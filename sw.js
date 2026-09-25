@@ -1,5 +1,5 @@
 // Tankōbon Reader service worker: keeps the app working offline.
-const CACHE = 'tankobon-v3';
+const CACHE = 'tankobon-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './jszip.min.js', './Sortable.min.js',
   './icon-192.png', './icon-512.png', './maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });

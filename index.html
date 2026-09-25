@@ -156,6 +156,13 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .progress .bar{height:6px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.checks li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.checks .mark{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px}
+.checks .ok .mark{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.checks .bad .mark{background:var(--accent-soft);color:var(--accent)}
+.checks b{font-weight:500;font-size:14px}
+.report{white-space:pre-wrap;word-break:break-all;font-size:11px;background:var(--surface2);padding:10px;border-radius:8px;user-select:all}
 .danger-zone{border:1.5px solid var(--accent-soft);border-radius:14px;padding:14px;display:grid;gap:10px}
 
 /* ---------- reader ---------- */
@@ -669,6 +676,7 @@ async function renderLibrary() {
     h('header', { class: 'appbar' },
       h('div', { class: 'grow' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'),
         h('div', { class: 'sub num', style: 'margin-top:4px' }, gals.length ? `${plural(gals.length, 'gallery').replace('gallerys', 'galleries')} · ${plural(pages, 'page')}` : 'Your reading shelf')),
+      isStandalone() ? null : h('button', { class: 'btn small ' + (installEvt ? 'primary' : 'ghost'), onclick: doInstall }, installEvt ? 'Install app' : 'Install'),
       h('button', { class: 'iconbtn', 'aria-label': 'Settings', onclick: openGlobalSettings }, icon('tune'))),
     DB.memory ? h('div', { class: 'banner' }, 'This browser is blocking storage, so your library will be lost when you close the page. Open the app in a normal Chrome tab (not incognito) to keep it.') : null,
     gals.length ? h('div', { class: 'lib-tools' }, search,
@@ -1405,6 +1413,58 @@ async function addSample() {
   toast('Sample gallery added. Delete it any time from Edit.');
   if (CUR.view === 'library') renderLibrary();
 }
+
+/* ================= install as an app ================= */
+let installEvt = null, installOffered = false;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; installOffered = true; if (CUR.view === 'library') renderLibrary(); });
+window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Tankōbon from your home screen or app drawer.', 5000); if (CUR.view === 'library') renderLibrary(); });
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+async function doInstall() {
+  if (!installEvt) return openInstallHelp();
+  try { installEvt.prompt(); await installEvt.userChoice; } catch (e) { }
+  installEvt = null; if (CUR.view === 'library') renderLibrary();
+}
+function browserName(ua) {
+  if (/SamsungBrowser/.test(ua)) return 'Samsung Internet';
+  if (/EdgA\//.test(ua)) return 'Edge'; if (/OPR\//.test(ua)) return 'Opera';
+  if (/Firefox\//.test(ua)) return 'Firefox'; if (/; wv\)/.test(ua)) return 'a browser inside another app';
+  if (/Chrome\//.test(ua)) return 'Chrome ' + (ua.match(/Chrome\/(\d+)/) || [])[1];
+  return 'an unknown browser';
+}
+async function installChecks() {
+  const ua = navigator.userAgent, out = [];
+  const add = (ok, label, fix) => out.push({ ok, label, fix });
+  add(window.isSecureContext && location.protocol !== 'file:', 'The address starts with https://', 'Open the app from its https://…github.io address, not from a downloaded file.');
+  const inApp = /; wv\)/.test(ua) || /FBAN|FBAV|Instagram|GSA\//.test(ua);
+  add(!inApp, 'Opened in a full browser, not inside another app', 'Copy the address, open the Chrome app itself, and paste it there.');
+  const bn = browserName(ua), chrome = /^Chrome/.test(bn);
+  add(chrome, `Browser: ${bn}`, bn === 'Samsung Internet' ? 'In Samsung Internet tap ☰ → Add page to → Home screen, or open the address in Chrome.' : 'Chrome is the most reliable browser for installing. Open the address in Chrome.');
+  const link = document.querySelector('link[rel="manifest"]'); let man = false;
+  if (link) { try { const r = await fetch(link.href, { cache: 'no-store' }); man = r.ok && !!(await r.json()).name; } catch (e) { } }
+  add(man, 'The app settings file (manifest.webmanifest) was found', link ? 'manifest.webmanifest is missing or damaged. Upload it again, next to index.html.' : 'This index.html is an older copy without the app settings. Upload the index.html from the newest zip.');
+  let sw = false;
+  try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); sw = !!(reg && (reg.active || reg.waiting || reg.installing)); } catch (e) { }
+  add(sw, 'Offline support (sw.js) is running', 'sw.js is missing from the upload, or the page needs one reload. Pull down to refresh and check again.');
+  add(installOffered, 'Chrome has offered to install the app', 'If everything above is green, the app may already be installed: look for Tankōbon in your app drawer. Otherwise wait 30 seconds, refresh, and check again.');
+  return { out, bn, ua };
+}
+async function openInstallHelp() {
+  const box = h('div', { class: 'stack' }, h('p', { class: 'hint' }, 'Checking this phone…'));
+  openSheet('Install Tankōbon', box);
+  const { out, ua } = await installChecks();
+  const report = out.map(c => `${c.ok ? '✓' : '✗'} ${c.label}`).join('\n') + `\n${location.href}\n${ua}`;
+  box.replaceChildren(...[
+    isStandalone() ? h('div', { class: 'banner' }, 'You are already using the installed app.') : null,
+    h('ul', { class: 'checks' }, out.map(c => h('li', { class: c.ok ? 'ok' : 'bad' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, c.ok ? '✓' : '✗'),
+      h('div', {}, h('b', {}, c.label), c.ok ? null : h('p', { class: 'hint' }, c.fix))))),
+    installEvt ? h('button', { class: 'btn primary', onclick: () => { closeSheet(); doInstall(); } }, icon('plus'), 'Install now') : null,
+    h('p', { class: 'hint' }, 'When every line is green, Chrome shows an Install button here and in the ⋮ menu (called "Install app" or "Add to home screen", then "Install").'),
+    h('div', { class: 'row' }, h('button', { class: 'btn ghost small', onclick: async () => {
+      try { await navigator.clipboard.writeText(report); toast('Copied. Paste it in the chat with Claude.'); } catch (e) { pre.hidden = false; toast('Select the text below and copy it.'); }
+    } }, 'Copy these results')),
+    (pre = h('pre', { class: 'report', hidden: true }, report))].filter(Boolean));
+}
+let pre;
 
 /* ================= boot ================= */
 (async function boot() {
