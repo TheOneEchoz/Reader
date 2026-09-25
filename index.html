@@ -1445,7 +1445,7 @@ async function installChecks() {
   let sw = false;
   try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); sw = !!(reg && (reg.active || reg.waiting || reg.installing)); } catch (e) { }
   add(sw, 'Offline support (sw.js) is running', 'sw.js is missing from the upload, or the page needs one reload. Pull down to refresh and check again.');
-  add(installOffered, 'Chrome has offered to install the app', 'If everything above is green, the app may already be installed: look for Tankōbon in your app drawer. Otherwise wait 30 seconds, refresh, and check again.');
+  add(installOffered, 'Chrome has offered its install button', 'Not required. Chrome often holds this back, for example after you dismiss it once. If everything above is green, install from the ⋮ menu: "Install and create shortcut" (older Chrome: "Add to home screen" or "Install app").');
   return { out, bn, ua };
 }
 async function openInstallHelp() {
@@ -1458,7 +1458,7 @@ async function openInstallHelp() {
     h('ul', { class: 'checks' }, out.map(c => h('li', { class: c.ok ? 'ok' : 'bad' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, c.ok ? '✓' : '✗'),
       h('div', {}, h('b', {}, c.label), c.ok ? null : h('p', { class: 'hint' }, c.fix))))),
     installEvt ? h('button', { class: 'btn primary', onclick: () => { closeSheet(); doInstall(); } }, icon('plus'), 'Install now') : null,
-    h('p', { class: 'hint' }, 'When every line is green, Chrome shows an Install button here and in the ⋮ menu (called "Install app" or "Add to home screen", then "Install").'),
+    h('p', { class: 'hint' }, 'If the first five lines are green, the app can be installed. Open Chrome\'s ⋮ menu and tap "Install and create shortcut" (older Chrome versions call it "Add to home screen" or "Install app"). If Tankōbon is already in your app drawer, it is already installed.'),
     h('div', { class: 'row' }, h('button', { class: 'btn ghost small', onclick: async () => {
       try { await navigator.clipboard.writeText(report); toast('Copied. Paste it in the chat with Claude.'); } catch (e) { pre.hidden = false; toast('Select the text below and copy it.'); }
     } }, 'Copy these results')),
