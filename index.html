@@ -206,6 +206,30 @@ input[type=range]{accent-color:var(--accent);width:100%}
 #v-lock{padding-inline:16px}
 .lockbox{max-width:420px;margin:0 auto;padding-block:10vh 48px;display:grid;gap:16px}
 .lockbox h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:8px 0 0;text-wrap:balance}
+.tagmark{position:absolute;left:4px;top:4px;z-index:2;max-width:calc(100% - 8px);display:inline-flex;gap:3px;align-items:center;background:rgba(10,11,13,.78);color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;white-space:nowrap;overflow:hidden}
+.tagmark .ic{width:11px;height:11px;flex:none}
+.tagmark span{overflow:hidden;text-overflow:ellipsis}
+.pcell.folder .tagmark{top:34px}
+.btile.folder .tagmark{left:6px;top:6px}
+.tagpick{position:relative;flex:1 1 180px;min-width:0}
+.tagpick .search{width:100%}
+.tagdrop{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:60;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.25);padding:4px;display:grid;max-height:300px;overflow:auto}
+.tagopt{display:flex;align-items:center;gap:8px;justify-content:space-between;text-align:left;padding:10px 12px;border-radius:8px;font-size:15px;color:var(--ink)}
+.tagopt:hover,.tagopt:focus-visible,.tagopt.hi{background:var(--surface2)}
+.tagopt .num{color:var(--muted);font-size:12px}
+.tagopt.new{justify-content:flex-start;color:var(--accent);font-weight:600}
+.tagopt.new .ic{width:16px;height:16px}
+.tagopt.none{color:var(--muted);font-size:13px}
+.tagchips{display:flex;flex-wrap:wrap;gap:6px}
+.tagchip{display:inline-flex;align-items:center;border-radius:999px;background:var(--accent-soft);color:var(--ink);font-size:14px;font-weight:600;min-height:34px;padding-left:12px}
+.tagchip.some{background:var(--surface2);border:1.5px dashed var(--line)}
+.tagchip small{color:var(--muted);font-weight:500;margin-left:4px}
+.tagchip .tc-add{display:inline-flex;align-items:center;min-height:34px;font:inherit;color:inherit}
+.tagchip .tc-x{width:34px;height:34px;display:grid;place-items:center;border-radius:999px}
+.tagchip .tc-x .ic{width:14px;height:14px}
+.tagchip.link{padding:0 12px;background:var(--surface2)}
+.tagchip.link[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.clue{margin:0;padding:10px 12px;border-radius:10px;background:var(--surface2);font-size:14px;word-break:break-word}
 .err{color:var(--accent);font-size:14px;font-weight:500;min-height:1.2em;margin:0}
 .wordmark{white-space:nowrap;overflow:hidden}
 @media (max-width:440px){.wordmark{font-size:20px;gap:8px}.wordmark .hanko{width:24px;height:24px;font-size:13px}.appbar .btn.small{padding:0 10px}}
@@ -405,7 +429,8 @@ const ICONS = {
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', devices: '<rect x="2.5" y="5" width="12" height="9" rx="1.5"/><rect x="16" y="8" width="5.5" height="11" rx="1.2"/><path d="M5 18h8"/>',
   more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>', chevr: '<path d="M9 6l6 6-6 6"/>',
   eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.5 6.6C4.4 8 2.9 10 2 12c1 2.5 5 7 10 7 1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 004.2 4.2"/>', eye: '<path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z"/><circle cx="12" cy="12" r="3"/>',
-  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'
+  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
 const MODE_LABEL = { single: 'One page', double: 'Two pages', vertical: 'Vertical', horizontal: 'Horizontal' };
@@ -480,7 +505,7 @@ function imgURL(id, store = 'images') {
 function forgetURL(id) { for (const s of ['i', 't']) { const k = s + id; if (URLS.has(k)) { URL.revokeObjectURL(URLS.get(k)); URLS.delete(k); } } }
 
 /* ================= settings ================= */
-const DEFAULTS = { mode: 'single', dir: 'ltr', fit: 'screen', coverAlone: true, gap: 0, stripWidth: 100, bg: 'black', dim: 0, tapZones: true, invertTaps: false, dblTapScale: 2.5, keepZoomPos: true, zoom: 1, pagedZoom: 1, pageNumber: true, keepAwake: true, chapterBreaks: true };
+const DEFAULTS = { mode: 'single', dir: 'ltr', fit: 'screen', coverAlone: true, gap: 0, stripWidth: 100, bg: 'black', dim: 0, tapZones: true, invertTaps: false, dblTapScale: 2.5, keepZoomPos: true, zoom: 1, pagedZoom: 1, pageNumber: true, keepAwake: true, chapterBreaks: true, showHidden: false };
 let GLOBAL = { ...DEFAULTS }, UI = { libSort: 'recent' };
 const paged = m => m === 'single' || m === 'double';
 const FIELDS = [
@@ -499,6 +524,7 @@ const FIELDS = [
   { k: 'keepZoomPos', label: 'Keep the zoom and position when turning pages', type: 'bool', group: 'zoom', when: p => paged(p.mode) },
   { k: 'pageNumber', label: 'Show the page number', type: 'bool' },
   { k: 'keepAwake', label: 'Keep the screen on while reading', type: 'bool' },
+  { k: 'showHidden', label: 'Include hidden pages and folders when reading', type: 'bool' },
 ];
 const effPrefs = g => { const p = { ...DEFAULTS, ...GLOBAL, ...(g && g.prefs || {}) }; if (p.dblTapZoom === false && !(g && g.prefs && 'dblTapScale' in g.prefs)) p.dblTapScale = 0; delete p.dblTapZoom; return p; };
 async function saveMeta() { try { await DB.put('meta', { id: 'defaults', v: GLOBAL }); await DB.put('meta', { id: 'ui', v: UI }); } catch (e) { } }
@@ -568,10 +594,10 @@ async function render(view, params) {
   if (view === 'reader') $('#toast').style.opacity = 0;
   try {
     if (view === 'library') await renderLibrary();
-    else if (view === 'detail') await renderDetail(params.id, params.folder);
+    else if (view === 'detail') await renderDetail(params.id, params.folder, params.tag);
     else if (view === 'editor') await renderEditor(params.id);
     else if (view === 'pages') await renderPages(params.id, params.ch);
-    else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start, params.scope, params.only);
+    else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start, params.scope, params.only, params.tag);
   } catch (e) { console.error(e); toast('Something went wrong: ' + (e.message || e)); }
   if (view !== 'reader') window.scrollTo(0, params.scroll || 0);
 }
@@ -591,7 +617,90 @@ function thumbImg(id, alt = '') {
   if (id) imgURL(id, 'thumbs').then(u => { if (u) img.src = u; });
   return img;
 }
-const saveGallery = async g => { g.updatedAt = Date.now(); await S.putGal(g); Sync.touched(g.id); };
+const saveGallery = async g => { pruneTags(g); g.updatedAt = Date.now(); await S.putGal(g); Sync.touched(g.id); };
+
+/* ---------- tags ----------
+   g.tags = { 'p:<page id>' | 'c:<folder id>': ['tag', ...] }. Tags are matched without caring about upper/lower case. */
+const normTag = s => (s || '').replace(/^#+/, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+const tagEq = (a, b) => a.toLowerCase() === b.toLowerCase();
+const tagsOf = (g, key) => (g.tags && g.tags[key]) || [];
+let TAGS = null; // lower-case name -> { name, n }: every tag in the open library
+async function allTags() {
+  if (TAGS) return TAGS;
+  const m = new Map();
+  for (const g of await S.gals()) for (const list of Object.values(g.tags || {})) for (const t of list) { const k = t.toLowerCase(), e = m.get(k); if (e) e.n++; else m.set(k, { name: t, n: 1 }); }
+  return TAGS = m;
+}
+function addTag(g, key, t) { g.tags = g.tags || {}; const l = g.tags[key] || (g.tags[key] = []); if (!l.some(x => tagEq(x, t))) l.push(t); TAGS = null; }
+function dropTag(g, key, t) { const l = g.tags && g.tags[key]; if (!l) return; const r = l.filter(x => !tagEq(x, t)); if (r.length) g.tags[key] = r; else delete g.tags[key]; TAGS = null; }
+function pruneTags(g) {
+  if (!g.tags) return;
+  const ok = new Set(); g.chapters.forEach(c => { ok.add('c:' + c.id); c.pages.forEach(p => ok.add('p:' + p)); });
+  for (const k of Object.keys(g.tags)) if (!ok.has(k) || !g.tags[k].length) { delete g.tags[k]; TAGS = null; }
+}
+/* Tags used in one gallery: lower-case name -> name */
+function galTags(g) { const m = new Map(); for (const l of Object.values(g.tags || {})) for (const t of l) if (!m.has(t.toLowerCase())) m.set(t.toLowerCase(), t); return m; }
+/* Pages carrying the tag themselves or inside a tagged folder, in reading order (hidden ones included). */
+function taggedPages(g, tag) {
+  const chs = g.chapters, on = k => tagsOf(g, k).some(x => tagEq(x, tag)), inT = [];
+  chs.forEach((c, i) => { const p = Tree.parent(chs, i); inT[i] = on('c:' + c.id) || (p >= 0 && inT[p]); });
+  return Tree.order(chs, null).filter(o => inT[o.ch] || on('p:' + o.id));
+}
+function tagMark(list) { return list.length ? h('span', { class: 'tagmark', title: list.map(t => '#' + t).join(' ') }, icon('tag'), h('span', {}, list[0] + (list.length > 1 ? ` +${list.length - 1}` : ''))) : null; }
+/* A text box with a dropdown of the tags that already exist and fit what was typed. */
+function tagPicker({ id, input, placeholder, onPick, exclude = () => false, allowNew = true, refocus = true, showEmpty = true }) {
+  const inp = input || h('input', { class: 'text', type: 'search', placeholder });
+  Object.assign(inp, { id, autocomplete: 'off' }); inp.setAttribute('role', 'combobox'); inp.setAttribute('aria-autocomplete', 'list'); inp.setAttribute('aria-expanded', 'false'); inp.setAttribute('aria-controls', id + '-list'); inp.setAttribute('enterkeyhint', 'done');
+  const list = h('div', { class: 'tagdrop', id: id + '-list', role: 'listbox', hidden: true });
+  let hits = [], exact = null;
+  const close = () => { list.hidden = true; inp.setAttribute('aria-expanded', 'false'); };
+  const pick = t => { close(); onPick(t); if (refocus) inp.focus(); else inp.blur(); };
+  const opt = (cls, kids, fn) => h('button', { type: 'button', class: 'tagopt ' + cls, role: 'option', tabindex: -1, onpointerdown: e => e.preventDefault(), onmousedown: e => e.preventDefault(), onclick: fn }, ...kids);
+  const draw = async () => {
+    const q = normTag(inp.value), ql = q.toLowerCase(), all = [...(await allTags()).values()];
+    if (!q && !showEmpty) return close();
+    exact = all.find(t => tagEq(t.name, q)) || null;
+    hits = all.filter(t => !exclude(t.name) && (!ql || t.name.toLowerCase().includes(ql)))
+      .sort((a, b) => (b.name.toLowerCase().startsWith(ql) - a.name.toLowerCase().startsWith(ql)) || b.n - a.n || natural(a.name, b.name)).slice(0, 8);
+    const rows = hits.map(t => opt('', [h('span', {}, '#' + t.name), h('span', { class: 'num' }, plural(t.n, 'use'))], () => pick(t.name)));
+    if (allowNew && q && !exact) rows.push(opt('new', [icon('plus'), h('span', {}, `New tag “${q}”`)], () => pick(q)));
+    if (!rows.length && q) rows.push(h('div', { class: 'tagopt none' }, allowNew ? 'Already added' : 'No tag matches'));
+    if (document.activeElement !== inp) return close();
+    list.replaceChildren(...rows); list.hidden = !rows.length; inp.setAttribute('aria-expanded', String(!list.hidden));
+  };
+  inp.addEventListener('input', draw); inp.addEventListener('focus', draw);
+  inp.addEventListener('blur', () => setTimeout(close, 120));
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') return close();
+    if (e.key !== 'Enter') return;
+    e.preventDefault(); const q = normTag(inp.value); if (!q) return;
+    if (exact && !exclude(exact.name)) pick(exact.name); else if (allowNew && !exact) pick(q); else if (hits[0]) pick(hits[0].name);
+  });
+  return h('div', { class: 'tagpick' }, inp, list);
+}
+/* Add or remove tags on several pages / folders at once. keys: 'p:<id>' | 'c:<id>' */
+function openTagSheet(g, keys, title, after) {
+  const chips = h('div', { class: 'tagchips' });
+  const apply = async fn => { keys.forEach(fn); await saveGallery(g); drawChips(); after && after(); };
+  const drawChips = () => {
+    const m = new Map();
+    keys.forEach(k => tagsOf(g, k).forEach(t => { const e = m.get(t.toLowerCase()) || { name: t, n: 0 }; e.n++; m.set(t.toLowerCase(), e); }));
+    const list = [...m.values()].sort((a, b) => natural(a.name, b.name));
+    chips.replaceChildren(...(list.length ? list.map(t => h('span', { class: 'tagchip' + (t.n < keys.length ? ' some' : '') },
+      t.n < keys.length
+        ? h('button', { class: 'tc-add', type: 'button', 'aria-label': `#${t.name} is on ${t.n} of ${keys.length}. Tap to add it to all`, onclick: () => apply(k => addTag(g, k, t.name)) }, '#' + t.name, h('small', { class: 'num' }, `${t.n}/${keys.length}`))
+        : h('span', {}, '#' + t.name),
+      h('button', { class: 'tc-x', type: 'button', 'aria-label': `Remove #${t.name}`, onclick: () => apply(k => dropTag(g, k, t.name)) }, icon('x'))))
+      : [h('p', { class: 'hint', style: 'margin:0' }, 'No tags yet.')]));
+  };
+  drawChips();
+  const picker = tagPicker({ id: 'tag-add', placeholder: 'Type a tag, or pick one below', onPick: t => apply(k => addTag(g, k, t)),
+    exclude: name => keys.every(k => tagsOf(g, k).some(x => tagEq(x, name))) });
+  openSheet(title, h('div', { class: 'stack', style: 'min-height:320px;align-content:start' }, chips,
+    h('div', { class: 'field' }, h('label', { class: 'label', for: 'tag-add' }, 'Add a tag'), picker),
+    h('p', { class: 'hint' }, keys.some(k => k[0] === 'c') ? 'A tag on a folder counts for every page inside it.' : 'Pick an existing tag from the list or type a new one.')));
+  setTimeout(() => { const f = $('#tag-add'); if (f) f.focus(); }, 60);
+}
 
 /* ================= import ================= */
 function pickFiles({ folder = false, accept = '', multiple = true } = {}) {
@@ -724,7 +833,7 @@ function openAddSheet(existing) {
       const groups = groupChapters(entries, existing ? (name.value.trim() || 'Added pages') : g.title);
       if (existing) groups.forEach(gr => { if (!gr.path.length) gr.path = [gr.title]; });
       const r = await importInto(g, groups, (d, t) => { lbl.textContent = `Adding page ${d.toLocaleString()} of ${t.toLocaleString()}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
-      if (!g.chapters.length) { await DB.del('galleries', g.id); closeSheet(); toast('Nothing was added.'); return render(CUR.view, CUR.params); }
+      if (!g.chapters.length) { await ST.del('galleries', g.id); closeSheet(); toast('Nothing was added.'); return render(CUR.view, CUR.params); }
       closeSheet();
       toast(`${cancel ? 'Stopped. ' : ''}${plural(r.done - r.skipped, 'page')} added${r.skipped ? `, ${r.skipped} could not be read` : ''}.`, 3500);
       if (existing) render(CUR.view, CUR.params); else go('detail', { id: g.id });
@@ -946,12 +1055,16 @@ async function renderLibrary() {
   gals.sort(sorters[UI.libSort] || sorters.recent);
   const pages = gals.reduce((n, g) => n + totalPages(g), 0);
   const grid = h('div', { class: 'grid' });
-  const search = h('input', { class: 'search', id: 'lib-search', type: 'search', placeholder: 'Search your galleries', 'aria-label': 'Search galleries' });
+  const search = h('input', { class: 'search', type: 'search', placeholder: 'Search titles or #tags', 'aria-label': 'Search galleries by title or tag' });
   const drawGrid = () => {
-    const q = search.value.trim().toLowerCase();
-    grid.replaceChildren(...gals.filter(g => !q || g.title.toLowerCase().includes(q)).map(card));
+    const raw = search.value.trim(), isTag = raw.startsWith('#'), q = normTag(raw).toLowerCase();
+    const hit = g => { if (!q) return true; const tg = [...galTags(g).keys()]; return isTag ? tg.includes(q) : g.title.toLowerCase().includes(q) || tg.some(t => t.includes(q)); };
+    const list = gals.filter(hit);
+    grid.replaceChildren(...list.map(g => card(g, isTag && q ? galTags(g).get(q) : null)));
+    if (q && !list.length) grid.replaceChildren(h('p', { class: 'hint', style: 'grid-column:1/-1' }, isTag ? `No gallery has the tag #${normTag(raw)}.` : 'No gallery matches.'));
   };
   search.addEventListener('input', drawGrid);
+  const searchBox = tagPicker({ id: 'lib-search', input: search, allowNew: false, refocus: false, showEmpty: true, onPick: t => { search.value = '#' + t; drawGrid(); } });
   v.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'appbar' },
       h('div', { class: 'grow' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'),
@@ -959,8 +1072,10 @@ async function renderLibrary() {
       Sync.st.enabled ? h('button', { class: 'syncpill', id: 'syncpill', onclick: openDevices, 'aria-label': 'Devices and sync' }, h('span', { class: 'sdot ' + Sync.status }), h('span', {}, pillText())) : null,
       isStandalone() ? null : h('button', { class: 'btn small ' + (installEvt ? 'primary' : 'ghost'), onclick: doInstall }, installEvt ? 'Install app' : 'Install'),
       h('button', { class: 'iconbtn', 'aria-label': 'Settings', onclick: openGlobalSettings }, icon('tune'))),
+    ST.folder ? h('div', { class: 'banner' }, h('p', { style: 'margin:0 0 8px' }, 'Your library is still in a phone folder, which is slow. Move it back into the app; nothing is lost.'),
+      h('button', { class: 'btn small primary', onclick: () => moveStorage('app', () => renderLibrary()) }, 'Move back into the app')) : null,
     DB.memory ? h('div', { class: 'banner' }, 'This browser is blocking storage, so your library will be lost when you close the page. Open the app in a normal Chrome tab (not incognito) to keep it.') : null,
-    gals.length ? h('div', { class: 'lib-tools' }, search,
+    gals.length ? h('div', { class: 'lib-tools' }, searchBox,
       h('div', { class: 'seg', role: 'group', 'aria-label': 'Sort' }, [['recent', 'Recent'], ['title', 'A–Z'], ['added', 'Newest']].map(([k, l]) => h('button', { 'aria-pressed': String(UI.libSort === k), onclick: () => { UI.libSort = k; saveMeta(); renderLibrary(); } }, l)))) : null,
     gals.length ? grid : h('div', { class: 'empty tone' },
       h('h2', {}, 'Your shelf is empty'),
@@ -971,13 +1086,13 @@ async function renderLibrary() {
   ), gals.length ? h('button', { class: 'btn primary fab', onclick: () => openAddSheet() }, icon('plus'), 'Add') : null);
   drawGrid();
 }
-function card(g) {
+function card(g, tag) {
   const pi = progressInfo(g), tp = totalPages(g);
   const meta = pi ? `${chLabel(g, pi.ci)} · p. ${pi.page + 1}` : `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`;
   return h('article', { class: 'card' }, h('div', { class: 'cwrap' },
-    h('button', { class: 'cover', 'aria-label': `Open ${g.title}`, onclick: () => go('detail', { id: g.id }) }, thumbImg(coverId(g)),
+    h('button', { class: 'cover', 'aria-label': tag ? `Pages tagged ${tag} in ${g.title}` : `Open ${g.title}`, onclick: () => go('detail', tag ? { id: g.id, tag } : { id: g.id }) }, thumbImg(coverId(g)),
       g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (chCount(g) > 0 ? h('span', { class: 'chip num' }, `${chCount(g)} CH`) : null)),
-    h('button', { class: 'play', 'aria-label': `${pi ? 'Continue' : 'Start'} reading ${g.title}`, onclick: () => go('reader', { id: g.id }) }, icon('play'))),
+    h('button', { class: 'play', 'aria-label': tag ? `Read pages tagged ${tag} in ${g.title}` : `${pi ? 'Continue' : 'Start'} reading ${g.title}`, onclick: () => go('reader', tag ? { id: g.id, tag } : { id: g.id }) }, icon('play'))),
     h('div', { style: 'display:grid;gap:4px' }, h('h3', {}, g.title), h('p', { class: 'meta num' }, meta),
       h('div', { class: 'bar' }, h('i', { style: `width:${pi ? (100 * pi.flat / tp).toFixed(1) : 0}%` }))));
 }
@@ -1005,17 +1120,19 @@ async function openGlobalSettings() {
         } })),
       h('div', { class: 'row' },
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
-        h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password'),
+        h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password or clue'),
+        MODE === 'main' ? h('button', { class: 'btn small', onclick: () => { closeSheet(); openDecoy(); } }, icon('lock'), 'Decoy password') : null,
         h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'))),
     settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
-    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), store, persisted,
+    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), storagePanel(), store, ST.folder ? null : persisted,
       h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { closeSheet(); addSample(); } }, 'Add the sample gallery')))));
 }
 
 /* ================= detail ================= */
-async function renderDetail(id, folderId) {
+async function renderDetail(id, folderId, tag) {
   const v = $('#v-detail'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
+  if (tag) return renderTagged(v, g, tag);
   const chs = g.chapters, fi = Math.max(0, folderId ? chs.findIndex(c => c.id === folderId) : 0), F = chs[fi], atRoot = fi === 0;
   const p = effPrefs(g), pi = progressInfo(g), tp = totalPages(g), nums = Tree.nums(chs);
   const setPref = (k, val) => { g.prefs = { ...(g.prefs || {}), [k]: val }; saveGallery(g); };
@@ -1027,20 +1144,20 @@ async function renderDetail(id, folderId) {
   // path from the main level down to this folder
   const trail = []; for (let k = fi; k > 0; k = Tree.parent(chs, k)) trail.unshift(k);
   const inHere = pi && pi.ci >= fi && pi.ci < Tree.end(chs, fi);
-  const its = Tree.items(chs, fi), hid = g.hid || {}, hiddenHere = Tree.hiddenIn(chs, fi);
+  const its = Tree.items(chs, fi), hid0 = g.hid || {}, showH = !!p.showHidden, hid = showH ? {} : hid0, hiddenHere = !showH && Tree.hiddenIn(chs, fi), wasHidden = Tree.hiddenIn(chs, fi);
   let pageNo = 0;
   const tiles = its.map(it => {
     if (it.t === 'p') {
       pageNo++;
-      const cur = pi && pi.ci === it.ci && pi.page === it.i, off = hid[it.id] || hiddenHere;
+      const cur = pi && pi.ci === it.ci && pi.page === it.i, off = hid[it.id] || hiddenHere, offMark = hid0[it.id] || wasHidden;
       return h('button', { class: 'btile' + (cur ? ' current' : '') + (off ? ' off' : ''), 'aria-label': `Page ${pageNo}${off ? ', hidden from reading' : ''}${cur ? ', where you stopped' : ''}`, onclick: () => go('reader', off ? { id, scope: F.id, only: hiddenHere ? undefined : 1, ch: it.ci, page: it.i } : { id, ch: it.ci, page: it.i }) },
-        h('span', { class: 'bthumb' }, lazyThumb(it.id), cur ? h('span', { class: 'bchip' }, 'READING') : off ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
+        h('span', { class: 'bthumb' }, lazyThumb(it.id), tagMark(tagsOf(g, 'p:' + it.id)), cur ? h('span', { class: 'bchip' }, 'READING') : offMark ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
         h('span', { class: 'bcap num' }, `${pageNo}`));
     }
     const c = chs[it.ci], n = Tree.subtreePages(chs, it.ci), sub = chs.slice(it.ci + 1, Tree.end(chs, it.ci)).filter(x => Tree.dep(x) === Tree.dep(c) + 1).length;
     const has = pi && pi.ci >= it.ci && pi.ci < Tree.end(chs, it.ci), done = read.has(c.id) && !has;
     return h('button', { class: 'btile folder' + (has ? ' current' : ''), 'aria-label': `Folder ${c.title}, ${plural(n, 'page')}`, onclick: () => go('detail', { id, folder: c.id }) },
-      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), c.hide ? h('span', { class: 'bchip done' }, icon('eyeoff'), ' HIDDEN') : has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
+      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(tagsOf(g, 'c:' + c.id)), c.hide ? h('span', { class: 'bchip done' }, icon('eyeoff'), ' HIDDEN') : has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
       h('span', { class: 'bcap' }, h('b', {}, c.title), h('span', { class: 'num' }, `${plural(n, 'page')}${sub ? ` · ${plural(sub, 'folder')}` : ''}`)));
   });
   const firstHere = hiddenHere ? -1 : Tree.firstFlat(chs, fi, hid);
@@ -1070,9 +1187,26 @@ async function renderDetail(id, folderId) {
           ord ? h('button', { class: 'btn ' + (inHere ? 'ghost' : 'primary'), style: inHere ? null : 'flex:1', onclick: () => go('reader', { id, ch: ord.ch, page: ord.i }) }, inHere ? 'From the start' : [icon('play'), 'Read this folder']) : null,
           !ord && Tree.subtreePages(chs, fi) ? h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id, scope: F.id }) }, icon('play'), 'View these extras') : null),
         hiddenHere ? h('div', { class: 'banner' }, 'This folder is hidden from reading. It is skipped when you read the gallery, but you can open its pages here.') : null),
+      atRoot && galTags(g).size ? h('div', { class: 'panel' }, h('div', { class: 'label' }, 'Tags · tap one to see and read only those pages'),
+        h('div', { class: 'tagchips' }, [...galTags(g).values()].sort(natural).map(t => h('button', { class: 'tagchip link', onclick: () => go('detail', { id, tag: t }) }, '#' + t)))) : null,
       atRoot ? h('div', { class: 'panel' }, h('div', { class: 'label' }, 'How pages appear'), modes, dirRow) : null,
       tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Edit to add images or folders.'))
     )));
+}
+
+function renderTagged(v, g, tag) {
+  const id = g.id, ord = taggedPages(g, tag), tags = [...galTags(g).values()].sort(natural);
+  const tiles = ord.map((o, k) => h('button', { class: 'btile' + ((g.hid || {})[o.id] || Tree.hiddenIn(g.chapters, o.ch) ? ' off' : ''), 'aria-label': `Page ${k + 1}, in ${Tree.crumb(g.chapters, o.ch)}`, onclick: () => go('reader', { id, tag, ch: o.ch, page: o.i }) },
+    h('span', { class: 'bthumb' }, lazyThumb(o.id)), h('span', { class: 'bcap' }, h('b', { class: 'num' }, `${k + 1}`), h('span', {}, Tree.crumb(g.chapters, o.ch)))));
+  v.replaceChildren(h('div', { class: 'wrap' },
+    h('header', { class: 'appbar' },
+      h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('detail', { id }) }, icon('back')),
+      h('div', { class: 'grow' }, h('h2', {}, '#' + tag), h('div', { class: 'sub' }, g.title))),
+    h('div', { class: 'stack' },
+      h('div', { class: 'sub num' }, `${plural(ord.length, 'page')} with this tag, including pages inside tagged folders.`),
+      ord.length ? h('div', { class: 'row' }, h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id, tag }) }, icon('play'), `Read only #${tag}`)) : null,
+      tags.length > 1 ? h('div', { class: 'tagchips' }, tags.map(t => h('button', { class: 'tagchip link', 'aria-pressed': String(tagEq(t, tag)), onclick: () => tagEq(t, tag) ? null : go('detail', { id, tag: t }, true) }, '#' + t))) : null,
+      tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'No pages have this tag any more.')))));
 }
 
 /* ================= editor ================= */
@@ -1123,6 +1257,7 @@ async function renderEditor(id) {
       item('up', 'Move up', 'Swaps it with the chapter above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
       item('down', 'Move down', 'Swaps it with the chapter below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
       item('move', 'Put it inside another chapter…', 'Or move it back to the top level', () => pickParent(c)),
+      item('tag', 'Tags…', tagsOf(g, 'c:' + c.id).length ? tagsOf(g, 'c:' + c.id).map(t => '#' + t).join(' ') : 'Tag the folder: every page inside counts as tagged', () => openTagSheet(g, ['c:' + c.id], `Tags for ${c.title}`, draw)),
       item(c.hide ? 'eye' : 'eyeoff', c.hide ? 'Show it when reading' : 'Hide it from reading', c.hide ? 'Its pages go back into normal reading' : 'Skipped when reading, still opens from the gallery as extras', async () => { if (c.hide) delete c.hide; else c.hide = true; await commit(c.hide ? 'Hidden from reading' : 'Shown when reading'); }),
       d > 1 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
       del));
@@ -1181,7 +1316,7 @@ async function renderEditor(id) {
   let armedDel = false;
   const delBtn = h('button', { class: 'btn danger', onclick: async () => {
     if (!armedDel) { armedDel = true; delBtn.textContent = 'Tap again to delete everything'; setTimeout(() => { armedDel = false; delBtn.textContent = 'Delete this gallery'; }, 3500); return; }
-    await purgeGallery(g); if (g.sample) { await DB.put('meta', { id: 'sampleGone', v: true }); } else await Sync.deleted(g.id);
+    await purgeGallery(g); if (g.sample) { await DB.put('meta', { id: mk('sampleGone'), v: true }); } else await Sync.deleted(g.id);
     toast('Gallery deleted'); go('library', {}, true);
   } }, 'Delete this gallery');
   const listPart = h('div', { class: 'stack' },
@@ -1228,7 +1363,7 @@ async function renderEditor(id) {
 async function dropCustomCover(g) {
   const c = g.customCover; g.customCover = null;
   if (!c || g.chapters.some(ch => ch.pages.includes(c))) return;
-  delete g.meta[c]; forgetURL(c); await DB.del('images', c); await DB.del('thumbs', c);
+  delete g.meta[c]; forgetURL(c); await ST.del('images', c); await ST.del('thumbs', c);
 }
 async function removePages(g, ids) {
   const set = new Set(ids);
@@ -1236,7 +1371,7 @@ async function removePages(g, ids) {
   g.chapters.forEach(c => c.pages = c.pages.filter(p => !set.has(p)));
   ids.forEach(i => { delete g.meta[i]; forgetURL(i); });
   if (set.has(g.cover)) g.cover = null;
-  await DB.delMany('images', ids); await DB.delMany('thumbs', ids);
+  await ST.delMany('images', ids); await ST.delMany('thumbs', ids);
 }
 
 async function renderPages(id, chId, host, gIn) {
@@ -1266,12 +1401,12 @@ async function renderPages(id, chId, host, gIn) {
         const c = g.chapters[it.ci], k = 'c:' + c.id;
         return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : '') + (c.hide ? ' off' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
           onclick: e => selecting() ? toggle(k, e.currentTarget) : go('pages', { id, ch: c.id }) },
-          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), c.hide ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, h('span', { class: 'ftitle' }, c.title));
+          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(tagsOf(g, k)), c.hide ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, h('span', { class: 'ftitle' }, c.title));
       }
       const pid = it.id, num = ++n, k = 'p:' + pid, off = !!(g.hid && g.hid[pid]);
       return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : '') + (off ? ' off' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}${off ? ', hidden from reading' : ''}`, 'aria-pressed': String(sel.has(k)),
         onclick: e => toggle(k, e.currentTarget) },
-        lazyThumb(pid), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+        lazyThumb(pid), tagMark(tagsOf(g, k)), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
     }));
     drawSel();
   };
@@ -1306,6 +1441,11 @@ async function renderPages(id, chId, host, gIn) {
     else label = h('b', { class: 'num' }, `${sel.size} selected`);
     selbar.replaceChildren(...[label,
       h('button', { class: 'btn', onclick: moveSheet }, icon('move'), 'Move'),
+      h('button', { class: 'btn', onclick: () => {
+        const keys = [...sel], one = keys.length === 1 ? keys[0] : null;
+        const title = !one ? `Tags for ${plural(keys.length, 'item')}` : one[0] === 'p' ? `Tags for ${(g.meta[one.slice(2)] || [])[2] || 'this page'}` : `Tags for ${chOf(one.slice(2)).title}`;
+        openTagSheet(g, keys, title, draw);
+      } }, icon('tag'), 'Tags'),
       h('button', { class: 'btn', onclick: () => shift(-1) }, icon('up'), 'To start'),
       h('button', { class: 'btn', onclick: () => shift(1) }, icon('down'), 'To end'),
       (() => {
@@ -1552,32 +1692,42 @@ const R = { g: null, p: null, pages: [], chStart: [], pos: 0, spreads: [], sprea
 const reader = $('#reader'), stage = $('#stage'), spread = $('#spread'), strip = $('#strip');
 const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 
-async function openReader(id, ch, page, start, scope, only) {
+/* The pages the reader goes through: everything, one folder's extras, or only the pages with a tag. */
+function buildPages() {
+  const g = R.g, chs = g.chapters;
+  const list = R.tag ? taggedPages(g, R.tag)
+    : R.extra ? Tree.orderIn(chs, R.scope, R.only ? (g.hid || {}) : null)
+    : Tree.order(chs, R.p.showHidden ? null : (g.hid || {}));
+  R.pages = list.map(o => ({ id: o.id, ch: o.ch, i: o.i }));
+  R.chPages = chs.map(() => []); R.pages.forEach((pg, k) => R.chPages[pg.ch].push(k));
+  R.idx = new Map(R.pages.map((pg, k) => [pg.ch + ':' + pg.i, k]));
+  R.chStart = R.chPages.map(l => l.length ? l[0] : -1);
+  R.runs = []; R.pages.forEach((pg, k) => { if (!k || R.pages[k - 1].ch !== pg.ch) R.runs.push(k); });
+}
+async function openReader(id, ch, page, start, scope, only, tag) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters); PIN.clear();
   const sci = scope ? g.chapters.findIndex(c => c.id === scope) : -1;
-  R.extra = sci >= 0; R.scope = sci;
-  R.pages = (R.extra ? Tree.orderIn(g.chapters, sci, only ? (g.hid || {}) : null) : Tree.order(g.chapters, g.hid || {})).map(o => ({ id: o.id, ch: o.ch, i: o.i }));
-  R.chPages = g.chapters.map(() => []); R.pages.forEach((pg, k) => R.chPages[pg.ch].push(k));
-  R.idx = new Map(R.pages.map((pg, k) => [pg.ch + ':' + pg.i, k]));
-  R.chStart = R.chPages.map(l => l.length ? l[0] : -1);
-  R.runs = []; R.pages.forEach((pg, k) => { if (!k || R.pages[k - 1].ch !== pg.ch) R.runs.push(k); });
+  R.extra = sci >= 0; R.scope = sci; R.only = !!only; R.tag = tag || null;
+  R.noProgress = R.extra || !!R.tag;
+  buildPages();
   const at = (ci, i) => R.idx.has(ci + ':' + i) ? R.idx.get(ci + ':' + i) : (R.chStart[ci] >= 0 ? R.chStart[ci] : -1);
   R.anchor = null;
   if (start) R.pos = 0;
   else if (ch != null && at(ch, page || 0) >= 0) R.pos = at(ch, page || 0);
-  else if (R.extra) R.pos = 0;
+  else if (R.noProgress) R.pos = 0;
   else { const pi = progressInfo(g); R.pos = pi && at(pi.ci, pi.page) >= 0 ? at(pi.ci, pi.page) : 0; if (pi && g.progress.anchor != null && at(pi.ci, g.progress.anchor.page) >= 0) R.anchor = { idx: at(pi.ci, g.progress.anchor.page), frac: g.progress.anchor.frac }; }
   R.pos = clamp(R.pos, 0, Math.max(0, R.pages.length - 1));
-  try { if ((ch != null || start) && history.state && history.state.view === 'reader') history.replaceState({ ...history.state, params: { id, scope, only } }, ''); } catch (e) { }
+  try { if ((ch != null || start) && history.state && history.state.view === 'reader') history.replaceState({ ...history.state, params: { id, scope, only, tag } }, ''); } catch (e) { }
   R.lastCh = -1;
   reader.classList.remove('ui');
-  if (!R.pages.length) { layout(); reader.classList.add('ui'); rToast('No pages yet', 'Add pages from Edit'); return; }
+  if (!R.pages.length) { layout(); reader.classList.add('ui'); rToast(R.tag ? 'No pages with this tag' : 'No pages yet', R.tag ? '#' + R.tag : 'Add pages from Edit'); return; }
   layout();
   const c = R.pages[R.pos]; R.lastCh = c.ch;
   R.nums = Tree.nums(g.chapters);
-  if (R.extra) rToast('Extras', 'Not counted as reading progress'); else rToast(R.nums[c.ch] ? `Chapter ${R.nums[c.ch]}` : '', Tree.crumb(g.chapters, c.ch));
+  if (R.tag) rToast('#' + R.tag, `${plural(R.pages.length, 'page')} · not counted as reading progress`);
+  else if (R.extra) rToast('Extras', 'Not counted as reading progress'); else rToast(R.nums[c.ch] ? `Chapter ${R.nums[c.ch]}` : '', Tree.crumb(g.chapters, c.ch));
   wakeOn();
 }
 function leaveReader() {
@@ -1649,6 +1799,8 @@ function preloadAround() {
     let n = 0;
     for (const id of ids) { if (!R.g || R.pos !== pos) return; await getPage(id); if (++n === 3) warmUp(); }
     warmUp();
+    // phone folders are slow: copy the pages further ahead into the fast copy while you read
+    if (ST.folder) for (let d = ahead + 1; d <= 30; d++) { if (!R.g || R.pos !== pos) return; const j = pos + d; if (j < R.pages.length) await ST.get('images', R.pages[j].id).catch(() => { }); }
   })();
 }
 /* The next and previous pages sit fully drawn behind the current one, so turning only swaps what is on top. */
@@ -1743,14 +1895,18 @@ function posChanged() {
   const shown = currentIdx(), lastShown = shown[shown.length - 1];
   const chp = R.g.chapters[c.ch];
   const lastOfCh = R.chPages[c.ch][R.chPages[c.ch].length - 1];
-  if (!R.extra && (paged(R.p.mode) ? lastShown === lastOfCh : R.pos === lastOfCh)) {
+  if (!R.noProgress && (paged(R.p.mode) ? lastShown === lastOfCh : R.pos === lastOfCh)) {
     R.g.read = R.g.read || []; if (!R.g.read.includes(chp.id)) R.g.read.push(chp.id);
   }
   updateUI(); saveProgress();
 }
 let saveT;
 function saveProgress(now) {
-  if (!R.g || !R.pages.length || R.extra) return;
+  if (!R.g || !R.pages.length || R.noProgress) {
+    // settings changed while reading extras or a tag are still kept
+    if (R.g && R.noProgress && now) S.gal(R.g.id).then(cur => { if (cur && JSON.stringify(cur.prefs || {}) !== JSON.stringify(R.g.prefs || {})) { cur.prefs = R.g.prefs; cur.updatedAt = Date.now(); return S.putGal(cur).then(() => Sync.touched(cur.id)); } }).catch(() => { });
+    return;
+  }
   clearTimeout(saveT);
   const doit = async () => {
     const c = R.pages[R.pos]; if (!c) return;
@@ -1769,7 +1925,7 @@ function saveProgress(now) {
   now ? doit() : (saveT = setTimeout(doit, 350));
 }
 function updateUI() {
-  const g = R.g; $('#rTitle').textContent = R.extra ? `${g.title} · extras` : g.title;
+  const g = R.g; $('#rTitle').textContent = R.tag ? `${g.title} · #${R.tag}` : R.extra ? `${g.title} · extras` : g.title;
   const c = R.pages[R.pos];
   if (!c) { $('#rChap').textContent = ''; $('#rLabel').textContent = ''; $('#pnum').hidden = true; return; }
   const list = R.chPages[c.ch], n = list.length, posIn = k => list.indexOf(k) + 1;
@@ -1796,6 +1952,16 @@ function setReaderPref(k, v) {
   if (k === 'dim') { $('#dim').style.opacity = v / 100; return; }
   if (k === 'pageNumber') return updateUI();
   if (k === 'keepAwake') return v ? wakeOn() : wakeOff();
+  if (k === 'showHidden') {
+    if (R.noProgress) return;
+    const c = R.pages[R.pos], full = Tree.order(R.g.chapters, null), rank = new Map(full.map((o, n) => [o.ch + ':' + o.i, n]));
+    buildPages();
+    if (c) { const r0 = rank.get(c.ch + ':' + c.i); let k = R.pages.findIndex(pg => rank.get(pg.ch + ':' + pg.i) >= r0); if (k < 0) k = R.pages.length - 1; R.pos = Math.max(0, k); }
+    R.anchor = paged(R.p.mode) ? null : { idx: R.pos, frac: 0 };
+    PRE.clear(); READY.clear(); layout();
+    rToast(v ? 'Hidden pages included' : 'Hidden pages skipped', `${plural(R.pages.length, 'page')} to read`);
+    return;
+  }
   if (['tapZones', 'invertTaps', 'dblTapScale', 'keepZoomPos'].includes(k)) { if (k === 'keepZoomPos') rememberPaged(); return; }
   if (k === 'bg') { reader.dataset.bg = v; return; }
   if (k === 'mode' && wasPaged && !paged(v)) R.anchor = { idx: R.pos, frac: 0 };
@@ -2144,7 +2310,7 @@ $('#rChapters').addEventListener('click', () => {
   const c = R.pages[R.pos]; const read = new Set(R.g.read || []);
   const chs = R.g.chapters, firstIn = i => { const e = Tree.end(chs, i); return R.pages.findIndex(pg => pg.ch >= i && pg.ch < e); };
   const list = h('div', { class: 'chlist' }, chapterRows(R.g, { cur: c ? { ci: c.ch, page: c.i } : null, read,
-    show: i => R.extra ? (i >= R.scope && i < Tree.end(chs, R.scope)) : !Tree.hiddenIn(chs, i),
+    show: i => R.tag ? firstIn(i) >= 0 : R.extra ? (i >= R.scope && i < Tree.end(chs, R.scope)) : (R.p.showHidden || !Tree.hiddenIn(chs, i)),
     has: i => firstIn(i) >= 0, onPick: (f, i) => { closeSheet(); const k = firstIn(i); if (k >= 0) goToIdx(k); } }));
   openSheet('Chapters', list);
   const cur = $('.chrow.current', list); if (cur) setTimeout(() => cur.scrollIntoView({ block: 'center' }), 30);
@@ -2211,6 +2377,284 @@ async function addSample() {
   if (CUR.view === 'library') renderLibrary();
 }
 
+/* ================= where records live: the app's private storage, or a folder on the phone ================= */
+const sniff = u8 => {
+  if (u8[0] === 0xFF && u8[1] === 0xD8) return 'image/jpeg';
+  if (u8[0] === 0x89 && u8[1] === 0x50) return 'image/png';
+  if (u8[0] === 0x47 && u8[1] === 0x49) return 'image/gif';
+  if (u8[0] === 0x42 && u8[1] === 0x4D) return 'image/bmp';
+  if (u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50) return 'image/webp';
+  if (u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70) return 'image/avif';
+  return 'image/jpeg';
+};
+const FS = (() => {
+  let root = null; const dirs = new Map(), keyCache = {};
+  /* Phone folders are much slower to read than the app's own storage, so keep what is read often in memory:
+     every gallery record, recent thumbnails, and the file handles already looked up. Everything stays encrypted. */
+  const mem = { galleries: new Map(), thumbs: new Map() }, MEM_MAX = { galleries: Infinity, thumbs: 800 }, handles = new Map();
+  const remember = (store, id, buf) => { const m = mem[store]; if (!m) return; m.delete(id); m.set(id, buf); if (m.size > MEM_MAX[store]) m.delete(m.keys().next().value); };
+  const forget = (store, id) => { if (mem[store]) mem[store].delete(id); handles.delete(store + '/' + id); };
+  /* Fast copy: reading a phone folder on Android goes through a slow system service, so everything read from it is also
+     kept in the app's own storage (still encrypted, same bytes). Galleries and thumbnails are all kept; pages up to a size
+     limit, dropping the ones read longest ago. The folder always stays the real copy. */
+  let idx = null, idxT = 0, bulk = false;
+  const cacheMax = () => (typeof UI === 'object' && UI.fsCache != null ? UI.fsCache : 300) * 1048576;
+  async function loadIdx() { if (!idx) { let r = null; try { r = await DB.get('meta', 'fscache'); } catch (e) { } idx = new Map(Object.entries((r && r.v) || {})); } return idx; }
+  const saveIdx = () => { clearTimeout(idxT); idxT = setTimeout(() => { DB.put('meta', { id: 'fscache', v: Object.fromEntries(idx) }).catch(() => { }); }, 1500); };
+  const size = e => e.byteLength || 0;
+  async function trim(max) {
+    const ix = await loadIdx(); let total = 0; for (const v of ix.values()) total += v[0];
+    if (total <= max) return;
+    const goal = max * 0.8;
+    for (const [id, v] of [...ix].sort((a, b) => a[1][1] - b[1][1])) { if (total <= goal) break; try { await DB.del('images', id); } catch (e) { } ix.delete(id); total -= v[0]; }
+    saveIdx();
+  }
+  async function cacheGet(store, id) {
+    if (DB.memory) return null;
+    try {
+      const r = await DB.get(store, id); if (!r || !r.e) return null;
+      if (store === 'images') { (await loadIdx()).set(id, [size(r.e), Date.now()]); saveIdx(); }
+      return r;
+    } catch (e) { return null; }
+  }
+  async function cachePut(store, id, e, t) {
+    if (DB.memory || !root || bulk) return;
+    if (store === 'images' && cacheMax() <= 0) return;
+    try {
+      await DB.put(store, t ? { id, t, e } : { id, e });
+      if (store === 'images') { (await loadIdx()).set(id, [size(e), Date.now()]); saveIdx(); await trim(cacheMax()); }
+    } catch (x) { }
+  }
+  const shard = id => (id.slice(-2).replace(/[^a-z0-9]/gi, '_') || '__');
+  async function sub(path) {
+    if (dirs.has(path)) return dirs.get(path);
+    let d = root; for (const part of path.split('/')) d = await d.getDirectoryHandle(part, { create: true });
+    dirs.set(path, d); return d;
+  }
+  const dirFor = (store, id) => store === 'galleries' ? sub('galleries') : sub(`${store === 'images' ? 'pages' : 'thumbs'}/${shard(id)}`);
+  const file = id => id + '.tkb';
+  return {
+    get root() { return root; },
+    set root(r) { root = r; dirs.clear(); handles.clear(); mem.galleries.clear(); mem.thumbs.clear(); for (const k in keyCache) delete keyCache[k]; },
+    async get(store, id) {
+      const m = mem[store] && mem[store].get(id); if (m) return { id, e: m };
+      const c = await cacheGet(store, id); if (c) { remember(store, id, c.e); return c; }
+      try {
+        const hk = store + '/' + id; let fh = handles.get(hk);
+        if (!fh) { fh = await (await dirFor(store, id)).getFileHandle(file(id)); handles.set(hk, fh); }
+        const e = await (await fh.getFile()).arrayBuffer(); remember(store, id, e); cachePut(store, id, e); return { id, e };
+      } catch (e) { handles.delete(store + '/' + id); if (e.name === 'NotFoundError' || e.name === 'TypeMismatchError') return undefined; throw e; }
+    },
+    async put(store, rec) {
+      const d = await dirFor(store, rec.id); const fh = await d.getFileHandle(file(rec.id), { create: true });
+      const w = await fh.createWritable(); await w.write(rec.e); await w.close();
+      const buf = rec.e instanceof ArrayBuffer ? rec.e : new Uint8Array(rec.e).slice().buffer;
+      handles.set(store + '/' + rec.id, fh); remember(store, rec.id, buf);
+      if (bulk) return;
+      if (store !== 'images') await cachePut(store, rec.id, buf, rec.t); else if (await DB.get('images', rec.id).catch(() => null)) await cachePut(store, rec.id, buf, rec.t);
+      if (keyCache[store]) keyCache[store].add(rec.id);
+    },
+    async del(store, id) { forget(store, id); try { await DB.del(store, id); if (store === 'images' && (await loadIdx()).delete(id)) saveIdx(); } catch (e) { } try { const d = await dirFor(store, id); await d.removeEntry(file(id)); } catch (e) { } if (keyCache[store]) keyCache[store].delete(id); },
+    async delMany(store, ids) { for (const id of ids) await this.del(store, id); },
+    async keys(store) {
+      if (keyCache[store]) return [...keyCache[store]];
+      const set = new Set();
+      const collect = async d => { for await (const [n, h] of d.entries()) if (h.kind === 'file' && n.endsWith('.tkb')) set.add(n.slice(0, -4)); };
+      if (store === 'galleries') await collect(await sub('galleries'));
+      else { const top = await sub(store === 'images' ? 'pages' : 'thumbs'); for await (const [, h] of top.entries()) if (h.kind === 'directory') await collect(h); }
+      keyCache[store] = set; return [...set];
+    },
+    async readInfo(dir = root) {
+      try { const f = await (await dir.getFileHandle('tankobon.json')).getFile(); return JSON.parse(await f.text()); } catch (e) { return null; }
+    },
+    async writeInfo() {
+      const lock = await DB.get('meta', 'lock'); if (!lock || !root) return;
+      const { old, ...clean } = lock; const lock2 = await DB.get('meta', 'lock2');
+      const prev = await this.readInfo();
+      const me = await Crypt.hash('fingerprint');
+      const fp = MODE === 'main' ? me : (prev && prev.fp), fp2 = MODE === 'decoy' ? me : (prev && prev.fp2);
+      const info = { app: 'Tankōbon Reader', v: 1, note: 'Encrypted library. Open it from the app with your password.', fp, lock: clean };
+      if (lock2) { const { old: o2, ...c2 } = lock2; info.lock2 = c2; if (fp2) info.fp2 = fp2; }
+      const w = await (await root.getFileHandle('tankobon.json', { create: true })).createWritable(); await w.write(JSON.stringify(info, null, 1)); await w.close();
+    },
+    /* Drop the fast copy (it is rebuilt as pages are read). */
+    async clearCache(pagesOnly) {
+      for (const st of pagesOnly ? ['images'] : ['images', 'thumbs', 'galleries']) { try { await DB.delMany(st, await DB.keys(st)); } catch (e) { } }
+      idx = new Map(); try { await DB.del('meta', 'fscache'); } catch (e) { }
+    },
+    trimCache: () => trim(cacheMax()),
+    set bulk(v) { bulk = v; },
+    async cacheUsed() { const ix = await loadIdx(); let t = 0; for (const v of ix.values()) t += v[0]; return t; },
+    async wipe() { for (const n of ['pages', 'thumbs', 'galleries', 'tankobon.json']) { try { await root.removeEntry(n, { recursive: true }); } catch (e) { } } dirs.clear(); for (const k in keyCache) delete keyCache[k]; },
+  };
+})();
+let STORE = { mode: 'app' };
+const ST = {
+  get folder() { return STORE.mode === 'folder' && !!FS.root; },
+  get: (s, id) => ST.folder ? FS.get(s, id) : DB.get(s, id),
+  put: (s, r) => ST.folder ? FS.put(s, r) : DB.put(s, r),
+  del: (s, id) => ST.folder ? FS.del(s, id) : DB.del(s, id),
+  delMany: (s, ids) => ST.folder ? FS.delMany(s, ids) : DB.delMany(s, ids),
+  keys: s => ST.folder ? FS.keys(s) : DB.keys(s),
+};
+const canPickFolder = () => 'showDirectoryPicker' in window;
+async function pickLibraryFolder() {
+  busy++; let picked;
+  try { picked = await window.showDirectoryPicker({ id: 'tankobon', mode: 'readwrite', startIn: 'documents' }); }
+  finally { setTimeout(() => { busy = Math.max(0, busy - 1); }, 1500); }
+  if (await FS.readInfo(picked)) return picked;
+  // an existing Tankobon folder inside the one picked?
+  try { const inner = await picked.getDirectoryHandle('Tankobon'); if (await FS.readInfo(inner)) return inner; } catch (e) { }
+  return picked;
+}
+async function folderAccess(handle, ask) {
+  try {
+    if (!handle.queryPermission) return true;
+    let st = await handle.queryPermission({ mode: 'readwrite' });
+    if (st !== 'granted' && ask) { busy++; try { st = await handle.requestPermission({ mode: 'readwrite' }); } finally { setTimeout(() => { busy = Math.max(0, busy - 1); }, 1500); } }
+    return st === 'granted';
+  } catch (e) { return false; }
+}
+/* Does this folder hold the library that is open now? Each library (real and decoy) leaves its own fingerprint.
+   A library that has not written one yet is recognised by its lock record. */
+async function folderIsOurs(info) {
+  if (!info) return false;
+  const mine = MODE === 'decoy' ? info.fp2 : info.fp;
+  if (mine) return mine === await Crypt.hash('fingerprint');
+  const lk = await DB.get('meta', lockKey()), theirs = info[lockKey()];
+  return !!(lk && theirs && theirs.salt === lk.salt && theirs.data === lk.data);
+}
+/* Called after unlocking. Resolves when storage is ready (may show a screen asking for folder access). */
+async function prepareStorage() {
+  const m = await DB.get('meta', 'storage').catch(() => null);
+  STORE = (m && m.v) || { mode: 'app' };
+  if (STORE.mode !== 'folder') return;
+  const h0 = STORE.handle;
+  const tryUse = async (h, ask) => {
+    if (!h || !(await folderAccess(h, ask))) return false;
+    const info = await FS.readInfo(h);
+    if (!(await folderIsOurs(info))) return 'missing';
+    FS.root = h; if (!(MODE === 'decoy' ? info.fp2 : info.fp)) FS.writeInfo().catch(() => { });
+    return true;
+  };
+  let ok = await tryUse(h0, true);
+  while (ok !== true) {
+    const missing = ok === 'missing';
+    await new Promise(res => lockShell(
+      h('h1', {}, missing ? 'Find your Tankōbon folder' : 'Allow access to your library folder'),
+      h('p', { class: 'hint' }, missing
+        ? `The folder “${STORE.name || 'Tankobon'}” with your pages could not be found. If you moved it, pick it again.`
+        : `Your pages are in the folder “${STORE.name || 'Tankobon'}” on your phone. Android needs your permission for the app to open it.`),
+      h('button', { class: 'btn primary', onclick: async () => {
+        if (!missing) { ok = await tryUse(h0, true); if (ok === true) return res(); }
+        try { const h = await pickLibraryFolder(); ok = await tryUse(h, true); if (ok === true) { if (h0 && !(await h0.isSameEntry(h).catch(() => false))) await FS.clearCache(); STORE.handle = h; STORE.name = h.name; await DB.put('meta', { id: 'storage', v: STORE }); return res(); } if (ok === 'missing') toast('That folder does not hold this library. Pick the Tankobon folder.', 4000); }
+        catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); }
+      } }, icon('folder'), missing ? 'Pick the folder' : 'Allow access'),
+      h('p', { class: 'hint' }, 'Nothing can be shown until the app can read the folder.')));
+  }
+}
+function storagePanel() {
+  const box = h('div', { class: 'stack', style: 'gap:10px' });
+  const draw = () => box.replaceChildren(
+    h('p', { class: 'hint' }, ST.folder
+      ? `Your library is still in the folder “${STORE.name}” on your phone. Phone-folder storage has been retired: move it back into the app, where it loads faster.`
+      : 'Your library is stored encrypted in the app\'s private storage on this phone.'),
+    ST.folder ? h('div', { class: 'row' }, h('button', { class: 'btn small primary', onclick: () => moveStorage('app', draw) }, 'Move back into the app')) : null,
+    ST.folder ? fastCopyPanel() : null);
+  draw(); return box;
+}
+function fastCopyPanel() {
+  const used = h('span', { class: 'num' });
+  const upd = () => FS.cacheUsed().then(n => used.textContent = n ? ` Now using ${mb(n)}.` : '');
+  const cur = UI.fsCache ?? 300;
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'fc-lbl' }, [[0, 'Off'], [150, '150 MB'], [300, '300 MB'], [1024, '1 GB'], [3072, '3 GB']].map(([v, l]) =>
+    h('button', { 'aria-pressed': String(cur === v), onclick: async e => {
+      UI.fsCache = v; saveMeta(); $$('button', seg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true');
+      if (v === 0) await FS.clearCache(true); else await FS.trimCache(); upd();
+    } }, l)));
+  upd();
+  return h('div', { class: 'setrow' },
+    h('div', { class: 'lab', id: 'fc-lbl' }, 'Fast copy of recently read pages'),
+    h('p', { class: 'hint', style: 'margin:0' }, 'Reading from a phone folder is slow on Android, so the app keeps your galleries, thumbnails and recently read pages in its own storage too, still encrypted. The folder stays the real copy.', used),
+    seg,
+    h('div', {}, h('button', { class: 'btn ghost small', onclick: async () => { await FS.clearCache(true); upd(); toast('Fast copy of pages cleared'); } }, 'Clear the fast copy')));
+}
+async function moveStorage(to, redraw) {
+  if (to === 'folder' && !canPickFolder()) return toast('This browser cannot open phone folders. Chrome 132 or newer is needed.', 4500);
+  busy++;
+  try { await moveStorageInner(to, redraw); } finally { busy = Math.max(0, busy - 1); }
+}
+async function moveStorageInner(to, redraw) {
+  let target = null;
+  if (to === 'folder') {
+    try {
+      const picked = await pickLibraryFolder();
+      const info = await FS.readInfo(picked);
+      if (info && !(await folderIsOurs(info))) return toast('That folder holds a different library. Pick another place.', 4000);
+      target = info ? picked : await picked.getDirectoryHandle('Tankobon', { create: true });
+    } catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); return; }
+  }
+  const lbl = h('div', { class: 'num' }, 'Preparing…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  let wake = null; try { wake = await navigator.wakeLock.request('screen'); } catch (e) { }
+  openSheet(to === 'folder' ? 'Moving your library to the folder' : 'Moving your library into the app', h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar), h('p', { class: 'hint' }, 'Keep the app open until this finishes; the screen stays on. Nothing is deleted until everything has been copied, and if it gets interrupted you can simply start the move again.')));
+  try {
+    const stores = ['galleries', 'thumbs', 'images'];
+    FS.bulk = true;
+    const from = to === 'folder' ? DB : FS, dest = to === 'folder' ? FS : DB;
+    if (to === 'folder') FS.root = target;
+    const all = []; for (const s of stores) (await from.keys(s)).forEach(id => all.push([s, id]));
+    let i = 0;
+    for (const [s, id] of all) {
+      const r = await from.get(s, id);
+      if (r) {
+        let e = r.e;
+        if (!e) e = s === 'galleries' ? await Crypt.encJSON(r) : await Crypt.enc(await r.blob.arrayBuffer());
+        await dest.put(s, s === 'galleries' ? { id, e } : { id, t: r.t || sniff(new Uint8Array(await Crypt.dec(e).catch(() => new ArrayBuffer(12)))), e });
+      }
+      if (++i % 10 === 0 || i === all.length) { lbl.textContent = `Copying ${i.toLocaleString()} of ${all.length.toLocaleString()}`; bar.firstChild.style.width = (100 * i / all.length) + '%'; }
+    }
+    for (const s of stores) { const n = (await dest.keys(s)).length, m = all.filter(x => x[0] === s).length; if (n < m) throw new Error(`only ${n} of ${m} ${s} were copied`); }
+    lbl.textContent = 'Cleaning up…';
+    if (to === 'folder') {
+      await FS.writeInfo();
+      STORE = { mode: 'folder', handle: target, name: target.name };
+      await DB.put('meta', { id: 'storage', v: STORE });
+      await FS.clearCache(true); // galleries and thumbnails stay in the app as the fast copy
+    } else {
+      STORE = { mode: 'app' }; await DB.put('meta', { id: 'storage', v: STORE });
+      await FS.wipe(); FS.root = null;
+    }
+    closeSheet(); toast(to === 'folder' ? 'Done. Your library now lives in the Tankobon folder.' : 'Done. Your library is back in the app.', 4500);
+    redraw && redraw();
+  } catch (e) {
+    console.error(e); if (to === 'folder' && STORE.mode !== 'folder') FS.root = null;
+    closeSheet(); toast('Moving stopped: ' + (e.message || e) + '. Nothing was deleted.', 5000);
+  } finally { FS.bulk = false; try { wake && wake.release(); } catch (e) { } }
+}
+/* Restore a library from its folder (after reinstalling or clearing Chrome). */
+async function openLibraryFolder() {
+  if (!canPickFolder()) return toast('This browser cannot open phone folders. Chrome 132 or newer is needed.', 4500);
+  let dir, info;
+  try { dir = await pickLibraryFolder(); info = await FS.readInfo(dir); } catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); return; }
+  if (!info || !info.lock) return toast('No Tankōbon library in that folder. Pick the Tankobon folder itself.', 4000);
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Open library');
+  lockShell(h('h1', {}, 'Open your library'),
+    h('p', { class: 'hint' }, `Found a library in “${dir.name}”. Enter its password.`),
+    h('form', { class: 'stack', onsubmit: async e => {
+      e.preventDefault(); btn.disabled = true; err.textContent = '';
+      await DB.put('meta', { ...info.lock, id: 'lock' });
+      if (info.lock2) await DB.put('meta', { ...info.lock2, id: 'lock2' });
+      try { await unlockWith($('#of-pw').value); }
+      catch (x) { err.textContent = 'That password is not right.'; btn.disabled = false; return; }
+      STORE = { mode: 'folder', handle: dir, name: dir.name }; await DB.put('meta', { id: 'storage', v: STORE });
+      afterUnlock(false);
+    } }, pwField('of-pw', 'Password', 'current-password'), err, btn),
+    clueButton(info.lock.hint),
+    h('button', { class: 'btn ghost small', type: 'button', onclick: () => showSetup() }, 'Back'));
+  setTimeout(() => { const f = $('#of-pw'); if (f) f.focus(); }, 50);
+}
+
 /* ================= encryption ================= */
 const Crypt = (() => {
   const te = new TextEncoder(), td = new TextDecoder();
@@ -2255,23 +2699,24 @@ const Crypt = (() => {
 /* Encrypted records on top of IndexedDB. Galleries: {id, e}. Images/thumbs: {id, t: mime, e}. */
 const S = {
   async open(r) { if (!r) return null; let g = r; if (r.e) { try { g = await Crypt.decJSON(r.e); } catch (e) { return null; } } if (g && g.chapters) Tree.ensureRoot(g); return g; },
-  async gal(id) { return S.open(await DB.get('galleries', id)); },
-  async gals() { const ids = await DB.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
-  async putGal(g) { await DB.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
-  async putBlob(store, id, blob) { await DB.put(store, { id, t: blob.type || 'image/jpeg', e: await Crypt.enc(await blob.arrayBuffer()) }); },
+  async gal(id) { return S.open(await ST.get('galleries', id)); },
+  async gals() { const ids = await ST.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
+  async putGal(g) { TAGS = null; await ST.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
+  async putBlob(store, id, blob) { await ST.put(store, { id, t: blob.type || 'image/jpeg', e: await Crypt.enc(await blob.arrayBuffer()) }); },
   async blob(store, id) {
-    const r = await DB.get(store, id); if (!r) return null;
+    const r = await ST.get(store, id); if (!r) return null;
     if (r.blob) return r.blob;
-    return new Blob([await Crypt.dec(r.e)], { type: r.t || 'image/jpeg' });
+    const plain = new Uint8Array(await Crypt.dec(r.e));
+    return new Blob([plain], { type: r.t || sniff(plain) });
   },
 };
 /* Re-encrypt every record with newK. Unencrypted records get encrypted; records under oldK get moved to newK. */
 async function reencrypt(oldK, newK, resume, onProg) {
   const stores = ['galleries', 'thumbs', 'images'];
-  const all = []; for (const s of stores) (await DB.keys(s)).forEach(id => all.push([s, id]));
+  const all = []; for (const s of stores) (await ST.keys(s)).forEach(id => all.push([s, id]));
   let i = 0;
   for (const [store, id] of all) {
-    i++; const r = await DB.get(store, id); if (!r) continue;
+    i++; const r = await ST.get(store, id); if (!r) continue;
     let plain;
     if (!r.e) plain = store === 'galleries' ? Crypt.te.encode(JSON.stringify(r)) : await r.blob.arrayBuffer();
     else {
@@ -2280,18 +2725,23 @@ async function reencrypt(oldK, newK, resume, onProg) {
       try { plain = await Crypt.dec(r.e, oldK); } catch (e) { continue; }
     }
     const e = await Crypt.enc(plain, newK);
-    await DB.put(store, store === 'galleries' ? { id, e } : { id, t: r.t || (r.blob && r.blob.type) || 'image/jpeg', e });
+    await ST.put(store, store === 'galleries' ? { id, e } : { id, t: r.t || (r.blob && r.blob.type) || 'image/jpeg', e });
     if (onProg && (i % 5 === 0 || i === all.length)) onProg(i, all.length);
   }
 }
 async function purgeGallery(g) {
   const ids = Object.keys(g.meta || {});
-  await DB.delMany('images', ids); await DB.delMany('thumbs', ids); ids.forEach(forgetURL);
-  await DB.del('galleries', g.id);
+  await ST.delMany('images', ids); await ST.delMany('thumbs', ids); ids.forEach(forgetURL);
+  await ST.del('galleries', g.id);
 }
 
 /* ================= lock screen ================= */
 let busy = 0, hiddenAt = 0;
+/* Two libraries can share this device: the real one ('main') and a decoy opened with the decoy password.
+   Each is encrypted with its own key, so neither can see the other's galleries or pages. */
+let MODE = 'main';
+const lockKey = () => MODE === 'decoy' ? 'lock2' : 'lock';
+const mk = name => MODE === 'decoy' ? name + '2' : name;
 const withBusy = async fn => { busy++; try { return await fn(); } finally { busy--; } };
 function lockNow() { try { if (CUR.view === 'reader') saveProgress(true); } catch (e) { } setTimeout(() => location.reload(), 150); }
 document.addEventListener('visibilitychange', () => {
@@ -2304,9 +2754,20 @@ function lockShell(...kids) {
   const v = $('#v-lock'); v.hidden = false;
   v.replaceChildren(h('div', { class: 'lockbox' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'), ...kids));
 }
-function pwField(id, label, auto) {
+function hintField(value) {
+  return h('div', { class: 'field' }, h('label', { class: 'label', for: 'pw-hint' }, 'Password clue (optional)'),
+    h('input', { class: 'text', id: 'pw-hint', maxlength: 120, autocomplete: 'off', value: value || '', placeholder: 'Something only you would understand' }),
+    h('p', { class: 'hint' }, 'Shown on the unlock screen to anyone holding your phone, so never write the password itself.'));
+}
+function badHint(hint, pw) { return hint && pw && hint.toLowerCase().includes(pw.toLowerCase()); }
+function clueButton(hint) {
+  if (!hint) return null;
+  const out = h('p', { class: 'clue', hidden: true }, hint);
+  return h('div', { class: 'stack', style: 'gap:6px' }, h('button', { class: 'btn ghost small', type: 'button', onclick: e => { out.hidden = !out.hidden; e.currentTarget.textContent = out.hidden ? 'Show password clue' : 'Hide password clue'; } }, 'Show password clue'), out);
+}
+function pwField(id, label, auto, optional) {
   return h('div', { class: 'field' }, h('label', { class: 'label', for: id }, label),
-    h('input', { class: 'text', id, type: 'password', autocomplete: auto, required: true }));
+    h('input', { class: 'text', id, type: 'password', autocomplete: auto, required: !optional }));
 }
 async function showSetup(joinRaw) {
   const legacy = (await DB.keys('galleries')).length;
@@ -2318,15 +2779,17 @@ async function showSetup(joinRaw) {
     const a = $('#pw1').value, b = $('#pw2').value;
     if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
     if (a !== b) { err.textContent = 'The two passwords are different. Type them again.'; return; }
+    if (badHint($('#pw-hint').value, a)) { err.textContent = 'The clue must not contain the password.'; return; }
     err.textContent = ''; btn.disabled = true; btn.textContent = 'Setting up…';
     await withBusy(async () => {
       if (joinRaw) await Crypt.setRaw(joinRaw); else await Crypt.fresh();
-      await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
+      const lk = await Crypt.wrapRaw(Crypt.raw, a); const hint = ($('#pw-hint').value || '').trim(); if (hint) lk.hint = hint;
+      await DB.put('meta', lk);
       await reencrypt(null, Crypt.key, false, (i, n) => prog.textContent = `Encrypting your library: ${i} of ${n}`);
       if (joinRaw) { Sync.st.enabled = true; await Sync.saveSt(); }
     });
     afterUnlock(!joinRaw);
-  } }, pwField('pw1', 'Password', 'new-password'), pwField('pw2', 'Type it again', 'new-password'), err, btn, prog);
+  } }, pwField('pw1', 'Password', 'new-password'), pwField('pw2', 'Type it again', 'new-password'), hintField(''), err, btn, prog);
   lockShell(
     h('h1', {}, joinRaw ? 'Set a password for this device' : 'Protect your library'),
     h('p', { class: 'hint' }, joinRaw
@@ -2336,8 +2799,16 @@ async function showSetup(joinRaw) {
     form,
     h('p', { class: 'hint' }, 'Nobody can reset this password, not even the app. If you forget it, the library on this device cannot be opened.'),
     joinRaw ? null : h('div', { class: 'stack', style: 'margin-top:8px' }, h('div', { class: 'label' }, 'Already use Tankōbon on another device?'),
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => scanPairCode(raw => showSetup(raw)) }, icon('devices'), 'Join my library from another device')));
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => scanPairCode(raw => showSetup(raw)) }, icon('devices'), 'Join my library from another device'),
+));
   setTimeout(() => { const f = $('#pw1'); if (f) f.focus(); }, 50);
+}
+async function unlockWith(pw) {
+  const lock = await DB.get('meta', 'lock'), lock2 = await DB.get('meta', 'lock2');
+  const [a, b] = await Promise.allSettled([Crypt.unwrapRaw(lock, pw), lock2 ? Crypt.unwrapRaw(lock2, pw) : Promise.reject(new Error('none'))]);
+  if (a.status === 'fulfilled') { MODE = 'main'; await Crypt.setRaw(a.value); return lock; }
+  if (b.status === 'fulfilled') { MODE = 'decoy'; await Crypt.setRaw(b.value); return lock2; }
+  throw new Error('wrong password');
 }
 function showUnlock(lock) {
   const err = h('p', { class: 'err', role: 'alert' });
@@ -2349,16 +2820,20 @@ function showUnlock(lock) {
     h('h1', {}, 'Unlock your library'),
     h('form', { class: 'stack', onsubmit: async e => {
       e.preventDefault(); btn.disabled = true; btn.textContent = 'Unlocking…'; err.textContent = '';
-      try { await Crypt.setRaw(await Crypt.unwrapRaw(lock, $('#pw').value)); }
+      let used;
+      try { used = await unlockWith($('#pw').value); }
       catch (x) { err.textContent = 'That password is not right. Try again.'; btn.disabled = false; btn.textContent = 'Unlock'; $('#pw').select(); return; }
-      if (lock.old) {
+      if (MODE === 'main' && used.old) {
         btn.textContent = 'Finishing an earlier change…';
-        const oldRaw = await Crypt.unwrapRaw(lock.old, $('#pw').value);
-        await withBusy(async () => reencrypt(await Crypt.importKey(oldRaw), Crypt.key, true));
-        const { old, ...clean } = lock; await DB.put('meta', clean);
+        let oldRaw = null; try { oldRaw = await Crypt.unwrapRaw(lock.old, $('#pw').value); } catch (x) { console.warn('earlier change cannot be finished with this password'); }
+        if (oldRaw) {
+          await withBusy(async () => reencrypt(await Crypt.importKey(oldRaw), Crypt.key, true));
+          const { old, ...clean } = lock; await DB.put('meta', clean);
+        }
       }
       afterUnlock(false);
     } }, pwField('pw', 'Password', 'current-password'), err, btn),
+    clueButton(lock.hint),
     h('button', { class: 'btn ghost small', type: 'button', onclick: () => { forgot.hidden = !forgot.hidden; } }, 'Forgot your password?'), forgot);
   setTimeout(() => { const f = $('#pw'); if (f) f.focus(); }, 50);
 }
@@ -2371,8 +2846,11 @@ function eraseButton() {
   return b;
 }
 async function afterUnlock(fresh) {
+  await prepareStorage();
   $('#v-lock').hidden = true; $('#v-lock').replaceChildren();
-  if (fresh) { try { const n = (await DB.keys('galleries')).length; const gone = await DB.get('meta', 'sampleGone'); if (!n && !gone) await addSample(); } catch (e) { console.error(e); } }
+  if (fresh || MODE === 'decoy') { try { const n = (await S.gals()).length; const gone = await DB.get('meta', mk('sampleGone')); if (!n && !gone) { await addSample(); await DB.put('meta', { id: mk('sampleGone'), v: true }); } } catch (e) { console.error(e); } }
+  await Sync.load();
+  if (!(await keyOpensLibrary())) toast('Your galleries could not be decrypted with this key. Nothing was deleted.', 8000);
   const st = history.state;
   if (st && st.view) render(st.view, st.params || {});
   else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
@@ -2384,27 +2862,107 @@ function askPassword(title, text, onOk) {
   openSheet(title, h('form', { class: 'stack', onsubmit: async e => {
     e.preventDefault(); btn.disabled = true;
     const pw = $('#ask-pw').value;
-    try { const lock = await DB.get('meta', 'lock'); await Crypt.unwrapRaw(lock, pw); }
+    try { const lock = await DB.get('meta', lockKey()); await Crypt.unwrapRaw(lock, pw); }
     catch (x) { err.textContent = 'That password is not right.'; btn.disabled = false; return; }
     onOk(pw);
   } }, h('p', { class: 'hint' }, text), pwField('ask-pw', 'Your password', 'current-password'), err, btn));
   setTimeout(() => { const f = $('#ask-pw'); if (f) f.focus(); }, 50);
 }
-function openChangePassword() {
+const sameBytes = (a, b) => !!a && !!b && a.length === b.length && a.every((x, i) => x === b[i]);
+/* Can the key in memory read this library? True when there is nothing to read yet. */
+async function keyOpensLibrary() {
+  const ids = await ST.keys('galleries'); if (!ids.length) return true;
+  for (const id of ids) { const r = await ST.get('galleries', id); if (!r || !r.e) return true; try { await Crypt.dec(r.e); return true; } catch (e) { } }
+  return !!(await DB.get('meta', 'lock2')); // with a decoy, the other library's galleries are expected to be unreadable
+}
+async function openChangePassword() {
+  const cur0 = await DB.get('meta', lockKey());
   const err = h('p', { class: 'err', role: 'alert' });
-  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Change password');
-  openSheet('Change password', h('form', { class: 'stack', onsubmit: async e => {
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Save');
+  openSheet('Change password or clue', h('form', { class: 'stack', onsubmit: async e => {
     e.preventDefault(); err.textContent = '';
-    const cur = $('#cp-old').value, a = $('#cp-new').value, b = $('#cp-new2').value;
-    if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
-    if (a !== b) { err.textContent = 'The new passwords are different.'; return; }
+    const cur = $('#cp-old').value, a = $('#cp-new').value, b = $('#cp-new2').value, keep = !a && !b;
+    if (!keep && a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+    if (!keep && a !== b) { err.textContent = 'The new passwords are different.'; return; }
+    if (badHint($('#pw-hint').value, keep ? cur : a)) { err.textContent = 'The clue must not contain the password.'; return; }
+    if (!keep) { const other = await DB.get('meta', MODE === 'decoy' ? 'lock' : 'lock2'); if (other) { try { await Crypt.unwrapRaw(other, a); err.textContent = 'Choose a different password.'; return; } catch (x) { } } }
     btn.disabled = true; btn.textContent = 'Saving…';
-    try { const lock = await DB.get('meta', 'lock'); await Crypt.unwrapRaw(lock, cur); }
-    catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Change password'; return; }
-    await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
-    closeSheet(); toast('Password changed on this device.');
-  } }, pwField('cp-old', 'Current password', 'current-password'), pwField('cp-new', 'New password', 'new-password'), pwField('cp-new2', 'New password again', 'new-password'), err, btn,
+    try { const lock = await DB.get('meta', lockKey()); await Crypt.unwrapRaw(lock, cur); }
+    catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Save'; return; }
+    /* The pages are encrypted with the library key, never with the password. The password only locks that key,
+       so changing it re-locks the same key. Check everything before and after saving so the library can never be locked out. */
+    if (!(await keyOpensLibrary())) { err.textContent = 'Something is wrong with the key in memory, so nothing was changed. Lock the app, unlock it again and retry.'; btn.disabled = false; btn.textContent = 'Save'; return; }
+    const { old: _o, ...base } = cur0 || {};
+    const lk = keep ? { ...base } : { ...base, ...(await Crypt.wrapRaw(Crypt.raw, a)) }; lk.id = lockKey(); const hint = ($('#pw-hint').value || '').trim();
+    if (hint) lk.hint = hint; else delete lk.hint;
+    try { if (!sameBytes(await Crypt.unwrapRaw(lk, keep ? cur : a), Crypt.raw)) throw new Error('mismatch'); }
+    catch (x) { err.textContent = 'The new password could not be checked, so nothing was changed. Try again.'; btn.disabled = false; btn.textContent = 'Save'; return; }
+    await DB.put('meta', lk);
+    const saved = await DB.get('meta', lockKey());
+    let ok = false; try { ok = sameBytes(await Crypt.unwrapRaw(saved, keep ? cur : a), Crypt.raw); } catch (x) { }
+    if (!ok) { if (cur0) await DB.put('meta', cur0); err.textContent = 'Saving the new password failed, so your old password still works.'; btn.disabled = false; btn.textContent = 'Save'; return; }
+    if (ST.folder) { try { await FS.writeInfo(); } catch (x) { toast('Password changed, but the library folder could not be updated. Open Settings once more with the folder available.', 5000); closeSheet(); return; } }
+    closeSheet(); toast(keep ? 'Clue saved.' : 'Password changed on this device. Your pages stay as they are.');
+  } }, pwField('cp-old', 'Current password', 'current-password'), pwField('cp-new', 'New password (leave empty to keep it)', 'new-password', true), pwField('cp-new2', 'New password again', 'new-password', true), hintField(cur0 && cur0.hint), err, btn,
     h('p', { class: 'hint' }, 'This changes the password on this device only. Your other devices keep their own passwords.')));
+}
+
+/* ---------- decoy library ---------- */
+async function openDecoy() {
+  const has = await DB.get('meta', 'lock2');
+  const err = h('p', { class: 'err', role: 'alert' });
+  if (!has) {
+    const btn = h('button', { class: 'btn primary', type: 'submit' }, icon('lock'), 'Create decoy password');
+    openSheet('Decoy password', h('form', { class: 'stack', onsubmit: async e => {
+      e.preventDefault(); err.textContent = '';
+      const main = $('#dc-main').value, a = $('#dc-new').value, b = $('#dc-new2').value;
+      if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+      if (a !== b) { err.textContent = 'The two decoy passwords are different.'; return; }
+      if (a === main) { err.textContent = 'The decoy password must be different from your real password.'; return; }
+      btn.disabled = true; btn.textContent = 'Setting up…';
+      try { await Crypt.unwrapRaw(await DB.get('meta', 'lock'), main); }
+      catch (x) { err.textContent = 'Your real password is not right.'; btn.disabled = false; btn.replaceChildren(icon('lock'), 'Create decoy password'); return; }
+      const lk = await Crypt.wrapRaw(crypto.getRandomValues(new Uint8Array(32)), a); lk.id = 'lock2';
+      await DB.put('meta', lk);
+      for (const k of ['sync2', 'tombs2', 'sampleGone2']) await DB.del('meta', k).catch(() => { });
+      if (ST.folder) await FS.writeInfo().catch(() => { });
+      closeSheet(); toast('Decoy password created. Unlock with it to open the decoy library.', 4500);
+    } },
+      h('p', { class: 'hint' }, 'Unlocking with the decoy password opens a separate, harmless library instead of yours. Put a few ordinary galleries in it. The unlock screen looks exactly the same, and nothing in the decoy library shows that your real one exists.'),
+      h('p', { class: 'hint' }, 'The decoy library has its own settings for sync and its own password changes. Open it with the decoy password to fill it.'),
+      pwField('dc-main', 'Your real password', 'current-password'),
+      pwField('dc-new', 'Decoy password', 'new-password'), pwField('dc-new2', 'Decoy password again', 'new-password'), err, btn));
+    setTimeout(() => { const f = $('#dc-main'); if (f) f.focus(); }, 50);
+    return;
+  }
+  const prog = h('p', { class: 'hint num' });
+  let armed = false;
+  const btn = h('button', { class: 'btn danger', type: 'submit' }, icon('trash'), 'Remove the decoy library');
+  openSheet('Decoy password', h('form', { class: 'stack', onsubmit: async e => {
+    e.preventDefault(); err.textContent = '';
+    if (!armed) { armed = true; btn.replaceChildren(icon('trash'), 'Tap again to delete the decoy library'); return; }
+    btn.disabled = true;
+    try { await Crypt.unwrapRaw(await DB.get('meta', 'lock'), $('#dc-main').value); }
+    catch (x) { err.textContent = 'Your real password is not right.'; btn.disabled = false; return; }
+    await withBusy(() => removeDecoy((i, n) => prog.textContent = `Removing the decoy library: ${i} of ${n}`));
+    closeSheet(); toast('The decoy password and its library were removed.', 4000);
+  } },
+    h('p', { class: 'hint' }, 'A decoy password is set. Unlocking with it opens the decoy library. To change the decoy password, unlock with it and use Change password there.'),
+    h('p', { class: 'hint' }, 'Removing it deletes the decoy library and its pages from this device. Your real library is not touched.'),
+    pwField('dc-main', 'Your real password', 'current-password'), err, btn, prog));
+}
+/* Delete every record that the open (real) library's key cannot read: those belong to the decoy. */
+async function removeDecoy(onProg) {
+  const mine = async r => { if (!r || !r.e) return true; try { await Crypt.dec(r.e); return true; } catch (e) { return false; } };
+  const gal = await ST.keys('galleries'), th = await ST.keys('thumbs'), im = await ST.keys('images');
+  const n = gal.length + th.length + im.length; let i = 0;
+  const tick = () => { if (onProg && (++i % 10 === 0 || i === n)) onProg(i, n); };
+  for (const id of gal) { if (!(await mine(await ST.get('galleries', id)))) await ST.del('galleries', id); tick(); }
+  const ok = new Set(), bad = new Set();
+  for (const id of th) { if (await mine(await ST.get('thumbs', id))) ok.add(id); else { bad.add(id); await ST.del('thumbs', id); } tick(); }
+  for (const id of im) { if (bad.has(id) || (!ok.has(id) && !(await mine(await ST.get('images', id))))) await ST.del('images', id); tick(); }
+  for (const k of ['lock2', 'sync2', 'tombs2', 'sampleGone2']) await DB.del('meta', k).catch(() => { });
+  if (ST.folder) await FS.writeInfo().catch(() => { });
 }
 
 /* ================= export ================= */
@@ -2466,13 +3024,14 @@ const Sync = (() => {
     try {
       const d = await DB.get('meta', 'device'); device = d && d.v;
       if (!device) { device = { id: uid(), name: guessName() }; await DB.put('meta', { id: 'device', v: device }); }
-      const t = await DB.get('meta', 'tombs'); tombs = (t && t.v) || {};
-      const s = await DB.get('meta', 'sync'); if (s) Object.assign(st, s.v);
+      Object.assign(st, { enabled: false, lanOnly: false, devices: {}, v: 2 });
+      const t = await DB.get('meta', mk('tombs')); tombs = (t && t.v) || {};
+      const s = await DB.get('meta', mk('sync')); if (s) Object.assign(st, s.v);
       if (st.v !== 2) { st.lanOnly = false; st.v = 2; await saveSt(); }
     } catch (e) { device = device || { id: uid(), name: guessName() }; }
   }
-  const saveSt = () => DB.put('meta', { id: 'sync', v: st }).catch(() => { });
-  const saveTombs = () => DB.put('meta', { id: 'tombs', v: tombs }).catch(() => { });
+  const saveSt = () => DB.put('meta', { id: mk('sync'), v: st }).catch(() => { });
+  const saveTombs = () => DB.put('meta', { id: mk('tombs'), v: tombs }).catch(() => { });
   async function listing(ids) {
     const gs = ids ? (await Promise.all(ids.map(S.gal))).filter(Boolean) : await S.gals();
     return gs.filter(g => !g.sample).map(g => ({ id: g.id, u: g.updatedAt || 0, p: g.progressAt || 0 }));
@@ -2508,7 +3067,7 @@ const Sync = (() => {
     }
     if (m.t === 'hello' || m.t === 'changed') {
       await applyTombs(m.tomb || {});
-      const have = new Set(await DB.keys('images')), want = [];
+      const have = new Set(await ST.keys('images')), want = [];
       for (const r of m.list || []) {
         if (tombs[r.id] && tombs[r.id] >= r.u) continue;
         if (wanting.has(r.id)) continue;
@@ -2528,7 +3087,7 @@ const Sync = (() => {
       wanting.delete(m.g.id); await merge(m.g, pid); log(`Received “${m.g.title}”`);
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
-        const r = await DB.get(store, id);
+        const r = await ST.get(store, id);
         if (r && r.e) await fact.send(new Uint8Array(r.e), { target: pid, metadata: { id, s, t: r.t } });
       }
       await send({ t: 'done' }, pid);
@@ -2550,7 +3109,7 @@ const Sync = (() => {
   }
   async function onFile(data, md, pid) {
     if (!md || !md.id || !data || !data.byteLength) return;
-    await DB.put(md.s === 't' ? 'thumbs' : 'images', { id: md.id, t: md.t, e: data });
+    await ST.put(md.s === 't' ? 'thumbs' : 'images', { id: md.id, t: md.t, e: data });
     if (md.s === 'i') { if (recv.want) recv.got = Math.min(recv.want, recv.got + 1); emit(); softRefresh(); }
   }
   async function merge(R, pid) {
@@ -2567,9 +3126,9 @@ const Sync = (() => {
     await S.putGal(M);
     if (L) {
       const gone = Object.keys(L.meta || {}).filter(id => !(M.meta || {})[id]);
-      if (gone.length) { await DB.delMany('images', gone); await DB.delMany('thumbs', gone); gone.forEach(forgetURL); }
+      if (gone.length) { await ST.delMany('images', gone); await ST.delMany('thumbs', gone); gone.forEach(forgetURL); }
     }
-    queueMissing(M, pid, new Set(await DB.keys('images')));
+    queueMissing(M, pid, new Set(await ST.keys('images')));
     softRefresh(M.id);
   }
   async function applyTombs(t) {
@@ -2676,10 +3235,12 @@ function joinLibrary(raw) {
     await withBusy(async () => {
       const oldRaw = Crypt.raw, oldK = Crypt.key, newK = await Crypt.importKey(raw);
       const lockNew = await Crypt.wrapRaw(raw, pw); lockNew.old = await Crypt.wrapRaw(oldRaw, pw);
+      lockNew.id = lockKey(); { const l0 = await DB.get('meta', lockKey()); if (l0 && l0.hint) lockNew.hint = l0.hint; }
       await DB.put('meta', lockNew);
       await Crypt.setRaw(raw);
       await reencrypt(oldK, newK, false, (i, n) => lbl.textContent = `Moving your galleries: ${i} of ${n}`);
       const { old, ...clean } = lockNew; await DB.put('meta', clean);
+      if (ST.folder) await FS.writeInfo().catch(() => { });
       URLS.forEach(u => URL.revokeObjectURL(u)); URLS.clear();
       Sync.st.enabled = true; await Sync.saveSt(); await Sync.restart();
     });
