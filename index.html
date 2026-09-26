@@ -996,7 +996,7 @@ async function openGlobalSettings() {
       h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-full' }, 'Full screen (hide the browser and phone bars)'),
         h('button', { class: 'switch', id: 'sw-full', role: 'switch', 'aria-checked': String(UI.fullscreen !== false), onclick: e => {
           UI.fullscreen = UI.fullscreen === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.fullscreen));
-          if (!UI.fullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => { });
+          if (!UI.fullscreen && document.fullscreenElement) exitFull().catch(() => { });
           else if (UI.fullscreen && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
         } })),
       h('div', { class: 'row' },
@@ -1581,7 +1581,7 @@ function leaveReader() {
   PRE.clear(); READY.clear(); PIN.clear();
   for (const [k, u] of [...URLS]) if (k[0] === 'i') { URLS.delete(k); URL.revokeObjectURL(u); }
   saveProgress(true); teardownStrip(); wakeOff(); clearTimeout(tapTimer);
-  try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { }
+  try { if (document.fullscreenElement && UI.fullscreen === false) exitFull(); } catch (e) { }
   spread.replaceChildren();
 }
 function layout() {
@@ -2094,6 +2094,25 @@ document.addEventListener('pointerdown', e => {
   if (e.target.closest && e.target.closest('.picks, input, textarea, select, label')) return;
   document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
 }, true);
+/* ---- the phone's back button: in full screen Android uses it to leave full screen, so treat that as "back" ---- */
+let ownExit = 0;
+const exitFull = () => { ownExit = performance.now() + 1500; return document.exitFullscreen(); };
+function appBack() {
+  if (!$('#sheet').hidden) return closeSheet();
+  if (CUR.view === 'reader' && reader.classList.contains('ui')) return toggleUI(false);
+  if (CUR.view === 'reader') return back('detail', { id: R.g.id });
+  if (CUR.view === 'detail' && CUR.params.folder) return back('detail', { id: CUR.params.id });
+  if (CUR.view === 'detail') return back('library');
+  if (CUR.view === 'editor') return back('detail', { id: CUR.params.id });
+  if (CUR.view === 'pages') return back('editor', { id: CUR.params.id });
+}
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement || performance.now() < ownExit || UI.fullscreen === false) return;
+  const t = performance.now();
+  // leaving because the app went to the background is not a back press
+  setTimeout(() => { if (document.visibilityState === 'visible' && !document.hidden && performance.now() - t < 1000) appBack(); }, 120);
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) ownExit = performance.now() + 1500; });
 /* ---- reader chrome ---- */
 $('#rZoomOut').append(icon('zoomout')); $('#rZoomIn').append(icon('zoomin'));
 $('#rZoomOut').addEventListener('click', () => zoomStep(-1)); $('#rZoomIn').addEventListener('click', () => zoomStep(1));
@@ -2101,7 +2120,7 @@ $('#rZoomLbl').addEventListener('click', () => zoomCenter(1)); $('#rZoomOpts').a
 $('#rBack').append(icon('back')); $('#rChapters').append(icon('list')); $('#rSettings').append(icon('tune')); $('#rFull').append(icon('full'));
 $('#rBack').addEventListener('click', () => back('detail', { id: R.g.id }));
 $('#rFull').addEventListener('click', async () => {
-  try { if (document.fullscreenElement) { UI.fullscreen = false; saveMeta(); await document.exitFullscreen(); } else { UI.fullscreen = true; saveMeta(); await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } }
+  try { if (document.fullscreenElement) { UI.fullscreen = false; saveMeta(); await exitFull(); } else { UI.fullscreen = true; saveMeta(); await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } }
   catch (e) { toast('Full screen is not available here. Add the app to your home screen for a full-screen view.', 3500); }
 });
 $('#rPrevCh').addEventListener('click', e => jumpChapter(+e.currentTarget.dataset.dir || -1));
