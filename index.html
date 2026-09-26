@@ -136,6 +136,10 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .pcell.sel{border-color:var(--accent)}
 .pcell.folder{border-radius:4px 10px 10px 10px}
 .pcell.carried{opacity:.3}
+.pcell{-webkit-touch-callout:none}
+.dragghost{position:fixed!important;left:0;top:0;z-index:90;pointer-events:none;margin:0;box-shadow:0 14px 34px rgba(0,0,0,.4);opacity:.95;border-color:var(--accent)!important}
+.dragghost[data-count]::before{content:attr(data-count);position:absolute;right:4px;top:4px;z-index:3;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;display:grid;place-items:center}
+.dropmark{position:fixed;z-index:89;width:4px;border-radius:2px;background:var(--accent);pointer-events:none;box-shadow:0 0 0 2px var(--bg)}
 .pcell.off img{opacity:.4;filter:grayscale(.6)}
 .offmark{position:absolute;right:4px;bottom:4px;z-index:2;width:24px;height:24px;border-radius:6px;background:rgba(10,11,13,.75);color:#fff;display:grid;place-items:center}
 .offmark .ic{width:15px;height:15px}
@@ -1395,49 +1399,127 @@ async function renderPages(id, chId) {
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
-      h('p', { class: 'hint' }, 'Press and hold, then drag to reorder. Drop images anywhere on a folder to put them inside; folders stay in place while you drag images over them. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
+      h('p', { class: 'hint' }, 'Press and hold, then drag. A red line shows where it will go; a folder lights up when you are over it, and letting go puts things inside. Nothing moves until you let go. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
       grid)), selbar);
   draw();
 
-  /* ---- drag and drop: whole selection, and dropping onto folders ---- */
-  if (!window.Sortable) return;
-  let drag = null;
-  const pt = { x: 0, y: 0 };
-  const track = e => { const t = e.touches ? e.touches[0] : e; if (t) { pt.x = t.clientX; pt.y = t.clientY; } if (drag) setDrop(folderUnder()); };
-  const folderUnder = () => {
-    for (const el of grid.querySelectorAll('.pcell.folder')) {
-      if (!drag || el === drag.item || drag.carry.includes(el)) continue;
-      const r = el.getBoundingClientRect(), m = drag.pagesOnly ? 0 : .2, mx = r.width * m, my = r.height * m;
-      if (pt.x > r.left + mx && pt.x < r.right - mx && pt.y > r.top + my && pt.y < r.bottom - my) return el;
-    }
-    return null;
+  /* ---- drag and drop (custom): nothing moves while dragging; a marker or a lit-up folder shows where things will go ---- */
+  const tiles = () => [...grid.children].filter(el => el.dataset.id || el.dataset.cid);
+  let press = null, drag = null, noClick = 0, scrollRaf = 0;
+  const mark = h('div', { class: 'dropmark', hidden: true });
+  document.body.append(mark);
+  const cleanupDom = () => { mark.remove(); };
+  const obs = new MutationObserver(() => { if (!v.contains(grid)) { cleanupDom(); obs.disconnect(); } });
+  obs.observe(v, { childList: true });
+  grid.addEventListener('click', e => { if (performance.now() < noClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+  grid.addEventListener('contextmenu', e => e.preventDefault());
+  const startDrag = (el, x, y) => {
+    press = null;
+    const k = keyOf(el), multi = sel.has(k) && sel.size > 1;
+    const order = tiles().map(keyOf);
+    const keys = multi ? order.filter(x => sel.has(x)) : [k];
+    const r = el.getBoundingClientRect();
+    const ghost = el.cloneNode(true); ghost.className += ' dragghost'; ghost.removeAttribute('data-id'); ghost.removeAttribute('data-cid');
+    ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
+    if (keys.length > 1) ghost.setAttribute('data-count', keys.length);
+    document.body.append(ghost);
+    const carried = tiles().filter(t => keys.includes(keyOf(t)));
+    carried.forEach(t => t.classList.add('carried'));
+    drag = { keys, pagesOnly: keys.every(x => x[0] === 'p'), ghost, carried, w: r.width, h: r.height, x, y, target: null };
+    try { navigator.vibrate && navigator.vibrate(12); } catch (e) { }
+    moveDrag(x, y);
+    const loop = () => {
+      if (!drag) return;
+      const edge = 90, H = innerHeight;
+      if (drag.y < edge) scrollBy(0, -Math.ceil((edge - drag.y) / 6));
+      else if (drag.y > H - edge) scrollBy(0, Math.ceil((drag.y - (H - edge)) / 6));
+      aim(); scrollRaf = requestAnimationFrame(loop);
+    };
+    scrollRaf = requestAnimationFrame(loop);
   };
-  const tiles = () => [...grid.children].filter(el => (el.dataset.id || el.dataset.cid) && !el.classList.contains('sortable-fallback') && !el.classList.contains('sortable-drag'));
-  window.__dnd = () => ({ pt, drop: drag && drag.drop && drag.drop.dataset.cid });
-  const setDrop = el => { if (drag.drop === el) return; if (drag.drop) drag.drop.classList.remove('droptarget'); drag.drop = el; if (el) el.classList.add('droptarget'); };
-  Sortable.create(grid, {
-    animation: 160, delay: 220, delayOnTouchOnly: true, filter: '.empty', fallbackOnBody: true, invertSwap: true, invertedSwapThreshold: 0.4,
-    onStart: ev => {
-      const k = keyOf(ev.item), multi = sel.has(k) && sel.size > 1;
-      const order = tiles().map(keyOf);
-      drag = { item: ev.item, key: k, keys: multi ? order.filter(x => sel.has(x)) : [k], carry: multi ? [...grid.children].filter(el => el !== ev.item && sel.has(keyOf(el))) : [], drop: null };
-      drag.pagesOnly = drag.keys.every(x => x[0] === 'p');
-      drag.carry.forEach(el => el.classList.add('carried'));
-      if (multi) ev.item.setAttribute('data-count', drag.keys.length);
-      ['pointermove', 'touchmove', 'mousemove', 'dragover'].forEach(t => document.addEventListener(t, track, { passive: true, capture: true }));
-    },
-    onMove: ev => { const f = folderUnder(); setDrop(f); if (f) return false; if (drag && drag.pagesOnly && ev.related && ev.related.dataset && ev.related.dataset.cid) return false; return true; },
-    onEnd: async ev => {
-      ['pointermove', 'touchmove', 'mousemove', 'dragover'].forEach(t => document.removeEventListener(t, track, { capture: true }));
-      const d = drag; drag = null; if (!d) return;
-      d.carry.forEach(el => el.classList.remove('carried')); d.item.removeAttribute('data-count');
-      if (d.drop) { d.drop.classList.remove('droptarget'); return moveKeys(d.keys, d.drop.dataset.cid); }
-      if (d.keys.length === 1 && ev.oldIndex === ev.newIndex) return;
-      let order = tiles().map(keyOf);
-      if (d.keys.length > 1) { const others = new Set(d.keys.filter(k => k !== d.key)); order = order.filter(k => !others.has(k)); const at = order.indexOf(d.key); order.splice(at, 1, ...d.keys); }
-      await reorder(order);
-    },
+  const setTarget = t => {
+    const old = drag.target;
+    if (old && old.into) old.el.classList.remove('droptarget');
+    drag.target = t;
+    if (t && t.into) { t.el.classList.add('droptarget'); mark.hidden = true; }
+    else if (t) {
+      const r = t.el.getBoundingClientRect();
+      mark.hidden = false;
+      mark.style.cssText = `left:${(t.after ? r.right + 3 : r.left - 7)}px;top:${r.top}px;height:${r.height}px`;
+    } else mark.hidden = true;
+  };
+  const aim = () => {
+    const { x, y } = drag;
+    const hit = document.elementFromPoint(x, y);
+    const el = hit && hit.closest && hit.closest('#v-pages .pcell');
+    if (!el || drag.carried.includes(el)) {
+      // below the last tile: put at the end
+      const all = tiles(), last = all[all.length - 1];
+      if (last) { const r = last.getBoundingClientRect(); if (y > r.bottom || (y > r.top && x > r.right)) return setTarget({ el: last, after: true }); }
+      return setTarget(drag.target && drag.carried.includes(drag.target.el) ? null : drag.target);
+    }
+    const r = el.getBoundingClientRect();
+    if (el.dataset.cid) {
+      const m = drag.pagesOnly ? 0 : .22;
+      if (x > r.left + r.width * m && x < r.right - r.width * m && y > r.top + r.height * m && y < r.bottom - r.height * m) return setTarget({ el, into: true });
+    }
+    setTarget({ el, after: x > r.left + r.width / 2 });
+  };
+  const moveDrag = (x, y) => {
+    drag.x = x; drag.y = y;
+    drag.ghost.style.transform = `translate(${x - drag.w / 2}px,${y - drag.h * .6}px) scale(1.06)`;
+    aim();
+  };
+  const endDrag = async cancelled => {
+    const d = drag; drag = null; cancelAnimationFrame(scrollRaf);
+    d.ghost.remove(); mark.hidden = true;
+    d.carried.forEach(t => t.classList.remove('carried'));
+    noClick = performance.now() + 400;
+    const t = d.target; if (t && t.into) t.el.classList.remove('droptarget');
+    if (cancelled || !t) return;
+    if (t.into) return moveKeys(d.keys, t.el.dataset.cid);
+    const tk = keyOf(t.el); if (d.keys.includes(tk)) return;
+    const order = tiles().map(keyOf).filter(k => !d.keys.includes(k));
+    let at = order.indexOf(tk) + (t.after ? 1 : 0);
+    order.splice(at, 0, ...d.keys);
+    await reorder(order);
+  };
+  // touch: long press to pick up, then the page stops scrolling and the tile follows the finger
+  grid.addEventListener('touchstart', e => {
+    const el = e.target.closest('.pcell'); if (!el || e.touches.length > 1) return;
+    const t = e.touches[0];
+    press = { el, x: t.clientX, y: t.clientY, timer: setTimeout(() => { if (press) startDrag(press.el, press.x, press.y); }, 300) };
+  }, { passive: true });
+  const onTouchMove = e => {
+    const t = e.touches[0]; if (!t) return;
+    if (drag) { e.preventDefault(); moveDrag(t.clientX, t.clientY); return; }
+    if (press && Math.hypot(t.clientX - press.x, t.clientY - press.y) > 10) { clearTimeout(press.timer); press = null; }
+  };
+  const onTouchEnd = e => {
+    if (press) { clearTimeout(press.timer); press = null; }
+    if (drag && !e.touches.length) endDrag(e.type === 'touchcancel');
+  };
+  document.addEventListener('touchmove', onTouchMove, { passive: false });
+  document.addEventListener('touchend', onTouchEnd); document.addEventListener('touchcancel', onTouchEnd);
+  // mouse: press and move
+  grid.addEventListener('mousedown', e => {
+    const el = e.target.closest('.pcell'); if (!el || e.button !== 0) return;
+    press = { el, x: e.clientX, y: e.clientY, mouse: true };
   });
+  const onMouseMove = e => {
+    if (drag) { moveDrag(e.clientX, e.clientY); return; }
+    if (press && press.mouse && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) startDrag(press.el, e.clientX, e.clientY);
+  };
+  const onMouseUp = () => { press = null; if (drag) endDrag(false); };
+  document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp);
+  const detach = new MutationObserver(() => {
+    if (!v.contains(grid)) {
+      document.removeEventListener('touchmove', onTouchMove); document.removeEventListener('touchend', onTouchEnd); document.removeEventListener('touchcancel', onTouchEnd);
+      document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp);
+      detach.disconnect();
+    }
+  });
+  detach.observe(v, { childList: true });
 }
 
 /* ================= reader ================= */
