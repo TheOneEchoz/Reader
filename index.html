@@ -132,6 +132,10 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .pcell .no{position:absolute;left:4px;bottom:4px;background:rgba(10,11,13,.75);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums}
 .pcell .cv{position:absolute;right:4px;top:4px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;letter-spacing:.04em}
 .pcell.sel{border-color:var(--accent)}
+.pcell.folder{border-radius:4px 10px 10px 10px}
+.pcell.folder::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(10,11,13,.7))}
+.pcell .bfold{left:4px;top:4px;bottom:auto;width:26px;height:26px}
+.pcell .ftitle{position:absolute;left:6px;right:6px;bottom:5px;z-index:1;color:#fff;font-size:12px;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pcell.sel::after{content:"";position:absolute;inset:0;background:var(--accent-soft)}
 .selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);border-radius:18px;padding:8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center;width:min(560px,calc(100% - 32px));box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .selbar b{padding:0 8px;font-size:14px}
@@ -162,6 +166,22 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .progress .bar{height:6px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:16px 10px}
+.btile{display:grid;gap:6px;text-align:left;min-width:0;align-content:start}
+.bthumb{position:relative;display:block;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface2);box-shadow:var(--shadow)}
+.bthumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.btile.current .bthumb{outline:3px solid var(--accent);outline-offset:2px}
+.btile.folder .bthumb{border-radius:4px 10px 10px 10px;box-shadow:4px -4px 0 -1px var(--surface),4px -4px 0 1px var(--line),var(--shadow);margin:4px 4px 0 0}
+.btile.folder .bthumb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,11,13,.55))}
+.bfold{position:absolute;left:6px;bottom:6px;z-index:1;width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.bfold .ic{width:18px;height:18px}
+.bchip{position:absolute;right:6px;top:6px;z-index:1;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;letter-spacing:.05em;border-radius:6px;padding:1px 6px}
+.bchip.done{background:rgba(10,11,13,.7);color:#fff}
+.bcap{display:grid;gap:1px;font-size:12px;color:var(--muted);min-width:0}
+.bcap b{color:var(--ink);font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px;color:var(--muted)}
+.crumbs button{color:var(--accent);font-weight:500;padding:4px 0}
+.crumbs b{color:var(--ink)}
 .coverrow{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:start;background:var(--surface);border-radius:14px;padding:12px}
 #v-lock{padding-inline:16px}
 .lockbox{max-width:420px;margin:0 auto;padding-block:10vh 48px;display:grid;gap:16px}
@@ -501,6 +521,7 @@ $('#sheetClose').append(icon('x')); $('#sheetClose').addEventListener('click', c
 let CUR = { view: 'library', params: {} };
 function go(view, params = {}, replace = false) {
   const depth = (history.state && history.state.depth) || 0;
+  if (!replace && CUR.view !== 'reader') { try { history.replaceState({ ...(history.state || {}), view: CUR.view, params: { ...CUR.params, scroll: window.scrollY } }, ''); } catch (e) { } }
   const st = { view, params, depth: replace ? depth : depth + 1 };
   try { replace ? history.replaceState(st, '') : history.pushState(st, ''); } catch (e) { }
   render(view, params);
@@ -520,10 +541,10 @@ async function render(view, params) {
   if (view === 'reader') $('#toast').style.opacity = 0;
   try {
     if (view === 'library') await renderLibrary();
-    else if (view === 'detail') await renderDetail(params.id);
+    else if (view === 'detail') await renderDetail(params.id, params.folder);
     else if (view === 'editor') await renderEditor(params.id);
     else if (view === 'pages') await renderPages(params.id, params.ch);
-    else if (view === 'reader') await openReader(params.id, params.ch, params.page);
+    else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start);
   } catch (e) { console.error(e); toast('Something went wrong: ' + (e.message || e)); }
   if (view !== 'reader') window.scrollTo(0, params.scroll || 0);
 }
@@ -602,7 +623,7 @@ function groupChapters(entries, rootTitle) {
   for (const e of entries) { if (!map.has(e.dir)) map.set(e.dir, []); map.get(e.dir).push(e); }
   const cmp = (a, b) => { const x = a.split('/'), y = b.split('/'); for (let i = 0; i < Math.min(x.length, y.length); i++) { const c = natural(x[i], y[i]); if (c) return c; } return x.length - y.length; };
   const dirs = [...map.keys()].sort((a, b) => a === '' ? -1 : b === '' ? 1 : cmp(a, b));
-  return dirs.map(d => ({ title: d ? d.split('/').pop() : rootTitle, path: d ? d.split('/') : [rootTitle], items: map.get(d).sort((a, b) => natural(a.name, b.name)) }));
+  return dirs.map(d => ({ title: d ? d.split('/').pop() : rootTitle, path: d ? d.split('/') : [], items: map.get(d).sort((a, b) => natural(a.name, b.name)) }));
 }
 async function makeThumb(blob) {
   let src, w, hgt;
@@ -622,6 +643,7 @@ async function makeThumb(blob) {
 }
 /* Import into a new or existing gallery. onProgress(done,total). Returns gallery. */
 async function importInto(g, groups, onProgress, cancelled) {
+  Tree.ensureRoot(g);
   const total = groups.reduce((n, c) => n + c.items.length, 0); let done = 0, skipped = 0;
   for (const grp of groups) {
     let ch = grp.chId ? g.chapters.find(c => c.id === grp.chId) : Tree.ensurePath(g.chapters, grp.path || [grp.title]);
@@ -673,6 +695,7 @@ function openAddSheet(existing) {
       const g = existing || newGallery(name.value.trim() || title || 'Untitled gallery');
       if (!existing) await saveGallery(g);
       const groups = groupChapters(entries, existing ? (name.value.trim() || 'Added pages') : g.title);
+      if (existing) groups.forEach(gr => { if (!gr.path.length) gr.path = [gr.title]; });
       const r = await importInto(g, groups, (d, t) => { lbl.textContent = `Adding page ${d.toLocaleString()} of ${t.toLocaleString()}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
       if (!g.chapters.length) { await DB.del('galleries', g.id); closeSheet(); toast('Nothing was added.'); return render(CUR.view, CUR.params); }
       closeSheet();
@@ -683,7 +706,7 @@ function openAddSheet(existing) {
   };
   const createEmpty = async () => {
     const g = newGallery(name.value.trim() || 'New gallery');
-    g.chapters.push({ id: uid(), title: 'Chapter 1', pages: [], keep: true });
+    Tree.ensureRoot(g); g.chapters.push({ id: uid(), title: 'Chapter 1', pages: [], keep: true, d: 1 });
     await saveGallery(g); closeSheet();
     toast('Gallery created. Add chapters, then open a chapter to add images.', 4500);
     go('editor', { id: g.id });
@@ -700,7 +723,10 @@ function openAddSheet(existing) {
     h('p', { class: 'hint' }, 'Pages are copied into this app on your phone, so the gallery keeps working even if you move the original folder. Android will ask you to confirm access to the folder.')));
 }
 
-/* ================= chapter tree (outline stored as a flat list with depth d) ================= */
+/* ================= chapter tree =================
+   g.chapters is an outline: a flat list in tree order where d is the depth.
+   chapters[0] is the gallery's main level (root: true, d: 0); every other chapter sits inside it (d >= 1).
+   A sub-chapter's `at` is where it sits among its parent's pages (after that many pages); missing means after all of them. */
 const Tree = (() => {
   const dep = c => c.d || 0;
   const end = (chs, i) => { const d = dep(chs[i]); let j = i + 1; while (j < chs.length && dep(chs[j]) > d) j++; return j; };
@@ -711,49 +737,116 @@ const Tree = (() => {
     return root;
   }
   function flat(root) { const out = []; const walk = (n, d) => n.kids.forEach(k => { k.c.d = d; out.push(k.c); walk(k, d + 1); }); walk(root, 0); return out; }
-  const norm = chs => flat(toTree(chs));
+  function norm(chs) {
+    const out = flat(toTree(chs));
+    // keep a single root: anything that ended up at depth 0 besides the root goes inside it
+    if (out.length && out[0].root) for (let i = 1; i < out.length; i++) out[i].d = Math.max(1, out[i].d);
+    return out;
+  }
+  function ensureRoot(g) {
+    const chs = g.chapters || (g.chapters = []);
+    if (chs[0] && chs[0].root) return g;
+    const ri = chs.findIndex(c => c.root);
+    if (ri > 0) { const [r] = chs.splice(ri, 1); r.d = 0; chs.unshift(r); for (let i = 1; i < chs.length; i++) chs[i].d = Math.max(1, dep(chs[i])); g.chapters = norm(chs); return g; }
+    const first = chs[0];
+    if (first && !dep(first) && first.title === g.title) { first.root = true; first.keep = true; for (let i = 1; i < chs.length; i++) chs[i].d = dep(chs[i]) + 1; }
+    else { chs.forEach(c => { c.d = dep(c) + 1; }); chs.unshift({ id: 'root-' + g.id, title: g.title, pages: [], d: 0, root: true, keep: true }); }
+    g.chapters = norm(chs); return g;
+  }
   function nums(chs) {
     const cnt = [];
-    return chs.map(c => { const d = dep(c); cnt.length = d + 1; cnt[d] = (cnt[d] || 0) + 1; for (let k = 0; k < d; k++) cnt[k] = cnt[k] || 1; return cnt.slice(0, d + 1).join('.'); });
+    return chs.map(c => {
+      if (c.root) return '';
+      const d = dep(c) - 1; cnt.length = d + 1; cnt[d] = (cnt[d] || 0) + 1;
+      for (let k = 0; k < d; k++) cnt[k] = cnt[k] || 1;
+      return cnt.slice(0, d + 1).join('.');
+    });
   }
-  function crumb(chs, i) { const parts = [chs[i].title]; let p = parent(chs, i); while (p >= 0) { parts.unshift(chs[p].title); p = parent(chs, p); } return parts.join(' › '); }
+  function crumb(chs, i) {
+    if (chs[i].root) return chs[i].title;
+    const parts = [chs[i].title]; let p = parent(chs, i);
+    while (p > 0) { parts.unshift(chs[p].title); p = parent(chs, p); }
+    return parts.join(' › ');
+  }
+  function kidsOf(chs) {
+    const kids = chs.map(() => []), st = [];
+    chs.forEach((c, i) => { const d = dep(c); while (st.length && dep(chs[st[st.length - 1]]) >= d) st.pop(); if (st.length) kids[st[st.length - 1]].push(i); st.push(i); });
+    return kids;
+  }
+  /* The contents of one chapter in display order: its pages with its sub-chapters placed among them. */
+  function mixed(chs, kids, ci) {
+    const c = chs[ci], n = c.pages.length;
+    const ks = kids[ci].map((k, o) => ({ k, o, at: Math.min(chs[k].at ?? n, n) })).sort((a, b) => a.at - b.at || a.o - b.o);
+    const out = []; let j = 0;
+    for (let p = 0; p <= n; p++) {
+      while (j < ks.length && ks[j].at <= p) out.push({ t: 'c', ci: ks[j++].k });
+      if (p < n) out.push({ t: 'p', ci, i: p, id: c.pages[p] });
+    }
+    return out;
+  }
+  const items = (chs, ci) => mixed(chs, kidsOf(chs), ci);
+  /* Every page in reading order. */
+  function order(chs) {
+    const kids = kidsOf(chs), out = [];
+    const walk = ci => { for (const it of mixed(chs, kids, ci)) it.t === 'p' ? out.push({ ch: ci, i: it.i, id: it.id }) : walk(it.ci); };
+    chs.forEach((c, i) => { if (!dep(c)) walk(i); });
+    return out;
+  }
+  /* Apply a new mixed order (pages and sub-chapters) for chapter ci. tokens: [{t:'p', id} | {t:'c', id}] */
+  function setOrder(chs, ci, tokens) {
+    const c = chs[ci], pages = [], kidIds = [];
+    for (const t of tokens) {
+      if (t.t === 'p') pages.push(t.id);
+      else { const k = chs.find(x => x.id === t.id); if (k) { k.at = pages.length; kidIds.push(k.id); } }
+    }
+    c.pages = pages;
+    const kids = kidsOf(chs)[ci]; if (!kids.length) return chs;
+    const blocks = new Map(kids.map(k => [chs[k].id, chs.slice(k, end(chs, k))]));
+    const rebuilt = [...kidIds.map(id => blocks.get(id) || []), ...kids.filter(k => !kidIds.includes(chs[k].id)).map(k => blocks.get(chs[k].id))].flat();
+    chs.splice(ci + 1, end(chs, ci) - ci - 1, ...rebuilt);
+    return chs;
+  }
   const block = (chs, i) => chs.splice(i, end(chs, i) - i);
+  function swapAt(a, b) { const t = a.at; if (b.at === undefined) delete a.at; else a.at = b.at; if (t === undefined) delete b.at; else b.at = t; }
   function moveUp(chs, i) {
     const d = dep(chs[i]); let p = -1;
     for (let j = i - 1; j >= 0; j--) { if (dep(chs[j]) < d) break; if (dep(chs[j]) === d) { p = j; break; } }
-    if (p < 0) return false; const b = block(chs, i); chs.splice(p, 0, ...b); return true;
+    if (p < 0) return false; swapAt(chs[i], chs[p]); const b = block(chs, i); chs.splice(p, 0, ...b); return true;
   }
   function moveDown(chs, i) {
     const d = dep(chs[i]), n = end(chs, i);
     if (n >= chs.length || dep(chs[n]) !== d) return false;
-    const nb = chs.splice(n, end(chs, n) - n); chs.splice(i, 0, ...nb); return true;
+    swapAt(chs[i], chs[n]); const nb = chs.splice(n, end(chs, n) - n); chs.splice(i, 0, ...nb); return true;
   }
   function moveInto(chs, i, t) {
-    const e = end(chs, i); if (t >= i && t < e) return false;
-    const target = t >= 0 ? chs[t] : null, b = block(chs, i);
-    const delta = (target ? dep(target) + 1 : 0) - dep(b[0]);
-    b.forEach(c => { c.d = dep(c) + delta; });
-    chs.splice(target ? end(chs, chs.indexOf(target)) : chs.length, 0, ...b); return true;
+    if (t < 0) t = 0;
+    const e = end(chs, i); if (chs[i].root || (t >= i && t < e)) return false;
+    const target = chs[t], b = block(chs, i);
+    const delta = dep(target) + 1 - dep(b[0]);
+    b.forEach(c => { c.d = dep(c) + delta; }); delete b[0].at;
+    chs.splice(end(chs, chs.indexOf(target)), 0, ...b); return true;
   }
   function outdent(chs, i) {
-    const p = parent(chs, i); if (p < 0) return false;
-    const P = chs[p], b = block(chs, i); b.forEach(c => { c.d = dep(c) - 1; });
+    const p = parent(chs, i); if (p <= 0) return false;
+    const P = chs[p], b = block(chs, i); b.forEach(c => { c.d = dep(c) - 1; }); delete b[0].at;
     chs.splice(end(chs, chs.indexOf(P)), 0, ...b); return true;
   }
-  function sortRec(chs, fn) { const root = toTree(chs); const rec = n => { fn(n.kids); n.kids.forEach(rec); }; rec(root); return flat(root); }
+  function sortRec(chs, fn) { const root = toTree(chs); const rec = n => { fn(n.kids); n.kids.forEach(rec); }; root.kids.forEach(rec); return norm(flat(root)); }
   function prune(chs) {
-    const keep = chs.map(c => !!(c.pages.length || c.keep));
+    const keep = chs.map(c => !!(c.pages.length || c.keep || c.root));
     for (let i = chs.length - 1; i >= 0; i--) if (keep[i]) { const p = parent(chs, i); if (p >= 0) keep[p] = true; }
     return chs.filter((c, i) => keep[i]);
   }
-  function firstPage(chs, i) { const e = end(chs, i); for (let j = i; j < e; j++) if (chs[j].pages.length) return j; return -1; }
+  function firstPage(chs, i) { const ord = order(chs), e = end(chs, i); const hit = ord.find(o => o.ch >= i && o.ch < e); return hit ? hit.ch : -1; }
+  function firstFlat(chs, i) { const ord = order(chs), e = end(chs, i); return ord.findIndex(o => o.ch >= i && o.ch < e); }
   function subtreePages(chs, i) { let n = 0; const e = end(chs, i); for (let j = i; j < e; j++) n += chs[j].pages.length; return n; }
   function ensurePath(chs, path) {
-    let lo = 0, hi = chs.length, idx = -1;
+    if (!path.length) return chs[0];
+    let lo = 1, hi = chs.length, idx = 0;
     path.forEach((t, k) => {
-      let f = -1;
-      for (let j = lo; j < hi; j++) if (dep(chs[j]) === k && chs[j].title === t) { f = j; break; }
-      if (f < 0) { chs.splice(hi, 0, { id: uid(), title: t, pages: [], d: k, keep: k < path.length - 1 }); f = hi; }
+      const d = k + 1; let f = -1;
+      for (let j = lo; j < hi; j++) if (dep(chs[j]) === d && chs[j].title === t) { f = j; break; }
+      if (f < 0) { chs.splice(hi, 0, { id: uid(), title: t, pages: [], d, keep: k < path.length - 1 }); f = hi; }
       else if (k < path.length - 1) chs[f].keep = true;
       idx = f; lo = f + 1; hi = end(chs, f);
     });
@@ -763,27 +856,45 @@ const Tree = (() => {
     const out = [];
     for (const c of chs) {
       const parts = c.title.split('›').map(s => s.trim()).filter(Boolean);
-      if (parts.length < 2 || dep(c) > 0) { out.push(c); continue; }
+      if (c.root || parts.length < 2 || dep(c) !== 1) { out.push(c); continue; }
       const anc = ensurePath(out, parts.slice(0, -1)), ai = out.indexOf(anc);
-      c.title = parts[parts.length - 1]; c.d = parts.length - 1;
+      c.title = parts[parts.length - 1]; c.d = parts.length; delete c.at;
       out.splice(end(out, ai), 0, c);
     }
     return norm(out);
   }
-  return { dep, end, parent, norm, nums, crumb, moveUp, moveDown, moveInto, outdent, sortRec, prune, firstPage, subtreePages, ensurePath, splitArrows };
+  /* Keep sub-chapters next to the same pages when pages are removed from a chapter. */
+  function fixAt(chs, removed) {
+    const kids = kidsOf(chs);
+    chs.forEach((c, ci) => kids[ci].forEach(k => { const at = chs[k].at; if (at !== undefined) chs[k].at = c.pages.slice(0, at).filter(p => !removed.has(p)).length; }));
+  }
+  return { dep, end, parent, norm, ensureRoot, nums, crumb, items, order, setOrder, moveUp, moveDown, moveInto, outdent, sortRec, prune, firstPage, firstFlat, subtreePages, ensurePath, splitArrows, fixAt };
 })();
-/* Chapter list used by the gallery page and the reader: indented, numbered 1, 1.1, 1.2 … */
+const chTitle = c => c.root ? `${c.title} (main level)` : c.title;
+const chCount = g => g.chapters.filter(c => !c.root).length;
+const chLabel = (g, ci) => { const n = Tree.nums(g.chapters)[ci]; return n ? `Ch. ${n}` : 'Start'; };
+/* Chapter list used by the reader: indented, numbered 1, 1.1, 1.2 … */
 function chapterRows(g, { cur, read, onPick }) {
   const chs = g.chapters, nums = Tree.nums(chs);
   return chs.map((c, i) => {
-    const d = Tree.dep(c), own = c.pages.length, first = Tree.firstPage(chs, i), isCur = cur && cur.ci === i;
+    if (c.root && !c.pages.length) return null;
+    const d = Math.max(0, Tree.dep(c) - 1), own = c.pages.length, first = Tree.firstPage(chs, i), isCur = cur && cur.ci === i;
     const inside = own ? 0 : Tree.subtreePages(chs, i);
-    return h('button', { class: 'chrow' + (isCur ? ' current' : '') + (read.has(c.id) && !isCur ? ' read' : '') + (own ? '' : ' group'), style: d ? `padding-left:${14 + Math.min(d, 8) * 18}px` : null, disabled: first < 0, onclick: () => onPick(first) },
-      h('span', { class: 'n' }, nums[i]),
-      h('span', { class: 't' }, c.title),
+    return h('button', { class: 'chrow' + (isCur ? ' current' : '') + (read.has(c.id) && !isCur ? ' read' : '') + (own ? '' : ' group'), style: d ? `padding-left:${14 + Math.min(d, 8) * 18}px` : null, disabled: first < 0, onclick: () => onPick(first, i) },
+      h('span', { class: 'n' }, nums[i] || '•'),
+      h('span', { class: 't' }, chTitle(c)),
       h('span', { class: 's num' }, isCur ? [h('span', { class: 'dot' }), `p. ${cur.page + 1}/${own}`] : own ? (read.has(c.id) ? 'Read' : plural(own, 'page')) : inside ? `${plural(inside, 'page')} inside` : 'Empty'));
-  });
+  }).filter(Boolean);
 }
+/* Thumbnails that load only when they scroll near the screen. */
+const thumbIO = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  const img = e.target; thumbIO.unobserve(img);
+  imgURL(img.dataset.tid, 'thumbs').then(u => { if (u) img.src = u; });
+}), { rootMargin: '800px 0px' });
+function lazyThumb(id, alt = '') { const img = h('img', { alt, decoding: 'async' }); if (id) { img.dataset.tid = id; thumbIO.observe(img); } return img; }
+/* First page of a folder, used as its picture. */
+function folderThumb(g, ci) { const ord = Tree.order(g.chapters), e = Tree.end(g.chapters, ci); const hit = ord.find(o => o.ch >= ci && o.ch < e); return hit ? hit.id : null; }
 
 /* ================= library ================= */
 async function renderLibrary() {
@@ -820,10 +931,10 @@ async function renderLibrary() {
 }
 function card(g) {
   const pi = progressInfo(g), tp = totalPages(g);
-  const meta = pi ? `Ch. ${Tree.nums(g.chapters)[pi.ci]} · p. ${pi.page + 1}` : `${plural(g.chapters.length, 'chapter')} · ${plural(tp, 'page')}`;
+  const meta = pi ? `${chLabel(g, pi.ci)} · p. ${pi.page + 1}` : `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`;
   return h('article', { class: 'card' }, h('div', { class: 'cwrap' },
     h('button', { class: 'cover', 'aria-label': `Open ${g.title}`, onclick: () => go('detail', { id: g.id }) }, thumbImg(coverId(g)),
-      g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (g.chapters.length > 1 ? h('span', { class: 'chip num' }, `${g.chapters.length} CH`) : null)),
+      g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (chCount(g) > 0 ? h('span', { class: 'chip num' }, `${chCount(g)} CH`) : null)),
     h('button', { class: 'play', 'aria-label': `${pi ? 'Continue' : 'Start'} reading ${g.title}`, onclick: () => go('reader', { id: g.id }) }, icon('play'))),
     h('div', { style: 'display:grid;gap:4px' }, h('h3', {}, g.title), h('p', { class: 'meta num' }, meta),
       h('div', { class: 'bar' }, h('i', { style: `width:${pi ? (100 * pi.flat / tp).toFixed(1) : 0}%` }))));
@@ -852,34 +963,63 @@ async function openGlobalSettings() {
 }
 
 /* ================= detail ================= */
-async function renderDetail(id) {
+async function renderDetail(id, folderId) {
   const v = $('#v-detail'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
-  const p = effPrefs(g), pi = progressInfo(g), tp = totalPages(g);
+  const chs = g.chapters, fi = Math.max(0, folderId ? chs.findIndex(c => c.id === folderId) : 0), F = chs[fi], atRoot = fi === 0;
+  const p = effPrefs(g), pi = progressInfo(g), tp = totalPages(g), nums = Tree.nums(chs);
   const setPref = (k, val) => { g.prefs = { ...(g.prefs || {}), [k]: val }; saveGallery(g); };
   const modes = h('div', { class: 'modes', role: 'group', 'aria-label': 'Page layout' }, ['single', 'double', 'vertical', 'horizontal'].map(m =>
     h('button', { 'aria-pressed': String(p.mode === m), onclick: e => { setPref('mode', m); p.mode = m; $$('button', modes).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); dirRow.hidden = m === 'vertical'; } }, icon(m), MODE_LABEL[m])));
   const dirRow = h('div', { class: 'seg', role: 'group', 'aria-label': 'Reading direction', hidden: p.mode === 'vertical' }, [['ltr', 'Left to right'], ['rtl', 'Right to left']].map(([k, l]) =>
     h('button', { 'aria-pressed': String(p.dir === k), onclick: e => { setPref('dir', k); $$('button', dirRow).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l)));
   const read = new Set(g.read || []);
+  // path from the main level down to this folder
+  const trail = []; for (let k = fi; k > 0; k = Tree.parent(chs, k)) trail.unshift(k);
+  const inHere = pi && pi.ci >= fi && pi.ci < Tree.end(chs, fi);
+  const its = Tree.items(chs, fi);
+  let pageNo = 0;
+  const tiles = its.map(it => {
+    if (it.t === 'p') {
+      pageNo++;
+      const cur = pi && pi.ci === it.ci && pi.page === it.i;
+      return h('button', { class: 'btile' + (cur ? ' current' : ''), 'aria-label': `Page ${pageNo}${cur ? ', where you stopped' : ''}`, onclick: () => go('reader', { id, ch: it.ci, page: it.i }) },
+        h('span', { class: 'bthumb' }, lazyThumb(it.id), cur ? h('span', { class: 'bchip' }, 'READING') : null),
+        h('span', { class: 'bcap num' }, `${pageNo}`));
+    }
+    const c = chs[it.ci], n = Tree.subtreePages(chs, it.ci), sub = chs.slice(it.ci + 1, Tree.end(chs, it.ci)).filter(x => Tree.dep(x) === Tree.dep(c) + 1).length;
+    const has = pi && pi.ci >= it.ci && pi.ci < Tree.end(chs, it.ci), done = read.has(c.id) && !has;
+    return h('button', { class: 'btile folder' + (has ? ' current' : ''), 'aria-label': `Folder ${c.title}, ${plural(n, 'page')}`, onclick: () => go('detail', { id, folder: c.id }) },
+      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
+      h('span', { class: 'bcap' }, h('b', {}, c.title), h('span', { class: 'num' }, `${plural(n, 'page')}${sub ? ` · ${plural(sub, 'folder')}` : ''}`)));
+  });
+  const firstHere = Tree.firstFlat(chs, fi);
+  const ord = firstHere >= 0 ? Tree.order(chs)[firstHere] : null;
   v.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'appbar' },
-      h('button', { class: 'iconbtn', 'aria-label': 'Back to library', onclick: () => back('library') }, icon('back')),
-      h('div', { class: 'grow' }),
-      h('button', { class: 'btn ghost small', onclick: () => exportZip(g) }, icon('download'), 'Save ZIP'),
-      h('button', { class: 'btn ghost small', onclick: () => go('editor', { id }) }, icon('edit'), 'Edit')),
-    h('div', { class: 'hero' },
+      h('button', { class: 'iconbtn', 'aria-label': atRoot ? 'Back to library' : 'Back', onclick: () => atRoot ? back('library') : back('detail', { id, folder: trail.length > 1 ? chs[trail[trail.length - 2]].id : undefined }) }, icon('back')),
+      h('div', { class: 'grow' }, atRoot ? null : h('h2', {}, F.title)),
+      atRoot ? h('button', { class: 'btn ghost small', onclick: () => exportZip(g) }, icon('download'), 'Save ZIP') : null,
+      h('button', { class: 'btn ghost small', onclick: () => atRoot ? go('editor', { id }) : go('pages', { id, ch: F.id }) }, icon('edit'), 'Edit')),
+    atRoot ? h('div', { class: 'hero' },
       h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
       h('div', {}, h('h1', {}, g.title),
-        h('div', { class: 'sub num' }, `${plural(g.chapters.length, 'chapter')} · ${plural(tp, 'page')}`),
-        h('div', { class: 'sub' }, ago(g.lastReadAt)))),
+        h('div', { class: 'sub num' }, `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`),
+        h('div', { class: 'sub' }, ago(g.lastReadAt)))) : null,
     h('div', { class: 'stack' },
-      h('div', { class: 'row' },
-        h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id }) }, icon('play'), pi ? `Continue · Ch. ${Tree.nums(g.chapters)[pi.ci]}, p. ${pi.page + 1}` : 'Start reading'),
-        pi ? h('button', { class: 'btn ghost', onclick: () => go('reader', { id, ch: 0, page: 0 }) }, 'From the start') : null),
-      h('div', { class: 'panel' }, h('div', { class: 'label' }, 'How pages appear'), modes, dirRow),
-      h('div', { class: 'row', style: 'justify-content:space-between' }, h('div', { class: 'label' }, 'Chapters'), h('span', { class: 'sub' }, 'Tap one to jump there')),
-      h('div', { class: 'chlist' }, chapterRows(g, { cur: pi, read, onPick: i => go('reader', { id, ch: i, page: 0 }) }))
+      atRoot ? h('div', { class: 'row' },
+        h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id }) }, icon('play'), pi ? `Continue · ${chLabel(g, pi.ci)}, p. ${pi.page + 1}` : 'Start reading'),
+        pi ? h('button', { class: 'btn ghost', onclick: () => go('reader', { id, start: true }) }, 'From the start') : null)
+      : h('div', { class: 'stack', style: 'gap:10px' },
+        h('nav', { class: 'crumbs', 'aria-label': 'Folders' },
+          h('button', { onclick: () => go('detail', { id }) }, g.title),
+          trail.map(k => [h('span', { 'aria-hidden': 'true' }, '›'), k === fi ? h('b', {}, chs[k].title) : h('button', { onclick: () => go('detail', { id, folder: chs[k].id }) }, chs[k].title)])),
+        h('div', { class: 'sub num' }, `${nums[fi] ? 'Chapter ' + nums[fi] + ' · ' : ''}${plural(Tree.subtreePages(chs, fi), 'page')}`),
+        h('div', { class: 'row' },
+          inHere ? h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id }) }, icon('play'), `Continue · p. ${pi.page + 1}`) : null,
+          ord ? h('button', { class: 'btn ' + (inHere ? 'ghost' : 'primary'), style: inHere ? null : 'flex:1', onclick: () => go('reader', { id, ch: ord.ch, page: ord.i }) }, inHere ? 'From the start' : [icon('play'), 'Read this folder']) : null)),
+      atRoot ? h('div', { class: 'panel' }, h('div', { class: 'label' }, 'How pages appear'), modes, dirRow) : null,
+      tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Edit to add images or folders.'))
     )));
 }
 
@@ -893,9 +1033,10 @@ async function renderEditor(id) {
   const draw = () => {
     const chs = g.chapters, nums = Tree.nums(chs), rows = []; let hideDeeper = Infinity;
     chs.forEach((c, i) => {
-      const d = Tree.dep(c);
+      if (c.root) return;
+      const d = Tree.dep(c) - 1;
       if (d > hideDeeper) return; hideDeeper = Infinity;
-      const kids = i + 1 < chs.length && Tree.dep(chs[i + 1]) > d, closed = collapsed.has(c.id);
+      const kids = i + 1 < chs.length && Tree.dep(chs[i + 1]) > d + 1, closed = collapsed.has(c.id);
       if (kids && closed) hideDeeper = d;
       rows.push(h('div', { class: 'edrow' + (c.pages.length ? '' : ' group'), style: d ? `margin-left:${Math.min(d, 8) * 16}px` : null },
         kids ? h('button', { class: 'twisty' + (closed ? '' : ' open'), 'aria-expanded': String(!closed), 'aria-label': closed ? `Show what is inside ${c.title}` : `Hide what is inside ${c.title}`, onclick: () => { closed ? collapsed.delete(c.id) : collapsed.add(c.id); draw(); } }, icon('chevr')) : h('span'),
@@ -904,8 +1045,9 @@ async function renderEditor(id) {
         h('button', { class: 'btn small', onclick: () => go('pages', { id, ch: c.id }) }, plural(c.pages.length, 'page')),
         h('button', { class: 'iconbtn', 'aria-label': `More for ${c.title}`, onclick: () => menu(c) }, icon('more'))));
     });
+    countLbl.textContent = `Chapters · ${chCount(g)}`;
+    if (!rows.length) rows.push(h('p', { class: 'hint' }, 'No chapters yet. Pages you add without a chapter go on the main level.'));
     list.replaceChildren(...rows);
-    countLbl.textContent = `Chapters · ${chs.length}`;
   };
   const menu = c => {
     const chs = g.chapters, i = chs.indexOf(c), d = Tree.dep(c), e = Tree.end(chs, i);
@@ -929,17 +1071,17 @@ async function renderEditor(id) {
       item('up', 'Move up', 'Swaps it with the chapter above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
       item('down', 'Move down', 'Swaps it with the chapter below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
       item('move', 'Put it inside another chapter…', 'Or move it back to the top level', () => pickParent(c)),
-      d > 0 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
+      d > 1 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
       del));
   };
   const pickParent = c => {
     const chs = g.chapters, i = chs.indexOf(c), e = Tree.end(chs, i), nums = Tree.nums(chs);
     const box = h('div', { class: 'chlist' });
-    const rows = [h('button', { class: 'chrow', onclick: async () => { Tree.moveInto(g.chapters, g.chapters.indexOf(c), -1); closeSheet(); await commit('Moved to the top level'); } },
+    const rows = [h('button', { class: 'chrow', onclick: async () => { Tree.moveInto(g.chapters, g.chapters.indexOf(c), 0); closeSheet(); await commit('Moved to the top level'); } },
       h('span', { class: 'n' }, '—'), h('span', { class: 't' }, 'Top level (not inside anything)'), h('span'))];
     chs.forEach((t, j) => {
-      if (j >= i && j < e) return;
-      rows.push(h('button', { class: 'chrow' + (t.pages.length ? '' : ' group'), 'data-q': (nums[j] + ' ' + t.title).toLowerCase(), style: Tree.dep(t) ? `padding-left:${14 + Math.min(Tree.dep(t), 8) * 18}px` : null,
+      if (t.root || (j >= i && j < e)) return;
+      rows.push(h('button', { class: 'chrow' + (t.pages.length ? '' : ' group'), 'data-q': (nums[j] + ' ' + t.title).toLowerCase(), style: Tree.dep(t) > 1 ? `padding-left:${14 + Math.min(Tree.dep(t) - 1, 8) * 18}px` : null,
         onclick: async () => { Tree.moveInto(g.chapters, g.chapters.indexOf(c), g.chapters.indexOf(t)); collapsed.delete(t.id); closeSheet(); await commit(`Moved inside ${t.title}`); } },
         h('span', { class: 'n' }, nums[j]), h('span', { class: 't' }, t.title), h('span')));
     });
@@ -959,7 +1101,7 @@ async function renderEditor(id) {
     });
     commit('Chapter order saved');
   };
-  const arrows = g.chapters.some(c => !Tree.dep(c) && c.title.includes('›'));
+  const arrows = g.chapters.some(c => Tree.dep(c) === 1 && c.title.includes('›'));
   const coverBox = h('div', { class: 'coverrow' });
   const drawCover = () => {
     const own = g.customCover && g.cover === g.customCover, page = !own && g.cover && g.meta[g.cover];
@@ -998,6 +1140,8 @@ async function renderEditor(id) {
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
         h('input', { class: 'text', id: 'g-title', value: g.title, onchange: e => { g.title = e.target.value.trim() || g.title; saveGallery(g); toast('Name saved'); } })),
       coverBox,
+      h('button', { class: 'chrow', style: 'background:var(--surface);border-radius:12px', onclick: () => go('pages', { id, ch: g.chapters[0].id }) },
+        h('span', { class: 'n' }, icon('folder')), h('span', { class: 't' }, 'Main level'), h('span', { class: 's num' }, `${plural(g.chapters[0].pages.length, 'page')} · Open`)),
       h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, countLbl,
         h('div', { class: 'row' },
           h('button', { class: 'btn small', onclick: () => sortCh('asc') }, icon('sort'), 'A–Z'),
@@ -1009,7 +1153,7 @@ async function renderEditor(id) {
       list,
       h('div', { class: 'row' },
         h('button', { class: 'btn', onclick: () => openAddSheet(g) }, icon('plus'), 'Add more pages'),
-        h('button', { class: 'btn ghost', onclick: async () => { const n = { id: uid(), title: `Chapter ${g.chapters.filter(c => !Tree.dep(c)).length + 1}`, pages: [], keep: true, d: 0 }; g.chapters.push(n); await commit(); setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60); } }, 'New chapter')),
+        h('button', { class: 'btn ghost', onclick: async () => { const n = { id: uid(), title: `Chapter ${g.chapters.filter(c => Tree.dep(c) === 1).length + 1}`, pages: [], keep: true, d: 1 }; g.chapters.push(n); await commit(); setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60); } }, 'New chapter')),
       h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'), h('p', { class: 'hint' }, 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.'), h('div', {}, delBtn))
     )));
 }
@@ -1020,6 +1164,7 @@ async function dropCustomCover(g) {
 }
 async function removePages(g, ids) {
   const set = new Set(ids);
+  Tree.fixAt(g.chapters, set);
   g.chapters.forEach(c => c.pages = c.pages.filter(p => !set.has(p)));
   ids.forEach(i => { delete g.meta[i]; forgetURL(i); });
   if (set.has(g.cover)) g.cover = null;
@@ -1034,11 +1179,20 @@ async function renderPages(id, chId) {
   const grid = h('div', { class: 'pgrid' });
   const selbar = h('div', { class: 'selbar', hidden: true });
   const draw = () => {
-    if (!ch.pages.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'This chapter has no pages yet. Tap Add images to pick pictures from anywhere on your phone.'))); head.textContent = `${ch.title} · no pages`; return; }
-    grid.replaceChildren(...ch.pages.map((pid, i) => h('div', { class: 'pcell' + (sel.has(pid) ? ' sel' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${i + 1}, ${(g.meta[pid] || [])[2] || ''}`, 'aria-pressed': String(sel.has(pid)),
-      onclick: e => { sel.has(pid) ? sel.delete(pid) : sel.add(pid); e.currentTarget.classList.toggle('sel'); e.currentTarget.setAttribute('aria-pressed', String(sel.has(pid))); drawSel(); } },
-      thumbImg(pid), h('span', { class: 'no' }, i + 1), g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null)));
-    head.textContent = `${ch.title} · ${plural(ch.pages.length, 'page')}`;
+    const ci = g.chapters.indexOf(ch), its = Tree.items(g.chapters, ci); let n = 0;
+    head.textContent = `${chTitle(ch)} · ${plural(ch.pages.length, 'page')}`;
+    if (!its.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Add images to pick pictures from anywhere on your phone, or New folder to organize.'))); return; }
+    grid.replaceChildren(...its.map(it => {
+      if (it.t === 'c') {
+        const c = g.chapters[it.ci];
+        return h('div', { class: 'pcell folder', 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-label': `Folder ${c.title}. Tap to open`, onclick: () => go('pages', { id, ch: c.id }) },
+          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), h('span', { class: 'ftitle' }, c.title));
+      }
+      const pid = it.id, k = ++n;
+      return h('div', { class: 'pcell' + (sel.has(pid) ? ' sel' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${k}, ${(g.meta[pid] || [])[2] || ''}`, 'aria-pressed': String(sel.has(pid)),
+        onclick: e => { sel.has(pid) ? sel.delete(pid) : sel.add(pid); e.currentTarget.classList.toggle('sel'); e.currentTarget.setAttribute('aria-pressed', String(sel.has(pid))); drawSel(); } },
+        lazyThumb(pid), h('span', { class: 'no' }, k), g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+    }));
   };
   const drawSel = () => {
     selbar.hidden = !sel.size;
@@ -1064,13 +1218,13 @@ async function renderPages(id, chId) {
     const others = g.chapters.filter(c => c !== ch), nums = Tree.nums(g.chapters);
     const list = h('div', { class: 'chlist' });
     const done = async msg => { await saveGallery(g); sel.clear(); closeSheet(); draw(); drawSel(); toast(msg); };
-    const row = c => h('button', { class: 'chrow', style: Tree.dep(c) ? `padding-left:${14 + Math.min(Tree.dep(c), 8) * 18}px` : null, onclick: async () => {
+    const row = c => h('button', { class: 'chrow', style: Tree.dep(c) > 1 ? `padding-left:${14 + Math.min(Tree.dep(c) - 1, 8) * 18}px` : null, onclick: async () => {
       const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p)); c.pages.push(...picked);
       await done(`Moved to ${c.title}`);
-    } }, h('span', { class: 'n' }, nums[g.chapters.indexOf(c)]), h('span', { class: 't' }, c.title), h('span', { class: 's' }, plural(c.pages.length, 'page')));
+    } }, h('span', { class: 'n' }, nums[g.chapters.indexOf(c)] || '•'), h('span', { class: 't' }, chTitle(c)), h('span', { class: 's' }, plural(c.pages.length, 'page')));
     const newRow = h('button', { class: 'chrow', onclick: async () => {
       const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p));
-      g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, { id: uid(), title: `${ch.title} (part 2)`, pages: picked, d: Tree.dep(ch) });
+      g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, { id: uid(), title: ch.root ? 'New folder' : `${ch.title} (part 2)`, pages: picked, d: Math.max(1, Tree.dep(ch)) });
       await done('Moved to a new chapter');
     } }, h('span', { class: 'n' }, icon('plus')), h('span', { class: 't' }, 'A new chapter after this one'), h('span'));
     const drawList = q => {
@@ -1097,6 +1251,18 @@ async function renderPages(id, chId) {
     } catch (e) { console.error(e); closeSheet(); toast('Adding images failed: ' + (e.message || e), 4000); }
     finally { busy = Math.max(0, busy - 1); }
   };
+  const newFolder = () => {
+    const inp = h('input', { class: 'text', id: 'nf-name', value: 'New folder', autocomplete: 'off' });
+    openSheet('New folder', h('form', { class: 'stack', onsubmit: async e => {
+      e.preventDefault();
+      const n = { id: uid(), title: inp.value.trim() || 'New folder', pages: [], keep: true, d: Tree.dep(ch) + 1 };
+      g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, n);
+      closeSheet(); await saveGallery(g); draw(); toast('Folder created. Drag it where you want it, or tap it to fill it.', 3500);
+    } }, h('p', { class: 'hint' }, 'It appears after the last page here. Drag it between pages to move it.'),
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'nf-name' }, 'Name'), inp),
+      h('button', { class: 'btn primary', type: 'submit' }, icon('folder'), 'Create folder')));
+    setTimeout(() => { inp.focus(); inp.select(); }, 60);
+  };
   const sortPages = async how => {
     const nm = p => (g.meta[p] || [])[2] || '';
     if (how === 'asc') ch.pages.sort((a, b) => natural(nm(a), nm(b)));
@@ -1113,15 +1279,17 @@ async function renderPages(id, chId) {
     h('div', { class: 'stack' },
       h('div', { class: 'row' },
         h('button', { class: 'btn small primary', onclick: addImagesHere }, icon('plus'), 'Add images'),
+        h('button', { class: 'btn small', onclick: newFolder }, icon('folder'), 'New folder'),
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
-      h('p', { class: 'hint' }, 'Press and hold a page, then drag it to a new spot. Tap pages to select them for moving, deleting or setting the cover.'),
+      h('p', { class: 'hint' }, 'Press and hold a page or folder, then drag it to a new spot. Tap a folder to open it. Tap pages to select them for moving, deleting or setting the cover.'),
       grid)), selbar);
   draw();
-  if (window.Sortable) Sortable.create(grid, { animation: 160, delay: 220, delayOnTouchOnly: true, onEnd: async ev => {
+  if (window.Sortable) Sortable.create(grid, { animation: 160, delay: 220, delayOnTouchOnly: true, filter: '.empty', onEnd: async ev => {
     if (ev.oldIndex === ev.newIndex) return;
-    const [m] = ch.pages.splice(ev.oldIndex, 1); ch.pages.splice(ev.newIndex, 0, m); await saveGallery(g); draw();
+    const tokens = [...grid.children].map(el => el.dataset.cid ? { t: 'c', id: el.dataset.cid } : { t: 'p', id: el.dataset.id }).filter(t => t.id);
+    Tree.setOrder(g.chapters, g.chapters.indexOf(ch), tokens); await saveGallery(g); draw();
   } });
 }
 
@@ -1130,23 +1298,28 @@ const R = { g: null, p: null, pages: [], chStart: [], pos: 0, spreads: [], sprea
 const reader = $('#reader'), stage = $('#stage'), spread = $('#spread'), strip = $('#strip');
 const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 
-async function openReader(id, ch, page) {
+async function openReader(id, ch, page, start) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
-  R.g = g; R.p = effPrefs(g); R.pages = []; R.chStart = []; R.nums = Tree.nums(g.chapters);
-  g.chapters.forEach((c, ci) => { R.chStart[ci] = c.pages.length ? R.pages.length : -1; c.pages.forEach((pid, i) => R.pages.push({ id: pid, ch: ci, i })); });
+  R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters);
+  R.pages = Tree.order(g.chapters).map(o => ({ id: o.id, ch: o.ch, i: o.i }));
+  R.idx = new Map(R.pages.map((pg, k) => [pg.ch + ':' + pg.i, k]));
+  R.chStart = g.chapters.map((c, ci) => R.idx.has(ci + ':0') ? R.idx.get(ci + ':0') : -1);
+  R.runs = []; R.pages.forEach((pg, k) => { if (!k || R.pages[k - 1].ch !== pg.ch) R.runs.push(k); });
+  const at = (ci, i) => R.idx.has(ci + ':' + i) ? R.idx.get(ci + ':' + i) : (R.chStart[ci] >= 0 ? R.chStart[ci] : -1);
   R.anchor = null;
-  if (ch != null && R.chStart[ch] >= 0) R.pos = R.chStart[ch] + (page || 0);
-  else { const pi = progressInfo(g); R.pos = pi && R.chStart[pi.ci] >= 0 ? R.chStart[pi.ci] + pi.page : 0; if (pi && g.progress.anchor != null) R.anchor = { idx: R.chStart[pi.ci] + g.progress.anchor.page, frac: g.progress.anchor.frac }; }
+  if (start) R.pos = 0;
+  else if (ch != null && at(ch, page || 0) >= 0) R.pos = at(ch, page || 0);
+  else { const pi = progressInfo(g); R.pos = pi && at(pi.ci, pi.page) >= 0 ? at(pi.ci, pi.page) : 0; if (pi && g.progress.anchor != null && at(pi.ci, g.progress.anchor.page) >= 0) R.anchor = { idx: at(pi.ci, g.progress.anchor.page), frac: g.progress.anchor.frac }; }
   R.pos = clamp(R.pos, 0, Math.max(0, R.pages.length - 1));
-  try { if (ch != null && history.state && history.state.view === 'reader') history.replaceState({ ...history.state, params: { id } }, ''); } catch (e) { }
+  try { if ((ch != null || start) && history.state && history.state.view === 'reader') history.replaceState({ ...history.state, params: { id } }, ''); } catch (e) { }
   R.lastCh = -1;
   reader.classList.remove('ui');
   if (!R.pages.length) { layout(); reader.classList.add('ui'); rToast('No pages yet', 'Add pages from Edit'); return; }
   layout();
   const c = R.pages[R.pos]; R.lastCh = c.ch;
   R.nums = Tree.nums(g.chapters);
-  rToast(`Chapter ${R.nums[c.ch]}`, Tree.crumb(g.chapters, c.ch));
+  rToast(R.nums[c.ch] ? `Chapter ${R.nums[c.ch]}` : '', Tree.crumb(g.chapters, c.ch));
   wakeOn();
 }
 function leaveReader() {
@@ -1177,7 +1350,8 @@ function buildSpreads() {
   const flush = () => { if (cur.length) { cur.forEach(i => R.spreadOf[i] = R.spreads.length); R.spreads.push(cur); cur = []; } };
   R.pages.forEach((pg, i) => {
     const [w, hh] = dims(pg.id), wide = w > hh * 1.05;
-    if (pg.i === 0) { flush(); if (R.p.coverAlone) { cur = [i]; flush(); return; } }
+    if (i && R.pages[i - 1].ch !== pg.ch) flush();
+    if (pg.i === 0 && R.p.coverAlone) { flush(); cur = [i]; flush(); return; }
     if (wide) { flush(); cur = [i]; flush(); return; }
     cur.push(i); if (cur.length === 2) flush();
   });
@@ -1222,14 +1396,15 @@ function goToIdx(idx, frac) {
   if (paged(R.p.mode)) { R.pos = R.p.mode === 'double' ? R.spreads[R.spreadOf[idx]][0] : idx; renderPaged(); posChanged(); }
   else { R.pos = idx; scrollToIdx(idx, frac || 0); posChanged(); }
 }
-function jumpChapter(ci) {
-  while (ci >= 0 && ci < R.g.chapters.length && R.chStart[ci] < 0) ci += ci > R.pages[R.pos].ch ? 1 : -1;
-  if (ci < 0 || ci >= R.g.chapters.length) return;
-  goToIdx(R.chStart[ci]);
+const runOf = pos => { let r = 0; for (let k = 0; k < R.runs.length; k++) if (R.runs[k] <= pos) r = k; return r; };
+function jumpChapter(dir) {
+  const r = runOf(R.pos), t = r + dir;
+  if (t < 0 || t >= R.runs.length) return;
+  goToIdx(R.runs[t]);
 }
 function posChanged() {
   const c = R.pages[R.pos]; if (!c) return;
-  if (c.ch !== R.lastCh && R.lastCh !== -1) rToast(`Chapter ${R.nums[c.ch]}`, Tree.crumb(R.g.chapters, c.ch));
+  if (c.ch !== R.lastCh && R.lastCh !== -1) rToast(R.nums[c.ch] ? `Chapter ${R.nums[c.ch]}` : '', Tree.crumb(R.g.chapters, c.ch));
   R.lastCh = c.ch;
   const shown = currentIdx(), lastShown = shown[shown.length - 1];
   const chp = R.g.chapters[c.ch];
@@ -1263,14 +1438,14 @@ function updateUI() {
   const c = R.pages[R.pos];
   if (!c) { $('#rChap').textContent = ''; $('#rLabel').textContent = ''; $('#pnum').hidden = true; return; }
   const chp = g.chapters[c.ch], n = chp.pages.length;
-  $('#rChap').textContent = `${(R.nums || [])[c.ch] || c.ch + 1} · ${Tree.crumb(g.chapters, c.ch)}`;
+  $('#rChap').textContent = (R.nums[c.ch] ? R.nums[c.ch] + ' · ' : '') + Tree.crumb(g.chapters, c.ch);
   const shown = paged(R.p.mode) ? currentIdx().map(i => R.pages[i].i + 1) : [c.i + 1];
   const pageTxt = shown.length > 1 ? `${shown[0]}–${shown[1]}` : shown[0];
   $('#rLabel').textContent = `Page ${pageTxt} of ${n}`;
   const r = $('#rRange'); r.max = n; r.value = c.i + 1; r.disabled = n < 2;
   updateZoomUI();
   const pn = $('#pnum'); pn.hidden = !R.p.pageNumber; pn.textContent = `${pageTxt} / ${n}`;
-  const hasPrev = R.chStart.some((s, i) => i < c.ch && s >= 0), hasNext = R.chStart.some((s, i) => i > c.ch && s >= 0);
+  const rr = runOf(R.pos), hasPrev = rr > 0, hasNext = rr < R.runs.length - 1;
   const [pb, nb] = isRTL() ? ['#rNextCh', '#rPrevCh'] : ['#rPrevCh', '#rNextCh'];
   $(pb).disabled = !hasPrev; $(nb).disabled = !hasNext;
   $(pb).dataset.dir = '-1'; $(nb).dataset.dir = '1';
@@ -1311,7 +1486,7 @@ function buildStrip() {
   applyStripZoom();
   const frag = document.createDocumentFragment(); const multi = R.g.chapters.length > 1;
   R.pages.forEach((pg, idx) => {
-    if (pg.i === 0 && multi && R.p.chapterBreaks) frag.append(h('div', { class: 'sep' }, h('span', {}, `Chapter ${R.nums[pg.ch]}`), h('b', {}, Tree.crumb(R.g.chapters, pg.ch))));
+    if ((idx ? R.pages[idx - 1].ch !== pg.ch : !R.g.chapters[pg.ch].root) && multi && R.p.chapterBreaks) frag.append(h('div', { class: 'sep' }, h('span', {}, R.nums[pg.ch] ? `Chapter ${R.nums[pg.ch]}` : 'Main level'), h('b', {}, Tree.crumb(R.g.chapters, pg.ch))));
     const [w, hh] = dims(pg.id);
     frag.append(h('div', { class: 'pg', 'data-i': idx, style: `aspect-ratio:${w}/${hh}` + (v ? '' : `;height:calc(min(100%,calc(100vw * ${(hh / w).toFixed(4)})) * var(--z,1))`) }));
   });
@@ -1585,9 +1760,9 @@ $('#rFull').addEventListener('click', async () => {
   try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
   catch (e) { toast('Full screen is not available here. Add the app to your home screen for a full-screen view.', 3500); }
 });
-$('#rPrevCh').addEventListener('click', e => jumpChapter(R.pages[R.pos].ch + (+e.currentTarget.dataset.dir || -1)));
-$('#rNextCh').addEventListener('click', e => jumpChapter(R.pages[R.pos].ch + (+e.currentTarget.dataset.dir || 1)));
-$('#rRange').addEventListener('input', e => { const c = R.pages[R.pos]; if (c) goToIdx(R.chStart[c.ch] + (+e.target.value) - 1); });
+$('#rPrevCh').addEventListener('click', e => jumpChapter(+e.currentTarget.dataset.dir || -1));
+$('#rNextCh').addEventListener('click', e => jumpChapter(+e.currentTarget.dataset.dir || 1));
+$('#rRange').addEventListener('input', e => { const c = R.pages[R.pos]; if (!c) return; const k = R.idx.get(c.ch + ':' + ((+e.target.value) - 1)); if (k != null) goToIdx(k); });
 $('#rChapters').addEventListener('click', () => {
   const c = R.pages[R.pos]; const read = new Set(R.g.read || []);
   const list = h('div', { class: 'chlist' }, chapterRows(R.g, { cur: c ? { ci: c.ch, page: c.i } : null, read, onPick: i => { closeSheet(); goToIdx(R.chStart[i]); } }));
@@ -1699,7 +1874,7 @@ const Crypt = (() => {
 
 /* Encrypted records on top of IndexedDB. Galleries: {id, e}. Images/thumbs: {id, t: mime, e}. */
 const S = {
-  async open(r) { if (!r) return null; if (!r.e) return r; try { return await Crypt.decJSON(r.e); } catch (e) { return null; } },
+  async open(r) { if (!r) return null; let g = r; if (r.e) { try { g = await Crypt.decJSON(r.e); } catch (e) { return null; } } if (g && g.chapters) Tree.ensureRoot(g); return g; },
   async gal(id) { return S.open(await DB.get('galleries', id)); },
   async gals() { const ids = await DB.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
   async putGal(g) { await DB.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
@@ -1865,11 +2040,14 @@ async function exportZip(g) {
     const zip = new JSZip();
     const pad = (n, l) => String(n).padStart(l, '0');
     const safe = s => (s || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 80) || 'Untitled';
-    const multi = g.chapters.length > 1, names = [], sib = [];
+    const names = [], sib = [];
     for (const [ci, c] of g.chapters.entries()) {
-      const d = Tree.dep(c); sib.length = d + 1; sib[d] = (sib[d] || 0) + 1;
-      names.length = d; names[d] = `${pad(sib[d], 2)} ${safe(c.title)}`;
-      const folder = multi ? zip.folder(names.slice(0, d + 1).join('/')) : zip;
+      let folder = zip;
+      if (!c.root) {
+        const d = Tree.dep(c) - 1; sib.length = d + 1; sib[d] = (sib[d] || 0) + 1;
+        names.length = d; names[d] = `${pad(sib[d], 2)} ${safe(c.title)}`;
+        folder = zip.folder(names.slice(0, d + 1).join('/'));
+      }
       for (const [pi, id] of c.pages.entries()) {
         if (cancel) throw new Error('stopped');
         const b = await S.blob('images', id); if (!b) continue;
