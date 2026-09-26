@@ -724,7 +724,7 @@ function openAddSheet(existing) {
       const groups = groupChapters(entries, existing ? (name.value.trim() || 'Added pages') : g.title);
       if (existing) groups.forEach(gr => { if (!gr.path.length) gr.path = [gr.title]; });
       const r = await importInto(g, groups, (d, t) => { lbl.textContent = `Adding page ${d.toLocaleString()} of ${t.toLocaleString()}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
-      if (!g.chapters.length) { await DB.del('galleries', g.id); closeSheet(); toast('Nothing was added.'); return render(CUR.view, CUR.params); }
+      if (!g.chapters.length) { await ST.del('galleries', g.id); closeSheet(); toast('Nothing was added.'); return render(CUR.view, CUR.params); }
       closeSheet();
       toast(`${cancel ? 'Stopped. ' : ''}${plural(r.done - r.skipped, 'page')} added${r.skipped ? `, ${r.skipped} could not be read` : ''}.`, 3500);
       if (existing) render(CUR.view, CUR.params); else go('detail', { id: g.id });
@@ -1008,7 +1008,7 @@ async function openGlobalSettings() {
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password'),
         h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'))),
     settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
-    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), store, persisted,
+    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), storagePanel(), store, ST.folder ? null : persisted,
       h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { closeSheet(); addSample(); } }, 'Add the sample gallery')))));
 }
 
@@ -1228,7 +1228,7 @@ async function renderEditor(id) {
 async function dropCustomCover(g) {
   const c = g.customCover; g.customCover = null;
   if (!c || g.chapters.some(ch => ch.pages.includes(c))) return;
-  delete g.meta[c]; forgetURL(c); await DB.del('images', c); await DB.del('thumbs', c);
+  delete g.meta[c]; forgetURL(c); await ST.del('images', c); await ST.del('thumbs', c);
 }
 async function removePages(g, ids) {
   const set = new Set(ids);
@@ -1236,7 +1236,7 @@ async function removePages(g, ids) {
   g.chapters.forEach(c => c.pages = c.pages.filter(p => !set.has(p)));
   ids.forEach(i => { delete g.meta[i]; forgetURL(i); });
   if (set.has(g.cover)) g.cover = null;
-  await DB.delMany('images', ids); await DB.delMany('thumbs', ids);
+  await ST.delMany('images', ids); await ST.delMany('thumbs', ids);
 }
 
 async function renderPages(id, chId, host, gIn) {
@@ -2211,6 +2211,193 @@ async function addSample() {
   if (CUR.view === 'library') renderLibrary();
 }
 
+/* ================= where records live: the app's private storage, or a folder on the phone ================= */
+const sniff = u8 => {
+  if (u8[0] === 0xFF && u8[1] === 0xD8) return 'image/jpeg';
+  if (u8[0] === 0x89 && u8[1] === 0x50) return 'image/png';
+  if (u8[0] === 0x47 && u8[1] === 0x49) return 'image/gif';
+  if (u8[0] === 0x42 && u8[1] === 0x4D) return 'image/bmp';
+  if (u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50) return 'image/webp';
+  if (u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70) return 'image/avif';
+  return 'image/jpeg';
+};
+const FS = (() => {
+  let root = null; const dirs = new Map(), keyCache = {};
+  const shard = id => (id.slice(-2).replace(/[^a-z0-9]/gi, '_') || '__');
+  async function sub(path) {
+    if (dirs.has(path)) return dirs.get(path);
+    let d = root; for (const part of path.split('/')) d = await d.getDirectoryHandle(part, { create: true });
+    dirs.set(path, d); return d;
+  }
+  const dirFor = (store, id) => store === 'galleries' ? sub('galleries') : sub(`${store === 'images' ? 'pages' : 'thumbs'}/${shard(id)}`);
+  const file = id => id + '.tkb';
+  return {
+    get root() { return root; },
+    set root(r) { root = r; dirs.clear(); for (const k in keyCache) delete keyCache[k]; },
+    async get(store, id) {
+      try { const d = await dirFor(store, id); const f = await (await d.getFileHandle(file(id))).getFile(); return { id, e: await f.arrayBuffer() }; }
+      catch (e) { if (e.name === 'NotFoundError' || e.name === 'TypeMismatchError') return undefined; throw e; }
+    },
+    async put(store, rec) {
+      const d = await dirFor(store, rec.id); const fh = await d.getFileHandle(file(rec.id), { create: true });
+      const w = await fh.createWritable(); await w.write(rec.e); await w.close();
+      if (keyCache[store]) keyCache[store].add(rec.id);
+    },
+    async del(store, id) { try { const d = await dirFor(store, id); await d.removeEntry(file(id)); } catch (e) { } if (keyCache[store]) keyCache[store].delete(id); },
+    async delMany(store, ids) { for (const id of ids) await this.del(store, id); },
+    async keys(store) {
+      if (keyCache[store]) return [...keyCache[store]];
+      const set = new Set();
+      const collect = async d => { for await (const [n, h] of d.entries()) if (h.kind === 'file' && n.endsWith('.tkb')) set.add(n.slice(0, -4)); };
+      if (store === 'galleries') await collect(await sub('galleries'));
+      else { const top = await sub(store === 'images' ? 'pages' : 'thumbs'); for await (const [, h] of top.entries()) if (h.kind === 'directory') await collect(h); }
+      keyCache[store] = set; return [...set];
+    },
+    async readInfo(dir = root) {
+      try { const f = await (await dir.getFileHandle('tankobon.json')).getFile(); return JSON.parse(await f.text()); } catch (e) { return null; }
+    },
+    async writeInfo() {
+      const lock = await DB.get('meta', 'lock'); if (!lock || !root) return;
+      const { old, ...clean } = lock;
+      const info = { app: 'Tankōbon Reader', v: 1, note: 'Encrypted library. Open it from the app with your password.', fp: await Crypt.hash('fingerprint'), lock: clean };
+      const w = await (await root.getFileHandle('tankobon.json', { create: true })).createWritable(); await w.write(JSON.stringify(info, null, 1)); await w.close();
+    },
+    async wipe() { for (const n of ['pages', 'thumbs', 'galleries', 'tankobon.json']) { try { await root.removeEntry(n, { recursive: true }); } catch (e) { } } dirs.clear(); for (const k in keyCache) delete keyCache[k]; },
+  };
+})();
+let STORE = { mode: 'app' };
+const ST = {
+  get folder() { return STORE.mode === 'folder' && !!FS.root; },
+  get: (s, id) => ST.folder ? FS.get(s, id) : DB.get(s, id),
+  put: (s, r) => ST.folder ? FS.put(s, r) : DB.put(s, r),
+  del: (s, id) => ST.folder ? FS.del(s, id) : DB.del(s, id),
+  delMany: (s, ids) => ST.folder ? FS.delMany(s, ids) : DB.delMany(s, ids),
+  keys: s => ST.folder ? FS.keys(s) : DB.keys(s),
+};
+const canPickFolder = () => 'showDirectoryPicker' in window;
+async function pickLibraryFolder() {
+  const picked = await window.showDirectoryPicker({ id: 'tankobon', mode: 'readwrite', startIn: 'documents' });
+  if (await FS.readInfo(picked)) return picked;
+  // an existing Tankobon folder inside the one picked?
+  try { const inner = await picked.getDirectoryHandle('Tankobon'); if (await FS.readInfo(inner)) return inner; } catch (e) { }
+  return picked;
+}
+async function folderAccess(handle, ask) {
+  try {
+    if (!handle.queryPermission) return true;
+    let st = await handle.queryPermission({ mode: 'readwrite' });
+    if (st !== 'granted' && ask) st = await handle.requestPermission({ mode: 'readwrite' });
+    return st === 'granted';
+  } catch (e) { return false; }
+}
+/* Called after unlocking. Resolves when storage is ready (may show a screen asking for folder access). */
+async function prepareStorage() {
+  const m = await DB.get('meta', 'storage').catch(() => null);
+  STORE = (m && m.v) || { mode: 'app' };
+  if (STORE.mode !== 'folder') return;
+  const h0 = STORE.handle;
+  const tryUse = async (h, ask) => {
+    if (!h || !(await folderAccess(h, ask))) return false;
+    const info = await FS.readInfo(h);
+    if (!info || info.fp !== await Crypt.hash('fingerprint')) return 'missing';
+    FS.root = h; return true;
+  };
+  let ok = await tryUse(h0, true);
+  while (ok !== true) {
+    const missing = ok === 'missing';
+    await new Promise(res => lockShell(
+      h('h1', {}, missing ? 'Find your Tankōbon folder' : 'Allow access to your library folder'),
+      h('p', { class: 'hint' }, missing
+        ? `The folder “${STORE.name || 'Tankobon'}” with your pages could not be found. If you moved it, pick it again.`
+        : `Your pages are in the folder “${STORE.name || 'Tankobon'}” on your phone. Android needs your permission for the app to open it.`),
+      h('button', { class: 'btn primary', onclick: async () => {
+        if (!missing) { ok = await tryUse(h0, true); if (ok === true) return res(); }
+        try { const h = await pickLibraryFolder(); ok = await tryUse(h, true); if (ok === true) { STORE.handle = h; STORE.name = h.name; await DB.put('meta', { id: 'storage', v: STORE }); return res(); } if (ok === 'missing') toast('That folder does not hold this library. Pick the Tankobon folder.', 4000); }
+        catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); }
+      } }, icon('folder'), missing ? 'Pick the folder' : 'Allow access'),
+      h('p', { class: 'hint' }, 'Nothing can be shown until the app can read the folder.')));
+  }
+}
+function storagePanel() {
+  const box = h('div', { class: 'stack', style: 'gap:10px' });
+  const draw = () => box.replaceChildren(
+    h('p', { class: 'hint' }, ST.folder
+      ? `Your library is stored encrypted in the folder “${STORE.name}” on your phone. It stays there even if Chrome's data is cleared; reopen it with your password.`
+      : 'Your library is stored encrypted in the app\'s private storage on this phone.'),
+    h('div', { class: 'row' }, ST.folder
+      ? h('button', { class: 'btn small ghost', onclick: () => moveStorage('app', draw) }, 'Move back into the app')
+      : h('button', { class: 'btn small picks', onclick: () => moveStorage('folder', draw) }, icon('folder'), 'Move to a phone folder')));
+  draw(); return box;
+}
+async function moveStorage(to, redraw) {
+  if (to === 'folder' && !canPickFolder()) return toast('This browser cannot open phone folders. Chrome 132 or newer is needed.', 4500);
+  let target = null;
+  if (to === 'folder') {
+    try {
+      const picked = await pickLibraryFolder();
+      const info = await FS.readInfo(picked);
+      if (info && info.fp !== await Crypt.hash('fingerprint')) return toast('That folder holds a different library. Pick another place.', 4000);
+      target = info ? picked : await picked.getDirectoryHandle('Tankobon', { create: true });
+    } catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); return; }
+  }
+  const lbl = h('div', { class: 'num' }, 'Preparing…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  openSheet(to === 'folder' ? 'Moving your library to the folder' : 'Moving your library into the app', h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar), h('p', { class: 'hint' }, 'Keep the app open until this finishes. Nothing is deleted until everything has been copied.')));
+  busy++;
+  try {
+    const stores = ['galleries', 'thumbs', 'images'];
+    const from = to === 'folder' ? DB : FS, dest = to === 'folder' ? FS : DB;
+    if (to === 'folder') FS.root = target;
+    const all = []; for (const s of stores) (await from.keys(s)).forEach(id => all.push([s, id]));
+    let i = 0;
+    for (const [s, id] of all) {
+      const r = await from.get(s, id);
+      if (r) {
+        let e = r.e;
+        if (!e) e = s === 'galleries' ? await Crypt.encJSON(r) : await Crypt.enc(await r.blob.arrayBuffer());
+        await dest.put(s, s === 'galleries' ? { id, e } : { id, t: r.t || sniff(new Uint8Array(await Crypt.dec(e).catch(() => new ArrayBuffer(12)))), e });
+      }
+      if (++i % 10 === 0 || i === all.length) { lbl.textContent = `Copying ${i.toLocaleString()} of ${all.length.toLocaleString()}`; bar.firstChild.style.width = (100 * i / all.length) + '%'; }
+    }
+    for (const s of stores) { const n = (await dest.keys(s)).length, m = all.filter(x => x[0] === s).length; if (n < m) throw new Error(`only ${n} of ${m} ${s} were copied`); }
+    lbl.textContent = 'Cleaning up…';
+    if (to === 'folder') {
+      await FS.writeInfo();
+      STORE = { mode: 'folder', handle: target, name: target.name };
+      await DB.put('meta', { id: 'storage', v: STORE });
+      for (const s of stores) await DB.delMany(s, await DB.keys(s));
+    } else {
+      STORE = { mode: 'app' }; await DB.put('meta', { id: 'storage', v: STORE });
+      await FS.wipe(); FS.root = null;
+    }
+    closeSheet(); toast(to === 'folder' ? 'Done. Your library now lives in the Tankobon folder.' : 'Done. Your library is back in the app.', 4500);
+    redraw && redraw();
+  } catch (e) {
+    console.error(e); if (to === 'folder' && STORE.mode !== 'folder') FS.root = null;
+    closeSheet(); toast('Moving stopped: ' + (e.message || e) + '. Nothing was deleted.', 5000);
+  } finally { busy = Math.max(0, busy - 1); }
+}
+/* Restore a library from its folder (after reinstalling or clearing Chrome). */
+async function openLibraryFolder() {
+  if (!canPickFolder()) return toast('This browser cannot open phone folders. Chrome 132 or newer is needed.', 4500);
+  let dir, info;
+  try { dir = await pickLibraryFolder(); info = await FS.readInfo(dir); } catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); return; }
+  if (!info || !info.lock) return toast('No Tankōbon library in that folder. Pick the Tankobon folder itself.', 4000);
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Open library');
+  lockShell(h('h1', {}, 'Open your library'),
+    h('p', { class: 'hint' }, `Found a library in “${dir.name}”. Enter its password.`),
+    h('form', { class: 'stack', onsubmit: async e => {
+      e.preventDefault(); btn.disabled = true; err.textContent = '';
+      try { await Crypt.setRaw(await Crypt.unwrapRaw(info.lock, $('#of-pw').value)); }
+      catch (x) { err.textContent = 'That password is not right.'; btn.disabled = false; return; }
+      await DB.put('meta', { ...info.lock, id: 'lock' });
+      STORE = { mode: 'folder', handle: dir, name: dir.name }; await DB.put('meta', { id: 'storage', v: STORE });
+      afterUnlock(false);
+    } }, pwField('of-pw', 'Password', 'current-password'), err, btn),
+    h('button', { class: 'btn ghost small', type: 'button', onclick: () => showSetup() }, 'Back'));
+  setTimeout(() => { const f = $('#of-pw'); if (f) f.focus(); }, 50);
+}
+
 /* ================= encryption ================= */
 const Crypt = (() => {
   const te = new TextEncoder(), td = new TextDecoder();
@@ -2255,23 +2442,24 @@ const Crypt = (() => {
 /* Encrypted records on top of IndexedDB. Galleries: {id, e}. Images/thumbs: {id, t: mime, e}. */
 const S = {
   async open(r) { if (!r) return null; let g = r; if (r.e) { try { g = await Crypt.decJSON(r.e); } catch (e) { return null; } } if (g && g.chapters) Tree.ensureRoot(g); return g; },
-  async gal(id) { return S.open(await DB.get('galleries', id)); },
-  async gals() { const ids = await DB.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
-  async putGal(g) { await DB.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
-  async putBlob(store, id, blob) { await DB.put(store, { id, t: blob.type || 'image/jpeg', e: await Crypt.enc(await blob.arrayBuffer()) }); },
+  async gal(id) { return S.open(await ST.get('galleries', id)); },
+  async gals() { const ids = await ST.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
+  async putGal(g) { await ST.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
+  async putBlob(store, id, blob) { await ST.put(store, { id, t: blob.type || 'image/jpeg', e: await Crypt.enc(await blob.arrayBuffer()) }); },
   async blob(store, id) {
-    const r = await DB.get(store, id); if (!r) return null;
+    const r = await ST.get(store, id); if (!r) return null;
     if (r.blob) return r.blob;
-    return new Blob([await Crypt.dec(r.e)], { type: r.t || 'image/jpeg' });
+    const plain = new Uint8Array(await Crypt.dec(r.e));
+    return new Blob([plain], { type: r.t || sniff(plain) });
   },
 };
 /* Re-encrypt every record with newK. Unencrypted records get encrypted; records under oldK get moved to newK. */
 async function reencrypt(oldK, newK, resume, onProg) {
   const stores = ['galleries', 'thumbs', 'images'];
-  const all = []; for (const s of stores) (await DB.keys(s)).forEach(id => all.push([s, id]));
+  const all = []; for (const s of stores) (await ST.keys(s)).forEach(id => all.push([s, id]));
   let i = 0;
   for (const [store, id] of all) {
-    i++; const r = await DB.get(store, id); if (!r) continue;
+    i++; const r = await ST.get(store, id); if (!r) continue;
     let plain;
     if (!r.e) plain = store === 'galleries' ? Crypt.te.encode(JSON.stringify(r)) : await r.blob.arrayBuffer();
     else {
@@ -2280,14 +2468,14 @@ async function reencrypt(oldK, newK, resume, onProg) {
       try { plain = await Crypt.dec(r.e, oldK); } catch (e) { continue; }
     }
     const e = await Crypt.enc(plain, newK);
-    await DB.put(store, store === 'galleries' ? { id, e } : { id, t: r.t || (r.blob && r.blob.type) || 'image/jpeg', e });
+    await ST.put(store, store === 'galleries' ? { id, e } : { id, t: r.t || (r.blob && r.blob.type) || 'image/jpeg', e });
     if (onProg && (i % 5 === 0 || i === all.length)) onProg(i, all.length);
   }
 }
 async function purgeGallery(g) {
   const ids = Object.keys(g.meta || {});
-  await DB.delMany('images', ids); await DB.delMany('thumbs', ids); ids.forEach(forgetURL);
-  await DB.del('galleries', g.id);
+  await ST.delMany('images', ids); await ST.delMany('thumbs', ids); ids.forEach(forgetURL);
+  await ST.del('galleries', g.id);
 }
 
 /* ================= lock screen ================= */
@@ -2336,7 +2524,8 @@ async function showSetup(joinRaw) {
     form,
     h('p', { class: 'hint' }, 'Nobody can reset this password, not even the app. If you forget it, the library on this device cannot be opened.'),
     joinRaw ? null : h('div', { class: 'stack', style: 'margin-top:8px' }, h('div', { class: 'label' }, 'Already use Tankōbon on another device?'),
-      h('button', { class: 'btn ghost', type: 'button', onclick: () => scanPairCode(raw => showSetup(raw)) }, icon('devices'), 'Join my library from another device')));
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => scanPairCode(raw => showSetup(raw)) }, icon('devices'), 'Join my library from another device'),
+      h('button', { class: 'btn ghost picks', type: 'button', onclick: openLibraryFolder }, icon('folder'), 'Open my Tankobon folder')));
   setTimeout(() => { const f = $('#pw1'); if (f) f.focus(); }, 50);
 }
 function showUnlock(lock) {
@@ -2371,8 +2560,9 @@ function eraseButton() {
   return b;
 }
 async function afterUnlock(fresh) {
+  await prepareStorage();
   $('#v-lock').hidden = true; $('#v-lock').replaceChildren();
-  if (fresh) { try { const n = (await DB.keys('galleries')).length; const gone = await DB.get('meta', 'sampleGone'); if (!n && !gone) await addSample(); } catch (e) { console.error(e); } }
+  if (fresh) { try { const n = (await ST.keys('galleries')).length; const gone = await DB.get('meta', 'sampleGone'); if (!n && !gone) await addSample(); } catch (e) { console.error(e); } }
   const st = history.state;
   if (st && st.view) render(st.view, st.params || {});
   else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
@@ -2402,6 +2592,7 @@ function openChangePassword() {
     try { const lock = await DB.get('meta', 'lock'); await Crypt.unwrapRaw(lock, cur); }
     catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Change password'; return; }
     await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
+    if (ST.folder) await FS.writeInfo().catch(() => { });
     closeSheet(); toast('Password changed on this device.');
   } }, pwField('cp-old', 'Current password', 'current-password'), pwField('cp-new', 'New password', 'new-password'), pwField('cp-new2', 'New password again', 'new-password'), err, btn,
     h('p', { class: 'hint' }, 'This changes the password on this device only. Your other devices keep their own passwords.')));
@@ -2508,7 +2699,7 @@ const Sync = (() => {
     }
     if (m.t === 'hello' || m.t === 'changed') {
       await applyTombs(m.tomb || {});
-      const have = new Set(await DB.keys('images')), want = [];
+      const have = new Set(await ST.keys('images')), want = [];
       for (const r of m.list || []) {
         if (tombs[r.id] && tombs[r.id] >= r.u) continue;
         if (wanting.has(r.id)) continue;
@@ -2528,7 +2719,7 @@ const Sync = (() => {
       wanting.delete(m.g.id); await merge(m.g, pid); log(`Received “${m.g.title}”`);
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
-        const r = await DB.get(store, id);
+        const r = await ST.get(store, id);
         if (r && r.e) await fact.send(new Uint8Array(r.e), { target: pid, metadata: { id, s, t: r.t } });
       }
       await send({ t: 'done' }, pid);
@@ -2550,7 +2741,7 @@ const Sync = (() => {
   }
   async function onFile(data, md, pid) {
     if (!md || !md.id || !data || !data.byteLength) return;
-    await DB.put(md.s === 't' ? 'thumbs' : 'images', { id: md.id, t: md.t, e: data });
+    await ST.put(md.s === 't' ? 'thumbs' : 'images', { id: md.id, t: md.t, e: data });
     if (md.s === 'i') { if (recv.want) recv.got = Math.min(recv.want, recv.got + 1); emit(); softRefresh(); }
   }
   async function merge(R, pid) {
@@ -2567,9 +2758,9 @@ const Sync = (() => {
     await S.putGal(M);
     if (L) {
       const gone = Object.keys(L.meta || {}).filter(id => !(M.meta || {})[id]);
-      if (gone.length) { await DB.delMany('images', gone); await DB.delMany('thumbs', gone); gone.forEach(forgetURL); }
+      if (gone.length) { await ST.delMany('images', gone); await ST.delMany('thumbs', gone); gone.forEach(forgetURL); }
     }
-    queueMissing(M, pid, new Set(await DB.keys('images')));
+    queueMissing(M, pid, new Set(await ST.keys('images')));
     softRefresh(M.id);
   }
   async function applyTombs(t) {
@@ -2680,6 +2871,7 @@ function joinLibrary(raw) {
       await Crypt.setRaw(raw);
       await reencrypt(oldK, newK, false, (i, n) => lbl.textContent = `Moving your galleries: ${i} of ${n}`);
       const { old, ...clean } = lockNew; await DB.put('meta', clean);
+      if (ST.folder) await FS.writeInfo().catch(() => { });
       URLS.forEach(u => URL.revokeObjectURL(u)); URLS.clear();
       Sync.st.enabled = true; await Sync.saveSt(); await Sync.restart();
     });
