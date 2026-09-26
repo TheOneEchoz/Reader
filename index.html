@@ -460,7 +460,7 @@ function toast(msg, ms = 2200) {
    The same page runs as a website and inside the Android app. In the app, pages are stored as files
    in the app's own storage, and updates to these screens are downloaded from the website when you ask. */
 const NATIVE = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
-const APP_VERSION = 30; // replaced by the build with the release number
+const APP_VERSION = 31; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => NATIVE ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -3349,20 +3349,41 @@ function scanPairCode(onCode) {
   const video = h('video', { class: 'scanvid', muted: true, playsinline: true, autoplay: true });
   const msg = h('p', { class: 'hint' }, 'Starting the camera…');
   const input = h('input', { class: 'text', id: 'pair-code', placeholder: 'Or paste the code here (starts with TKB1)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
-  let stream = null, timer = 0, done = false;
+  let stream = null, timer = 0, done = false, cams = [], camIdx = 0;
   const stopCam = () => { clearInterval(timer); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; };
+  const camBtn = h('button', { class: 'btn small', type: 'button', hidden: true, onclick: () => { if (cams.length < 2) return; camIdx = (camIdx + 1) % cams.length; UI.camId = cams[camIdx].deviceId; saveMeta(); startCam(cams[camIdx].deviceId); } }, icon('devices'), 'Switch camera');
+  /* Read a QR code from a photo or screenshot, for phones whose camera will not focus on it */
+  const fromPhoto = h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
+    const [f] = await pickFiles({ accept: 'image/*', multiple: false }); if (!f) return;
+    try {
+      const bmp = await createImageBitmap(f), sc = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const w = Math.round(bmp.width * sc), hh = Math.round(bmp.height * sc), c = document.createElement('canvas'); c.width = w; c.height = hh;
+      const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, w, hh);
+      let txt = null;
+      if ('BarcodeDetector' in window) { try { const r = await new BarcodeDetector({ formats: ['qr_code'] }).detect(c); if (r[0]) txt = r[0].rawValue; } catch (e) { } }
+      if (!txt && window.jsQR) { const q = jsQR(x.getImageData(0, 0, w, hh).data, w, hh); if (q) txt = q.data; }
+      if (!txt || !tryText(txt)) toast('No pairing code found in that picture. Try a sharper photo or a screenshot.', 3500);
+    } catch (e) { toast('Could not open that picture.', 3000); }
+  } }, icon('image'), 'Scan from a photo or screenshot');
+  // rear cameras first; special lenses (macro, microscope, telephoto, depth) last
+  const camScore = d => { const l = (d.label || '').toLowerCase(); let s = 0; if (/back|rear|environment|traseira|trasera|arrière/.test(l)) s -= 10; if (/front|user|frontal|selfie/.test(l)) s += 20; if (/macro|micro|tele|depth|profund|zoom|ultra|infra|ir\b/.test(l)) s += 15; return s; };
+  async function startCam(deviceId) {
+    stopCam();
+    stream = await navigator.mediaDevices.getUserMedia({ video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 } } : { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
+    if (done) return stopCam();
+    video.srcObject = stream; await video.play();
+    const tr = stream.getVideoTracks()[0], lbl = tr && tr.label;
+    try { const caps = tr.getCapabilities ? tr.getCapabilities() : {}; if (caps.focusMode && caps.focusMode.includes('continuous')) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) { }
+    msg.textContent = cams.length > 1 ? `Point the camera at the code. Using: ${lbl || 'camera ' + (camIdx + 1)} (${camIdx + 1} of ${cams.length}). If it looks blurry or too close, tap Switch camera.` : 'Point the camera at the code on your other device.';
+    scanLoop();
+  }
   const finish = raw => { if (done) return; done = true; stopCam(); closeSheet(); onCode(raw); };
   const tryText = t => { const raw = parseCode(t); if (raw) finish(raw); return !!raw; };
   openSheet('Scan the pairing code', h('div', { class: 'stack' },
     h('p', { class: 'hint' }, 'On your other device, open Tankōbon, then Settings → Devices & sync → Show pairing code.'),
-    video, msg,
+    video, msg, h('div', { class: 'row' }, camBtn, fromPhoto),
     h('div', { class: 'field' }, input, h('button', { class: 'btn', type: 'button', onclick: () => { if (!tryText(input.value)) toast('That code is not valid. Check it and try again.', 3000); } }, 'Use this code'))), stopCam);
-  (async () => {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      if (done) return stopCam();
-      video.srcObject = stream; await video.play();
-      msg.textContent = 'Point the camera at the code on your other device.';
+  function scanLoop() {
       const det = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
       const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
       timer = setInterval(async () => {
@@ -3376,7 +3397,22 @@ function scanPairCode(onCode) {
           }
         } catch (e) { }
       }, 300);
-    } catch (e) { msg.textContent = 'The camera is not available here. Paste the code from your other device instead.'; video.hidden = true; }
+  }
+  (async () => {
+    try {
+      try { await startCam(UI.camId || null); } catch (e) { if (!UI.camId) throw e; UI.camId = null; saveMeta(); await startCam(null); }
+      // after permission is given the camera names are known: pick a normal rear camera
+      const list = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+      cams = list.map((d, i) => ({ d, i })).sort((a, b) => camScore(a.d) - camScore(b.d) || a.i - b.i).map(x => x.d);
+      camBtn.hidden = cams.length < 2;
+      const curId = stream && stream.getVideoTracks()[0] && stream.getVideoTracks()[0].getSettings().deviceId;
+      camIdx = Math.max(0, cams.findIndex(c => c.deviceId === curId));
+      if (!UI.camId && cams.length > 1 && camScore(cams[camIdx]) > camScore(cams[0])) { camIdx = 0; await startCam(cams[0].deviceId); }
+      else if (cams.length > 1) { const tr = stream.getVideoTracks()[0]; msg.textContent = `Point the camera at the code. Using: ${(tr && tr.label) || 'camera ' + (camIdx + 1)} (${camIdx + 1} of ${cams.length}). If it looks blurry or too close, tap Switch camera.`; }
+    } catch (e) {
+      if (UI.camId) { UI.camId = null; saveMeta(); }
+      msg.textContent = 'The camera is not available here. Scan from a photo, or paste the code from your other device instead.'; video.hidden = true;
+    }
   })();
 }
 function showPairCode() {
