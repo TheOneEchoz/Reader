@@ -183,6 +183,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .progress .bar{height:6px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
+#shield{position:fixed;inset:0;z-index:500;background:var(--bg);display:grid;place-items:center}
 .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:16px 10px}
 .btile{display:grid;gap:6px;text-align:left;min-width:0;align-content:start}
 .bthumb{position:relative;display:block;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface2);box-shadow:var(--shadow)}
@@ -344,6 +345,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
   </div>
 </div>
 <div id="toast" style="opacity:0" role="status"></div>
+<div id="shield" hidden aria-hidden="true"><div class="wordmark"><span class="hanko">本</span>TANKŌBON</div></div>
 
 <script src="jszip.min.js"></script>
 <script src="Sortable.min.js"></script>
@@ -993,6 +995,8 @@ async function openGlobalSettings() {
       h('div', { class: 'setrow' }, h('div', { class: 'lab', id: 'lock-lbl' }, 'Lock the app after it has been in the background for'),
         (lockSeg = h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'lock-lbl' }, [[0, 'Right away'], [60, '1 min'], [300, '5 min'], [1800, '30 min']].map(([v, l]) =>
           h('button', { 'aria-pressed': String((UI.lockAfter ?? 60) === v), onclick: e => { UI.lockAfter = v; saveMeta(); $$('button', lockSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l))))),
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-shield' }, 'Hide what is on screen when you leave the app (recent apps list)'),
+        h('button', { class: 'switch', id: 'sw-shield', role: 'switch', 'aria-checked': String(UI.shield !== false), onclick: e => { UI.shield = UI.shield === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.shield)); } })),
       h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-full' }, 'Full screen (hide the browser and phone bars)'),
         h('button', { class: 'switch', id: 'sw-full', role: 'switch', 'aria-checked': String(UI.fullscreen !== false), onclick: e => {
           UI.fullscreen = UI.fullscreen === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.fullscreen));
@@ -2094,6 +2098,16 @@ document.addEventListener('pointerdown', e => {
   if (e.target.closest && e.target.closest('.picks, input, textarea, select, label')) return;
   document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
 }, true);
+/* ---- privacy screen: cover everything as soon as the app loses focus, before Android takes its recent-apps picture ---- */
+const shield = $('#shield');
+const cover = () => { if (UI.shield !== false) shield.hidden = false; };
+const uncover = () => { if (!document.hidden && document.hasFocus()) shield.hidden = true; };
+window.addEventListener('blur', cover);
+window.addEventListener('pagehide', cover);
+document.addEventListener('visibilitychange', () => document.hidden ? cover() : setTimeout(uncover, 50));
+window.addEventListener('focus', () => setTimeout(uncover, 50));
+window.addEventListener('pageshow', () => setTimeout(uncover, 50));
+shield.addEventListener('pointerdown', () => { shield.hidden = true; });
 /* ---- the phone's back button: in full screen Android uses it to leave full screen, so treat that as "back" ---- */
 let ownExit = 0;
 const exitFull = () => { ownExit = performance.now() + 1500; return document.exitFullscreen(); };
