@@ -99,12 +99,14 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .modes button .ic{width:26px;height:26px}
 .modes button[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);background:var(--accent-soft);font-weight:700}
 .chlist{display:grid;background:var(--surface);border-radius:14px;overflow:hidden}
-.chrow{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:12px 14px;text-align:left;border-top:1px solid var(--line);min-height:56px;width:100%}
+.chrow{display:grid;grid-template-columns:minmax(40px,auto) 1fr auto;gap:10px;align-items:center;padding:12px 14px;text-align:left;border-top:1px solid var(--line);min-height:56px;width:100%}
 .chrow:first-child{border-top:0}
 .chrow .n{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700;font-size:13px}
 .chrow .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .chrow .s{font-size:12px;color:var(--muted);white-space:nowrap}
 .chrow.read .t{color:var(--muted)}
+.chrow.group .t{font-weight:700}
+.chrow:disabled{opacity:.55}
 .chrow.current{background:var(--accent-soft)}
 .chrow.current .n{color:var(--accent)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:1px}
@@ -113,12 +115,16 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .field{display:grid;gap:6px}
 .text{height:46px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:0 14px;width:100%}
 .edlist{display:grid;gap:8px}
-.edrow{display:grid;grid-template-columns:36px 30px 1fr auto auto;gap:6px;align-items:center;background:var(--surface);border-radius:12px;padding:6px 6px 6px 2px}
+.edrow{display:grid;grid-template-columns:30px minmax(26px,auto) 1fr auto auto;gap:6px;align-items:center;background:var(--surface);border-radius:12px;padding:6px 6px 6px 2px}
 .edrow .grip{height:44px;display:grid;place-items:center;color:var(--muted);cursor:grab;touch-action:none}
 .edrow .n{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;font-weight:700;text-align:center}
 .edrow input{height:40px;border:1px solid transparent;background:transparent;border-radius:8px;padding:0 8px;min-width:0;width:100%}
 .edrow input:focus{border-color:var(--line);background:var(--bg)}
 .sortable-ghost{opacity:.35}
+.edrow.group input{font-weight:700}
+.twisty{width:30px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:8px}
+.twisty .ic{width:18px;height:18px;transition:transform .15s}
+.twisty.open .ic{transform:rotate(90deg)}
 .sortable-chosen{box-shadow:0 10px 28px rgba(0,0,0,.25)}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
 .pcell{position:relative;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--surface2);border:3px solid transparent;user-select:none;-webkit-user-select:none}
@@ -351,6 +357,7 @@ const ICONS = {
   sort: '<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>', move: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   zoomin: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5M11 8v6M8 11h6"/>', zoomout: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5M8 11h6"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', devices: '<rect x="2.5" y="5" width="12" height="9" rx="1.5"/><rect x="16" y="8" width="5.5" height="11" rx="1.2"/><path d="M5 18h8"/>',
+  more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>', chevr: '<path d="M9 6l6 6-6 6"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
@@ -593,8 +600,9 @@ async function collect(kind, files) {
 function groupChapters(entries, rootTitle) {
   const map = new Map();
   for (const e of entries) { if (!map.has(e.dir)) map.set(e.dir, []); map.get(e.dir).push(e); }
-  const dirs = [...map.keys()].sort((a, b) => a === '' ? -1 : b === '' ? 1 : natural(a, b));
-  return dirs.map(d => ({ title: d ? d.split('/').join(' › ') : rootTitle, items: map.get(d).sort((a, b) => natural(a.name, b.name)) }));
+  const cmp = (a, b) => { const x = a.split('/'), y = b.split('/'); for (let i = 0; i < Math.min(x.length, y.length); i++) { const c = natural(x[i], y[i]); if (c) return c; } return x.length - y.length; };
+  const dirs = [...map.keys()].sort((a, b) => a === '' ? -1 : b === '' ? 1 : cmp(a, b));
+  return dirs.map(d => ({ title: d ? d.split('/').pop() : rootTitle, path: d ? d.split('/') : [rootTitle], items: map.get(d).sort((a, b) => natural(a.name, b.name)) }));
 }
 async function makeThumb(blob) {
   let src, w, hgt;
@@ -616,7 +624,7 @@ async function makeThumb(blob) {
 async function importInto(g, groups, onProgress, cancelled) {
   const total = groups.reduce((n, c) => n + c.items.length, 0); let done = 0, skipped = 0;
   for (const grp of groups) {
-    let ch = grp.chId ? g.chapters.find(c => c.id === grp.chId) : g.chapters.find(c => c.title === grp.title);
+    let ch = grp.chId ? g.chapters.find(c => c.id === grp.chId) : Tree.ensurePath(g.chapters, grp.path || [grp.title]);
     if (!ch) { ch = { id: uid(), title: grp.title, pages: [] }; g.chapters.push(ch); }
     const queue = [...grp.items]; const results = new Array(queue.length);
     let k = 0;
@@ -637,7 +645,7 @@ async function importInto(g, groups, onProgress, cancelled) {
     await saveGallery(g);
     if (cancelled()) break;
   }
-  g.chapters = g.chapters.filter(c => c.pages.length || c.keep);
+  g.chapters = Tree.prune(g.chapters);
   await saveGallery(g);
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }
   return { skipped, done };
@@ -692,6 +700,91 @@ function openAddSheet(existing) {
     h('p', { class: 'hint' }, 'Pages are copied into this app on your phone, so the gallery keeps working even if you move the original folder. Android will ask you to confirm access to the folder.')));
 }
 
+/* ================= chapter tree (outline stored as a flat list with depth d) ================= */
+const Tree = (() => {
+  const dep = c => c.d || 0;
+  const end = (chs, i) => { const d = dep(chs[i]); let j = i + 1; while (j < chs.length && dep(chs[j]) > d) j++; return j; };
+  const parent = (chs, i) => { const d = dep(chs[i]); for (let j = i - 1; j >= 0; j--) if (dep(chs[j]) < d) return j; return -1; };
+  function toTree(chs) {
+    const root = { kids: [] }, st = [{ d: -1, n: root }];
+    for (const c of chs) { const d = dep(c); while (st[st.length - 1].d >= d) st.pop(); const n = { c, kids: [] }; st[st.length - 1].n.kids.push(n); st.push({ d, n }); }
+    return root;
+  }
+  function flat(root) { const out = []; const walk = (n, d) => n.kids.forEach(k => { k.c.d = d; out.push(k.c); walk(k, d + 1); }); walk(root, 0); return out; }
+  const norm = chs => flat(toTree(chs));
+  function nums(chs) {
+    const cnt = [];
+    return chs.map(c => { const d = dep(c); cnt.length = d + 1; cnt[d] = (cnt[d] || 0) + 1; for (let k = 0; k < d; k++) cnt[k] = cnt[k] || 1; return cnt.slice(0, d + 1).join('.'); });
+  }
+  function crumb(chs, i) { const parts = [chs[i].title]; let p = parent(chs, i); while (p >= 0) { parts.unshift(chs[p].title); p = parent(chs, p); } return parts.join(' › '); }
+  const block = (chs, i) => chs.splice(i, end(chs, i) - i);
+  function moveUp(chs, i) {
+    const d = dep(chs[i]); let p = -1;
+    for (let j = i - 1; j >= 0; j--) { if (dep(chs[j]) < d) break; if (dep(chs[j]) === d) { p = j; break; } }
+    if (p < 0) return false; const b = block(chs, i); chs.splice(p, 0, ...b); return true;
+  }
+  function moveDown(chs, i) {
+    const d = dep(chs[i]), n = end(chs, i);
+    if (n >= chs.length || dep(chs[n]) !== d) return false;
+    const nb = chs.splice(n, end(chs, n) - n); chs.splice(i, 0, ...nb); return true;
+  }
+  function moveInto(chs, i, t) {
+    const e = end(chs, i); if (t >= i && t < e) return false;
+    const target = t >= 0 ? chs[t] : null, b = block(chs, i);
+    const delta = (target ? dep(target) + 1 : 0) - dep(b[0]);
+    b.forEach(c => { c.d = dep(c) + delta; });
+    chs.splice(target ? end(chs, chs.indexOf(target)) : chs.length, 0, ...b); return true;
+  }
+  function outdent(chs, i) {
+    const p = parent(chs, i); if (p < 0) return false;
+    const P = chs[p], b = block(chs, i); b.forEach(c => { c.d = dep(c) - 1; });
+    chs.splice(end(chs, chs.indexOf(P)), 0, ...b); return true;
+  }
+  function sortRec(chs, fn) { const root = toTree(chs); const rec = n => { fn(n.kids); n.kids.forEach(rec); }; rec(root); return flat(root); }
+  function prune(chs) {
+    const keep = chs.map(c => !!(c.pages.length || c.keep));
+    for (let i = chs.length - 1; i >= 0; i--) if (keep[i]) { const p = parent(chs, i); if (p >= 0) keep[p] = true; }
+    return chs.filter((c, i) => keep[i]);
+  }
+  function firstPage(chs, i) { const e = end(chs, i); for (let j = i; j < e; j++) if (chs[j].pages.length) return j; return -1; }
+  function subtreePages(chs, i) { let n = 0; const e = end(chs, i); for (let j = i; j < e; j++) n += chs[j].pages.length; return n; }
+  function ensurePath(chs, path) {
+    let lo = 0, hi = chs.length, idx = -1;
+    path.forEach((t, k) => {
+      let f = -1;
+      for (let j = lo; j < hi; j++) if (dep(chs[j]) === k && chs[j].title === t) { f = j; break; }
+      if (f < 0) { chs.splice(hi, 0, { id: uid(), title: t, pages: [], d: k, keep: k < path.length - 1 }); f = hi; }
+      else if (k < path.length - 1) chs[f].keep = true;
+      idx = f; lo = f + 1; hi = end(chs, f);
+    });
+    return chs[idx];
+  }
+  function splitArrows(chs) {
+    const out = [];
+    for (const c of chs) {
+      const parts = c.title.split('›').map(s => s.trim()).filter(Boolean);
+      if (parts.length < 2 || dep(c) > 0) { out.push(c); continue; }
+      const anc = ensurePath(out, parts.slice(0, -1)), ai = out.indexOf(anc);
+      c.title = parts[parts.length - 1]; c.d = parts.length - 1;
+      out.splice(end(out, ai), 0, c);
+    }
+    return norm(out);
+  }
+  return { dep, end, parent, norm, nums, crumb, moveUp, moveDown, moveInto, outdent, sortRec, prune, firstPage, subtreePages, ensurePath, splitArrows };
+})();
+/* Chapter list used by the gallery page and the reader: indented, numbered 1, 1.1, 1.2 … */
+function chapterRows(g, { cur, read, onPick }) {
+  const chs = g.chapters, nums = Tree.nums(chs);
+  return chs.map((c, i) => {
+    const d = Tree.dep(c), own = c.pages.length, first = Tree.firstPage(chs, i), isCur = cur && cur.ci === i;
+    const inside = own ? 0 : Tree.subtreePages(chs, i);
+    return h('button', { class: 'chrow' + (isCur ? ' current' : '') + (read.has(c.id) && !isCur ? ' read' : '') + (own ? '' : ' group'), style: d ? `padding-left:${14 + Math.min(d, 8) * 18}px` : null, disabled: first < 0, onclick: () => onPick(first) },
+      h('span', { class: 'n' }, nums[i]),
+      h('span', { class: 't' }, c.title),
+      h('span', { class: 's num' }, isCur ? [h('span', { class: 'dot' }), `p. ${cur.page + 1}/${own}`] : own ? (read.has(c.id) ? 'Read' : plural(own, 'page')) : inside ? `${plural(inside, 'page')} inside` : 'Empty'));
+  });
+}
+
 /* ================= library ================= */
 async function renderLibrary() {
   const v = $('#v-library');
@@ -727,7 +820,7 @@ async function renderLibrary() {
 }
 function card(g) {
   const pi = progressInfo(g), tp = totalPages(g);
-  const meta = pi ? `Ch. ${pi.ci + 1} of ${g.chapters.length} · p. ${pi.page + 1}` : `${plural(g.chapters.length, 'chapter')} · ${plural(tp, 'page')}`;
+  const meta = pi ? `Ch. ${Tree.nums(g.chapters)[pi.ci]} · p. ${pi.page + 1}` : `${plural(g.chapters.length, 'chapter')} · ${plural(tp, 'page')}`;
   return h('article', { class: 'card' }, h('div', { class: 'cwrap' },
     h('button', { class: 'cover', 'aria-label': `Open ${g.title}`, onclick: () => go('detail', { id: g.id }) }, thumbImg(coverId(g)),
       g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (g.chapters.length > 1 ? h('span', { class: 'chip num' }, `${g.chapters.length} CH`) : null)),
@@ -782,17 +875,11 @@ async function renderDetail(id) {
         h('div', { class: 'sub' }, ago(g.lastReadAt)))),
     h('div', { class: 'stack' },
       h('div', { class: 'row' },
-        h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id }) }, icon('play'), pi ? `Continue · Ch. ${pi.ci + 1}, p. ${pi.page + 1}` : 'Start reading'),
+        h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id }) }, icon('play'), pi ? `Continue · Ch. ${Tree.nums(g.chapters)[pi.ci]}, p. ${pi.page + 1}` : 'Start reading'),
         pi ? h('button', { class: 'btn ghost', onclick: () => go('reader', { id, ch: 0, page: 0 }) }, 'From the start') : null),
       h('div', { class: 'panel' }, h('div', { class: 'label' }, 'How pages appear'), modes, dirRow),
       h('div', { class: 'row', style: 'justify-content:space-between' }, h('div', { class: 'label' }, 'Chapters'), h('span', { class: 'sub' }, 'Tap one to jump there')),
-      h('div', { class: 'chlist' }, g.chapters.map((c, i) => {
-        const cur = pi && pi.ci === i;
-        return h('button', { class: 'chrow' + (cur ? ' current' : '') + (read.has(c.id) && !cur ? ' read' : ''), onclick: () => go('reader', { id, ch: i, page: 0 }) },
-          h('span', { class: 'n' }, String(i + 1).padStart(2, '0')),
-          h('span', { class: 't' }, c.title),
-          h('span', { class: 's num' }, cur ? [h('span', { class: 'dot' }), `p. ${pi.page + 1}/${c.pages.length}`] : read.has(c.id) ? 'Read' : plural(c.pages.length, 'page')));
-      }))
+      h('div', { class: 'chlist' }, chapterRows(g, { cur: pi, read, onPick: i => go('reader', { id, ch: i, page: 0 }) }))
     )));
 }
 
@@ -801,32 +888,78 @@ async function renderEditor(id) {
   const v = $('#v-editor'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   const list = h('div', { class: 'edlist' });
+  const collapsed = new Set();
+  const commit = async msg => { g.chapters = Tree.norm(g.chapters); await saveGallery(g); draw(); if (msg) toast(msg); };
   const draw = () => {
-    list.replaceChildren(...g.chapters.map((c, i) => {
-      let armed = false;
-      const del = h('button', { class: 'iconbtn', 'aria-label': `Delete chapter ${c.title}`, onclick: async () => {
-        if (!armed) { armed = true; del.classList.add('btn', 'danger', 'small'); del.classList.remove('iconbtn'); del.textContent = 'Delete?'; setTimeout(() => { if (del.isConnected && armed) draw(); }, 3000); return; }
-        await removePages(g, c.pages.slice()); g.chapters = g.chapters.filter(x => x !== c); await saveGallery(g); toast('Chapter deleted'); draw();
-      } }, icon('trash'));
-      return h('div', { class: 'edrow' },
-        h('span', { class: 'grip', 'aria-label': 'Drag to reorder' }, icon('grip')),
-        h('span', { class: 'n' }, i + 1),
-        h('input', { value: c.title, 'aria-label': `Chapter ${i + 1} name`, id: 'ch-' + c.id, onchange: e => { c.title = e.target.value.trim() || c.title; saveGallery(g); } }),
-        h('button', { class: 'btn small', onclick: () => go('pages', { id, ch: c.id }) }, `${c.pages.length} pages`),
-        del);
-    }));
+    const chs = g.chapters, nums = Tree.nums(chs), rows = []; let hideDeeper = Infinity;
+    chs.forEach((c, i) => {
+      const d = Tree.dep(c);
+      if (d > hideDeeper) return; hideDeeper = Infinity;
+      const kids = i + 1 < chs.length && Tree.dep(chs[i + 1]) > d, closed = collapsed.has(c.id);
+      if (kids && closed) hideDeeper = d;
+      rows.push(h('div', { class: 'edrow' + (c.pages.length ? '' : ' group'), style: d ? `margin-left:${Math.min(d, 8) * 16}px` : null },
+        kids ? h('button', { class: 'twisty' + (closed ? '' : ' open'), 'aria-expanded': String(!closed), 'aria-label': closed ? `Show what is inside ${c.title}` : `Hide what is inside ${c.title}`, onclick: () => { closed ? collapsed.delete(c.id) : collapsed.add(c.id); draw(); } }, icon('chevr')) : h('span'),
+        h('span', { class: 'n' }, nums[i]),
+        h('input', { value: c.title, 'aria-label': `Chapter ${nums[i]} name`, id: 'ch-' + c.id, onchange: e => { c.title = e.target.value.trim() || c.title; saveGallery(g); } }),
+        h('button', { class: 'btn small', onclick: () => go('pages', { id, ch: c.id }) }, plural(c.pages.length, 'page')),
+        h('button', { class: 'iconbtn', 'aria-label': `More for ${c.title}`, onclick: () => menu(c) }, icon('more'))));
+    });
+    list.replaceChildren(...rows);
+    countLbl.textContent = `Chapters · ${chs.length}`;
   };
+  const menu = c => {
+    const chs = g.chapters, i = chs.indexOf(c), d = Tree.dep(c), e = Tree.end(chs, i);
+    const subs = e - i - 1, direct = chs.slice(i + 1, e).filter(x => Tree.dep(x) === d + 1).length;
+    const pagesIn = chs.slice(i, e).reduce((n, x) => n + x.pages.length, 0);
+    const item = (ic, label, sub, fn) => h('button', { class: 'bigopt', onclick: async () => { closeSheet(); await fn(); } }, icon(ic), h('div', {}, h('b', {}, label), sub ? h('span', {}, sub) : null));
+    let armed = false;
+    const del = h('button', { class: 'btn danger', onclick: async () => {
+      if (!armed) { armed = true; del.textContent = subs ? `Tap again: delete it, ${plural(subs, 'sub-chapter')} and ${plural(pagesIn, 'page')}` : `Tap again: delete it and ${plural(pagesIn, 'page')}`; return; }
+      const b = g.chapters.slice(i, e); await removePages(g, b.flatMap(x => x.pages)); g.chapters = g.chapters.filter(x => !b.includes(x));
+      closeSheet(); await commit('Deleted');
+    } }, icon('trash'), subs ? 'Delete it with everything inside' : 'Delete this chapter');
+    openSheet(c.title, h('div', { class: 'stack' },
+      item('image', 'Open its pages', `${plural(c.pages.length, 'page')} directly in this chapter`, () => go('pages', { id, ch: c.id })),
+      item('plus', 'Add a sub-chapter inside', subs ? `It will go after the ${plural(direct, 'sub-chapter')} already inside` : 'Use it to group pages inside this chapter', async () => {
+        const n = { id: uid(), title: `Part ${direct + 1}`, pages: [], keep: true, d: d + 1 };
+        g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(c)), 0, n); collapsed.delete(c.id);
+        await commit('Sub-chapter added. Type a name for it.');
+        setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.focus(); f.select(); } }, 60);
+      }),
+      item('up', 'Move up', 'Swaps it with the chapter above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
+      item('down', 'Move down', 'Swaps it with the chapter below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
+      item('move', 'Put it inside another chapter…', 'Or move it back to the top level', () => pickParent(c)),
+      d > 0 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
+      del));
+  };
+  const pickParent = c => {
+    const chs = g.chapters, i = chs.indexOf(c), e = Tree.end(chs, i), nums = Tree.nums(chs);
+    const box = h('div', { class: 'chlist' });
+    const rows = [h('button', { class: 'chrow', onclick: async () => { Tree.moveInto(g.chapters, g.chapters.indexOf(c), -1); closeSheet(); await commit('Moved to the top level'); } },
+      h('span', { class: 'n' }, '—'), h('span', { class: 't' }, 'Top level (not inside anything)'), h('span'))];
+    chs.forEach((t, j) => {
+      if (j >= i && j < e) return;
+      rows.push(h('button', { class: 'chrow' + (t.pages.length ? '' : ' group'), 'data-q': (nums[j] + ' ' + t.title).toLowerCase(), style: Tree.dep(t) ? `padding-left:${14 + Math.min(Tree.dep(t), 8) * 18}px` : null,
+        onclick: async () => { Tree.moveInto(g.chapters, g.chapters.indexOf(c), g.chapters.indexOf(t)); collapsed.delete(t.id); closeSheet(); await commit(`Moved inside ${t.title}`); } },
+        h('span', { class: 'n' }, nums[j]), h('span', { class: 't' }, t.title), h('span')));
+    });
+    box.replaceChildren(...rows);
+    const find = chs.length > 6 ? h('input', { class: 'search', id: 'pp-find', type: 'search', autocomplete: 'off', placeholder: 'Find a chapter by name or number', oninput: ev => {
+      const q = ev.target.value.trim().toLowerCase(); rows.forEach((r, k) => { if (k) r.hidden = !!q && !r.dataset.q.includes(q); });
+    } }) : null;
+    openSheet(`Put “${c.title}” inside…`, h('div', { class: 'stack' }, h('p', { class: 'hint' }, 'It becomes the last sub-chapter of the one you pick, together with everything inside it.'), find, box));
+  };
+  const countLbl = h('div', { class: 'label' });
   draw();
-  if (window.Sortable) Sortable.create(list, { handle: '.grip', animation: 160, onEnd: ev => {
-    if (ev.oldIndex === ev.newIndex) return;
-    const [m] = g.chapters.splice(ev.oldIndex, 1); g.chapters.splice(ev.newIndex, 0, m); saveGallery(g); draw();
-  } });
   const sortCh = how => {
-    if (how === 'asc') g.chapters.sort((a, b) => natural(a.title, b.title));
-    if (how === 'desc') g.chapters.sort((a, b) => natural(b.title, a.title));
-    if (how === 'rev') g.chapters.reverse();
-    saveGallery(g); draw(); toast('Chapter order saved');
+    g.chapters = Tree.sortRec(g.chapters, kids => {
+      if (how === 'asc') kids.sort((a, b) => natural(a.c.title, b.c.title));
+      if (how === 'desc') kids.sort((a, b) => natural(b.c.title, a.c.title));
+      if (how === 'rev') kids.reverse();
+    });
+    commit('Chapter order saved');
   };
+  const arrows = g.chapters.some(c => !Tree.dep(c) && c.title.includes('›'));
   const coverBox = h('div', { class: 'coverrow' });
   const drawCover = () => {
     const own = g.customCover && g.cover === g.customCover, page = !own && g.cover && g.meta[g.cover];
@@ -865,16 +998,18 @@ async function renderEditor(id) {
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
         h('input', { class: 'text', id: 'g-title', value: g.title, onchange: e => { g.title = e.target.value.trim() || g.title; saveGallery(g); toast('Name saved'); } })),
       coverBox,
-      h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, h('div', { class: 'label' }, `Chapters · ${g.chapters.length}`),
+      h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, countLbl,
         h('div', { class: 'row' },
           h('button', { class: 'btn small', onclick: () => sortCh('asc') }, icon('sort'), 'A–Z'),
           h('button', { class: 'btn small', onclick: () => sortCh('desc') }, 'Z–A'),
           h('button', { class: 'btn small', onclick: () => sortCh('rev') }, 'Reverse'))),
-      h('p', { class: 'hint' }, 'Drag the handle to change the chapter order. Rename a chapter by tapping its name. Tap a chapter\'s page count to see its pages or add images to it. Changes save on their own.'),
+      arrows ? h('div', { class: 'banner stack', style: 'gap:8px' }, h('span', {}, 'Some chapter names look like folder paths, such as “Volume 1 › Chapter 2”. They can become real sub-chapters.'),
+        h('div', {}, h('button', { class: 'btn small primary', onclick: async () => { g.chapters = Tree.splitArrows(g.chapters); await saveGallery(g); toast('Turned into sub-chapters'); renderEditor(id); } }, 'Turn them into sub-chapters'))) : null,
+      h('p', { class: 'hint' }, 'Tap ⋯ on a chapter to move it, put it inside another chapter, or add sub-chapters. Sub-chapters are only for organizing: when reading, every page follows in order. Tap a page count to see or add pages. Changes save on their own.'),
       list,
       h('div', { class: 'row' },
         h('button', { class: 'btn', onclick: () => openAddSheet(g) }, icon('plus'), 'Add more pages'),
-        h('button', { class: 'btn ghost', onclick: async () => { g.chapters.push({ id: uid(), title: `Chapter ${g.chapters.length + 1}`, pages: [], keep: true }); await saveGallery(g); draw(); } }, 'New empty chapter')),
+        h('button', { class: 'btn ghost', onclick: async () => { const n = { id: uid(), title: `Chapter ${g.chapters.filter(c => !Tree.dep(c)).length + 1}`, pages: [], keep: true, d: 0 }; g.chapters.push(n); await commit(); setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60); } }, 'New chapter')),
       h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'), h('p', { class: 'hint' }, 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.'), h('div', {}, delBtn))
     )));
 }
@@ -926,21 +1061,21 @@ async function renderPages(id, chId) {
     await saveGallery(g); draw(); toast('Order saved');
   };
   const moveSheet = () => {
-    const others = g.chapters.filter(c => c !== ch);
+    const others = g.chapters.filter(c => c !== ch), nums = Tree.nums(g.chapters);
     const list = h('div', { class: 'chlist' });
     const done = async msg => { await saveGallery(g); sel.clear(); closeSheet(); draw(); drawSel(); toast(msg); };
-    const row = c => h('button', { class: 'chrow', onclick: async () => {
+    const row = c => h('button', { class: 'chrow', style: Tree.dep(c) ? `padding-left:${14 + Math.min(Tree.dep(c), 8) * 18}px` : null, onclick: async () => {
       const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p)); c.pages.push(...picked);
       await done(`Moved to ${c.title}`);
-    } }, h('span', { class: 'n' }, String(g.chapters.indexOf(c) + 1).padStart(2, '0')), h('span', { class: 't' }, c.title), h('span', { class: 's' }, plural(c.pages.length, 'page')));
+    } }, h('span', { class: 'n' }, nums[g.chapters.indexOf(c)]), h('span', { class: 't' }, c.title), h('span', { class: 's' }, plural(c.pages.length, 'page')));
     const newRow = h('button', { class: 'chrow', onclick: async () => {
       const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p));
-      g.chapters.splice(g.chapters.indexOf(ch) + 1, 0, { id: uid(), title: `${ch.title} (part 2)`, pages: picked });
+      g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, { id: uid(), title: `${ch.title} (part 2)`, pages: picked, d: Tree.dep(ch) });
       await done('Moved to a new chapter');
     } }, h('span', { class: 'n' }, icon('plus')), h('span', { class: 't' }, 'A new chapter after this one'), h('span'));
     const drawList = q => {
       q = (q || '').trim().toLowerCase();
-      const hits = others.filter(c => !q || c.title.toLowerCase().includes(q) || String(g.chapters.indexOf(c) + 1) === q.replace(/^0+/, ''));
+      const hits = others.filter(c => !q || c.title.toLowerCase().includes(q) || nums[g.chapters.indexOf(c)] === q);
       list.replaceChildren(...[...hits.map(row), hits.length ? null : h('div', { class: 'chrow' }, h('span'), h('span', { class: 't hint' }, 'No chapter matches'), h('span')), newRow].filter(Boolean));
     };
     const find = others.length > 5 ? h('input', { class: 'search', id: 'move-find', type: 'search', placeholder: 'Find a chapter by name or number', autocomplete: 'off', oninput: e => drawList(e.target.value) }) : null;
@@ -998,7 +1133,7 @@ const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 async function openReader(id, ch, page) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
-  R.g = g; R.p = effPrefs(g); R.pages = []; R.chStart = [];
+  R.g = g; R.p = effPrefs(g); R.pages = []; R.chStart = []; R.nums = Tree.nums(g.chapters);
   g.chapters.forEach((c, ci) => { R.chStart[ci] = c.pages.length ? R.pages.length : -1; c.pages.forEach((pid, i) => R.pages.push({ id: pid, ch: ci, i })); });
   R.anchor = null;
   if (ch != null && R.chStart[ch] >= 0) R.pos = R.chStart[ch] + (page || 0);
@@ -1010,7 +1145,8 @@ async function openReader(id, ch, page) {
   if (!R.pages.length) { layout(); reader.classList.add('ui'); rToast('No pages yet', 'Add pages from Edit'); return; }
   layout();
   const c = R.pages[R.pos]; R.lastCh = c.ch;
-  rToast(`Chapter ${c.ch + 1}`, g.chapters[c.ch].title);
+  R.nums = Tree.nums(g.chapters);
+  rToast(`Chapter ${R.nums[c.ch]}`, Tree.crumb(g.chapters, c.ch));
   wakeOn();
 }
 function leaveReader() {
@@ -1093,7 +1229,7 @@ function jumpChapter(ci) {
 }
 function posChanged() {
   const c = R.pages[R.pos]; if (!c) return;
-  if (c.ch !== R.lastCh && R.lastCh !== -1) rToast(`Chapter ${c.ch + 1}`, R.g.chapters[c.ch].title);
+  if (c.ch !== R.lastCh && R.lastCh !== -1) rToast(`Chapter ${R.nums[c.ch]}`, Tree.crumb(R.g.chapters, c.ch));
   R.lastCh = c.ch;
   const shown = currentIdx(), lastShown = shown[shown.length - 1];
   const chp = R.g.chapters[c.ch];
@@ -1127,7 +1263,7 @@ function updateUI() {
   const c = R.pages[R.pos];
   if (!c) { $('#rChap').textContent = ''; $('#rLabel').textContent = ''; $('#pnum').hidden = true; return; }
   const chp = g.chapters[c.ch], n = chp.pages.length;
-  $('#rChap').textContent = `Chapter ${c.ch + 1} of ${g.chapters.length} · ${chp.title}`;
+  $('#rChap').textContent = `${(R.nums || [])[c.ch] || c.ch + 1} · ${Tree.crumb(g.chapters, c.ch)}`;
   const shown = paged(R.p.mode) ? currentIdx().map(i => R.pages[i].i + 1) : [c.i + 1];
   const pageTxt = shown.length > 1 ? `${shown[0]}–${shown[1]}` : shown[0];
   $('#rLabel').textContent = `Page ${pageTxt} of ${n}`;
@@ -1175,7 +1311,7 @@ function buildStrip() {
   applyStripZoom();
   const frag = document.createDocumentFragment(); const multi = R.g.chapters.length > 1;
   R.pages.forEach((pg, idx) => {
-    if (pg.i === 0 && multi && R.p.chapterBreaks) frag.append(h('div', { class: 'sep' }, h('span', {}, `Chapter ${pg.ch + 1}`), h('b', {}, R.g.chapters[pg.ch].title)));
+    if (pg.i === 0 && multi && R.p.chapterBreaks) frag.append(h('div', { class: 'sep' }, h('span', {}, `Chapter ${R.nums[pg.ch]}`), h('b', {}, Tree.crumb(R.g.chapters, pg.ch))));
     const [w, hh] = dims(pg.id);
     frag.append(h('div', { class: 'pg', 'data-i': idx, style: `aspect-ratio:${w}/${hh}` + (v ? '' : `;height:calc(min(100%,calc(100vw * ${(hh / w).toFixed(4)})) * var(--z,1))`) }));
   });
@@ -1454,9 +1590,7 @@ $('#rNextCh').addEventListener('click', e => jumpChapter(R.pages[R.pos].ch + (+e
 $('#rRange').addEventListener('input', e => { const c = R.pages[R.pos]; if (c) goToIdx(R.chStart[c.ch] + (+e.target.value) - 1); });
 $('#rChapters').addEventListener('click', () => {
   const c = R.pages[R.pos]; const read = new Set(R.g.read || []);
-  const list = h('div', { class: 'chlist' }, R.g.chapters.map((chp, i) => h('button', { class: 'chrow' + (c && c.ch === i ? ' current' : '') + (read.has(chp.id) ? ' read' : ''), disabled: R.chStart[i] < 0, onclick: () => { closeSheet(); goToIdx(R.chStart[i]); } },
-    h('span', { class: 'n' }, String(i + 1).padStart(2, '0')), h('span', { class: 't' }, chp.title),
-    h('span', { class: 's num' }, c && c.ch === i ? [h('span', { class: 'dot' }), `p. ${c.i + 1}/${chp.pages.length}`] : read.has(chp.id) ? 'Read' : plural(chp.pages.length, 'page')))));
+  const list = h('div', { class: 'chlist' }, chapterRows(R.g, { cur: c ? { ci: c.ch, page: c.i } : null, read, onPick: i => { closeSheet(); goToIdx(R.chStart[i]); } }));
   openSheet('Chapters', list);
   const cur = $('.chrow.current', list); if (cur) setTimeout(() => cur.scrollIntoView({ block: 'center' }), 30);
 });
@@ -1516,7 +1650,7 @@ async function addSample() {
     }
   }
   const g = newGallery('Sample: Screentone Nights'); g.sample = true;
-  const groups = groupChapters(entries, g.title).map(gr => ({ ...gr, title: gr.title.replace(/^\d+ /, '') }));
+  const groups = groupChapters(entries, g.title).map(gr => { const t = gr.title.replace(/^\d+ /, ''); return { ...gr, title: t, path: [t] }; });
   await importInto(g, groups, () => { }, () => false);
   toast('Sample gallery added. Delete it any time from Edit.');
   if (CUR.view === 'library') renderLibrary();
@@ -1731,9 +1865,11 @@ async function exportZip(g) {
     const zip = new JSZip();
     const pad = (n, l) => String(n).padStart(l, '0');
     const safe = s => (s || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 80) || 'Untitled';
-    const multi = g.chapters.length > 1;
+    const multi = g.chapters.length > 1, names = [], sib = [];
     for (const [ci, c] of g.chapters.entries()) {
-      const folder = multi ? zip.folder(`${pad(ci + 1, 2)} ${safe(c.title)}`) : zip;
+      const d = Tree.dep(c); sib.length = d + 1; sib[d] = (sib[d] || 0) + 1;
+      names.length = d; names[d] = `${pad(sib[d], 2)} ${safe(c.title)}`;
+      const folder = multi ? zip.folder(names.slice(0, d + 1).join('/')) : zip;
       for (const [pi, id] of c.pages.entries()) {
         if (cancel) throw new Error('stopped');
         const b = await S.blob('images', id); if (!b) continue;
@@ -1760,7 +1896,9 @@ async function exportZip(g) {
 /* ================= device sync ================= */
 const Sync = (() => {
   let room = null, act = null, fact = null, device = null, tombs = {}, status = 'off', lastSync = 0;
-  const st = { enabled: false, lanOnly: true, devices: {} };
+  const st = { enabled: false, lanOnly: false, devices: {}, v: 2 };
+  const logs = []; let libId = '';
+  const log = msg => { logs.push([Date.now(), msg]); if (logs.length > 40) logs.shift(); emit(); };
   const peers = new Map(), pend = new Map(), queued = new Set(), wanting = new Set(), subs = new Set();
   const recv = { got: 0, want: 0 };
   let changed = new Set(), changedT = 0, refreshT = 0, refreshIds = new Set();
@@ -1772,6 +1910,7 @@ const Sync = (() => {
       if (!device) { device = { id: uid(), name: guessName() }; await DB.put('meta', { id: 'device', v: device }); }
       const t = await DB.get('meta', 'tombs'); tombs = (t && t.v) || {};
       const s = await DB.get('meta', 'sync'); if (s) Object.assign(st, s.v);
+      if (st.v !== 2) { st.lanOnly = false; st.v = 2; await saveSt(); }
     } catch (e) { device = device || { id: uid(), name: guessName() }; }
   }
   const saveSt = () => DB.put('meta', { id: 'sync', v: st }).catch(() => { });
@@ -1784,21 +1923,22 @@ const Sync = (() => {
   async function start() {
     if (!st.enabled || room || !Crypt.ready) return;
     if (typeof P2P === 'undefined') { status = 'unavailable'; return emit(); }
-    const cfg = { appId: 'tankobon-reader-sync-1', password: await Crypt.hash('signal') };
+    const cfg = { appId: 'tankobon-reader-sync-1', password: await Crypt.hash('signal'), relayConfig: { redundancy: 10 } };
+    libId = (await Crypt.hash('room')).slice(0, 8).toUpperCase().replace(/(.{4})/, '$1-');
     if (st.lanOnly) cfg.rtcConfig = { iceServers: [] };
     if (window.P2P_URLS) cfg.relayConfig = { urls: window.P2P_URLS };
     try {
-      room = P2P.joinRoom(cfg, (await Crypt.hash('room')).slice(0, 40), { onJoinError: d => console.warn('sync join', d && d.error) });
+      room = P2P.joinRoom(cfg, (await Crypt.hash('room')).slice(0, 40), { onJoinError: d => { const m = String((d && d.error) || 'unknown'); console.warn('sync join', m); log('Could not connect to a device: ' + m.replace(/^Trystero: /, '')); } });
       act = room.makeAction('m'); fact = room.makeAction('f');
     } catch (e) { console.error(e); room = null; status = 'unavailable'; return emit(); }
-    room.onPeerJoin = pid => { peers.set(pid, { name: 'Another device' }); status = 'connected'; emit(); hello(pid).catch(console.error); };
-    room.onPeerLeave = pid => { peers.delete(pid); dropPeer(pid); status = peers.size ? 'connected' : 'waiting'; emit(); };
+    room.onPeerJoin = pid => { peers.set(pid, { name: 'Another device' }); status = 'connected'; log('Connected directly to a device'); hello(pid).catch(console.error); };
+    room.onPeerLeave = pid => { const p = peers.get(pid); peers.delete(pid); dropPeer(pid); status = peers.size ? 'connected' : 'waiting'; log(`${(p && p.name) || 'A device'} disconnected`); };
     act.onMessage = async (data, { peerId }) => {
       let m; try { m = await Crypt.decJSON(data); } catch (e) { return; }
       try { await handle(m, peerId); } catch (e) { console.error('sync', e); }
     };
     fact.onMessage = (data, { peerId, metadata }) => onFile(data, metadata, peerId).catch(console.error);
-    status = 'waiting'; emit();
+    status = 'waiting'; log(`Started. Library ID ${libId}. ${st.lanOnly ? 'Local network only.' : 'Direct connections on any network.'}`);
   }
   function stop() { try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); recv.got = recv.want = 0; status = 'off'; emit(); }
   function dropPeer(pid) { const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
@@ -1806,7 +1946,7 @@ const Sync = (() => {
   async function handle(m, pid) {
     if (m.t === 'hello') {
       const p = peers.get(pid) || {}; p.name = m.dev.name; p.dev = m.dev.id; peers.set(pid, p);
-      st.devices[m.dev.id] = { name: m.dev.name, seen: Date.now() }; saveSt(); emit();
+      st.devices[m.dev.id] = { name: m.dev.name, seen: Date.now() }; saveSt(); log(`${m.dev.name} has ${plural((m.list || []).length, 'gallery').replace('gallerys', 'galleries')}`);
     }
     if (m.t === 'hello' || m.t === 'changed') {
       await applyTombs(m.tomb || {});
@@ -1820,13 +1960,14 @@ const Sync = (() => {
       }
       if (want.length) {
         want.forEach(id => wanting.add(id)); setTimeout(() => want.forEach(id => wanting.delete(id)), 30000);
-        await send({ t: 'want', ids: want }, pid);
+        await send({ t: 'want', ids: want }, pid); log(`Asking for ${plural(want.length, 'gallery').replace('gallerys', 'galleries')}`);
       }
       lastSync = Date.now(); emit();
     } else if (m.t === 'want') {
       for (const id of m.ids) { const g = await S.gal(id); if (g && !g.sample) await send({ t: 'gal', g }, pid); }
+      log(`Sending ${plural(m.ids.length, 'gallery').replace('gallerys', 'galleries')}`);
     } else if (m.t === 'gal') {
-      wanting.delete(m.g.id); await merge(m.g, pid);
+      wanting.delete(m.g.id); await merge(m.g, pid); log(`Received “${m.g.title}”`);
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
         const r = await DB.get(store, id);
@@ -1845,7 +1986,7 @@ const Sync = (() => {
   }
   function pump(pid) {
     const q = pend.get(pid); if (!q || q.batch) return;
-    if (!q.queue.length) { pend.delete(pid); if (!pend.size) { recv.got = recv.want = 0; softRefresh(); } emit(); return; }
+    if (!q.queue.length) { pend.delete(pid); if (!pend.size) { if (recv.want) log(`All ${recv.want} pages received`); recv.got = recv.want = 0; softRefresh(); } emit(); return; }
     q.batch = q.queue.splice(0, 8);
     send({ t: 'need', ids: q.batch }, pid).catch(console.error);
   }
@@ -1901,7 +2042,8 @@ const Sync = (() => {
   async function deleted(id) { tombs[id] = Date.now(); await saveTombs(); if (act && peers.size) send({ t: 'changed', list: [], tomb: tombs }).catch(console.error); }
   return {
     load, start, stop, touched, deleted, saveSt, st, subs, recv,
-    get status() { return status; }, get peers() { return peers; }, get device() { return device; }, get lastSync() { return lastSync; },
+    get status() { return status; }, logs, get libId() { return libId; },
+    relays() { try { const r = Object.values((P2P.getRelaySockets && P2P.getRelaySockets()) || {}); return [r.filter(w => w && w.readyState === 1).length, r.length]; } catch (e) { return [0, 0]; } }, get peers() { return peers; }, get device() { return device; }, get lastSync() { return lastSync; },
     async rename(n) { device.name = n || device.name; await DB.put('meta', { id: 'device', v: device }); if (act) peers.forEach((_, pid) => hello(pid)); },
     async setEnabled(v) { st.enabled = v; await saveSt(); if (v) start(); else stop(); },
     async setLan(v) { st.lanOnly = v; await saveSt(); if (room) { stop(); start(); } },
@@ -2011,14 +2153,31 @@ function openDevices() {
         h('button', { class: 'btn ghost', onclick: () => scanPairCode(joinLibrary) }, 'Scan a pairing code')),
       h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-sync' }, 'Sync with my other devices'),
         h('button', { class: 'switch', id: 'sw-sync', role: 'switch', 'aria-checked': String(Sync.st.enabled), onclick: async () => { await Sync.setEnabled(!Sync.st.enabled); draw(); } })),
-      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-lan' }, 'Only connect on the same Wi‑Fi'),
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-lan' }, 'Only connect over the local network (stricter; some routers block it)'),
         h('button', { class: 'switch', id: 'sw-lan', role: 'switch', 'aria-checked': String(Sync.st.lanOnly), onclick: async () => { await Sync.setLan(!Sync.st.lanOnly); draw(); } })),
       known.length ? h('div', { class: 'stack' }, h('div', { class: 'label' }, 'Your devices'),
         h('div', { class: 'chlist' }, known.map(([id, d]) => h('div', { class: 'chrow' }, h('span', { class: 'sdot ' + (online.has(id) ? 'connected' : 'off') }), h('span', { class: 't' }, d.name), h('span', { class: 's' }, online.has(id) ? 'Connected' : ago(d.seen).replace('Read ', 'Seen ')))))) : null,
       h('p', { class: 'hint' }, 'Galleries, chapter order, settings and reading progress sync automatically while the app is open on both devices. Pages travel directly between your devices and are encrypted with your library key. The internet is only used for a moment so the devices can find each other.'));
   };
-  draw(); Sync.subs.add(draw);
-  openSheet('Devices & sync', body, () => Sync.subs.delete(draw));
+  let detailsOpen = false;
+  const baseDraw = draw;
+  const drawAll = () => {
+    baseDraw();
+    const [ok, total] = Sync.relays();
+    const lines = Sync.logs.slice(-12).map(([t, m]) => `${new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}  ${m}`);
+    const report = [`Library ID: ${Sync.libId || '(sync off)'}`, `Status: ${Sync.status}`, `Meeting points reachable: ${ok} of ${total}`, `Mode: ${Sync.st.lanOnly ? 'local network only' : 'any network'}`, `Device: ${Sync.device.name}`, `Browser: ${navigator.userAgent}`, '', ...lines].join('\n');
+    const det = h('details', { class: 'panel', style: 'background:var(--surface2)', open: detailsOpen, ontoggle: e => { detailsOpen = e.target.open; } },
+      h('summary', { class: 'lab' }, 'Connection details'),
+      h('div', { class: 'stack', style: 'gap:8px;margin-top:10px' },
+        h('p', { class: 'hint' }, 'Library ID: ', h('b', { class: 'num' }, Sync.libId || 'sync is off'), '. It must be the same on all your devices. If it differs, pair them again.'),
+        h('p', { class: 'hint num' }, `Meeting points reachable: ${ok} of ${total}.` + (total && !ok ? ' None can be reached, so check the internet connection.' : '')),
+        h('pre', { class: 'report', style: 'max-height:180px;overflow:auto' }, lines.join('\n') || 'Nothing yet.'),
+        h('div', {}, h('button', { class: 'btn ghost small', onclick: async () => { try { await navigator.clipboard.writeText(report); toast('Copied. Paste it in the chat with Claude.'); } catch (e) { toast('Copy did not work here.'); } } }, 'Copy these details'))));
+    body.append(det);
+  };
+  drawAll(); Sync.subs.add(drawAll);
+  const tick = setInterval(() => { if (!detailsOpen) return; drawAll(); }, 3000);
+  openSheet('Devices & sync', body, () => { Sync.subs.delete(drawAll); clearInterval(tick); });
 }
 Sync.subs.add(() => { const p = $('#syncpill'); if (p) { p.firstChild.className = 'sdot ' + Sync.status; p.lastChild.textContent = pillText(); } });
 function pillText() { return Sync.status === 'connected' && Sync.recv.want ? `${Sync.recv.got}/${Sync.recv.want}` : { off: 'Sync off', waiting: 'Looking', connected: 'Synced', unavailable: 'Offline' }[Sync.status]; }
