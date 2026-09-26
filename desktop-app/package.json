@@ -1,0 +1,42 @@
+{
+  "name": "tankobon-desktop",
+  "productName": "Tankobon",
+  "version": "1.0.0",
+  "description": "Tankōbon Reader for Windows",
+  "author": "TheOneEchoz",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --publish never"
+  },
+  "build": {
+    "appId": "io.github.theoneechoz.tankobon",
+    "productName": "Tankobon",
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "www/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Tankōbon",
+      "artifactName": "Tankobon-Setup.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  }
+}

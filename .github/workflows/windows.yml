@@ -1,0 +1,59 @@
+name: Windows app
+
+on:
+  push:
+    branches: [main]
+    paths: ['desktop-app/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Put the web app inside the Windows app
+        run: |
+          cd desktop-app
+          npm ci
+          rm -rf www && mkdir www
+          cp ../index.html ../*.js ../*.png ../manifest.webmanifest ../version.json www/
+          rm -f www/sw.js
+
+      - name: Build the installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          set -o pipefail
+          cd desktop-app
+          npm pkg set version="1.$(node -p "require('../version.json').version").${{ github.run_number }}"
+          npx electron-builder --win nsis --publish never 2>&1 | tee ../build.log
+          cp dist/Tankobon-Setup.exe ../Tankobon-Setup.exe
+
+      - name: Publish on the Releases page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-${{ github.run_number }}
+          name: Tankōbon for Windows (build ${{ github.run_number }})
+          body: Download Tankobon-Setup.exe on your computer and run it. Later screen updates arrive inside the app.
+          files: Tankobon-Setup.exe
+          make_latest: false
+
+      - name: Save the build log
+        if: always()
+        run: |
+          mkdir -p ../ci && cp build.log ../ci/ 2>/dev/null || true
+          { echo "run ${{ github.run_number }}"; echo "status ${{ job.status }}"; ls -la Tankobon-Setup.exe 2>&1; } > ../ci/status.txt
+          cd ../ci && git init -q && git checkout -q -b ci-log-windows && git add . \
+            && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "build ${{ github.run_number }}" \
+            && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-log-windows
