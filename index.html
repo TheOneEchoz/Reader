@@ -460,7 +460,7 @@ function toast(msg, ms = 2200) {
    The same page runs as a website and inside the Android app. In the app, pages are stored as files
    in the app's own storage, and updates to these screens are downloaded from the website when you ask. */
 const NATIVE = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
-const APP_VERSION = 31; // replaced by the build with the release number
+const APP_VERSION = 32; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => NATIVE ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -471,6 +471,9 @@ const NFS = (() => {
   const shard = id => (id.slice(-2).replace(/[^a-z0-9]/gi, '_') || '__');
   const rel = (store, id) => store === 'galleries' ? `lib/galleries/${id}.tkb` : `lib/${store === 'images' ? 'pages' : 'thumbs'}/${shard(id)}/${id}.tkb`;
   const F = () => Nat('Filesystem');
+  /* Android fails when two writes create the same new folder at once, so each folder is created once, before writing. */
+  const dirs = new Map();
+  const ensureDir = d => { if (!dirs.has(d)) dirs.set(d, F().mkdir({ path: d, directory: 'DATA', recursive: true }).catch(() => { })); return dirs.get(d); };
   return {
     get base() { return base; },
     async init() { base = (await F().getUri({ path: '', directory: 'DATA' })).uri.replace(/\/$/, ''); },
@@ -483,7 +486,10 @@ const NFS = (() => {
     },
     async put(store, rec) {
       const buf = rec.e instanceof ArrayBuffer ? rec.e : new Uint8Array(rec.e).slice().buffer;
-      await F().writeFile({ path: rel(store, rec.id), data: u8ToB64(new Uint8Array(buf)), directory: 'DATA', recursive: true });
+      const path = rel(store, rec.id), data = u8ToB64(new Uint8Array(buf));
+      await ensureDir(path.slice(0, path.lastIndexOf('/')));
+      try { await F().writeFile({ path, data, directory: 'DATA', recursive: true }); }
+      catch (e) { dirs.delete(path.slice(0, path.lastIndexOf('/'))); await ensureDir(path.slice(0, path.lastIndexOf('/'))); await F().writeFile({ path, data, directory: 'DATA', recursive: true }); }
       remember(store, rec.id, buf); if (keyCache[store]) keyCache[store].add(rec.id);
     },
     async del(store, id) { if (mem[store]) mem[store].delete(id); try { await F().deleteFile({ path: rel(store, id), directory: 'DATA' }); } catch (e) { } if (keyCache[store]) keyCache[store].delete(id); },
@@ -3220,15 +3226,26 @@ const Sync = (() => {
     } catch (e) { console.error(e); room = null; status = 'unavailable'; return emit(); }
     room.onPeerJoin = pid => { peers.set(pid, { name: 'Another device' }); status = 'connected'; log('Connected directly to a device'); hello(pid).catch(console.error); };
     room.onPeerLeave = pid => { const p = peers.get(pid); peers.delete(pid); dropPeer(pid); status = peers.size ? 'connected' : 'waiting'; log(`${(p && p.name) || 'A device'} disconnected`); };
-    act.onMessage = async (data, { peerId }) => {
+    // messages from one device are handled one after another, so saving galleries never overlaps
+    act.onMessage = (data, { peerId }) => serial(peerId, async () => {
       let m; try { m = await Crypt.decJSON(data); } catch (e) { return; }
-      try { await handle(m, peerId); } catch (e) { console.error('sync', e); }
-    };
-    fact.onMessage = (data, { peerId, metadata }) => onFile(data, metadata, peerId).catch(console.error);
+      try { await handle(m, peerId); } catch (e) { console.error('sync', e); failed(peerId, 'message ' + m.t); }
+    });
+    fact.onMessage = (data, { peerId, metadata }) => onFile(data, metadata, peerId).catch(e => { console.error(e); failed(peerId, 'page'); });
     status = 'waiting'; log(`Started. Library ID ${libId}. ${st.lanOnly ? 'Local network only.' : 'Direct connections on any network.'}`);
   }
+  const chains = new Map();
+  const serial = (pid, fn) => { const next = (chains.get(pid) || Promise.resolve()).then(fn, fn); chains.set(pid, next.catch(() => { })); return next; };
+  /* Something did not arrive: once the current transfer ends, ask that device to list its galleries again (a few times at most). */
+  const retries = new Map();
+  function failed(pid, what) { const r = retries.get(pid) || { n: 0, due: false }; r.due = true; retries.set(pid, r); log(`Something did not arrive (${what}); will ask again`); }
+  function askAgain(pid) {
+    const r = retries.get(pid); if (!r || !r.due || r.n >= 4) return;
+    r.due = false; r.n++;
+    setTimeout(() => { if (peers.has(pid)) send({ t: 'ask' }, pid).catch(console.error); }, 1500);
+  }
   function stop() { try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); recv.got = recv.want = 0; status = 'off'; emit(); }
-  function dropPeer(pid) { const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
+  function dropPeer(pid) { retries.delete(pid); chains.delete(pid); const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
   async function hello(pid) { await send({ t: 'hello', dev: device, list: await listing(), tomb: tombs }, pid); }
   async function handle(m, pid) {
     if (m.t === 'hello') {
@@ -3254,13 +3271,17 @@ const Sync = (() => {
       for (const id of m.ids) { const g = await S.gal(id); if (g && !g.sample) await send({ t: 'gal', g }, pid); }
       log(`Sending ${plural(m.ids.length, 'gallery').replace('gallerys', 'galleries')}`);
     } else if (m.t === 'gal') {
-      wanting.delete(m.g.id); await merge(m.g, pid); log(`Received “${m.g.title}”`);
+      wanting.delete(m.g.id);
+      try { await merge(m.g, pid); log(`Received “${m.g.title}”`); }
+      catch (e) { console.error(e); failed(pid, `“${m.g.title}”`); if (!pend.get(pid)) askAgain(pid); }
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
         const r = await ST.get(store, id);
         if (r && r.e) await fact.send(new Uint8Array(r.e), { target: pid, metadata: { id, s, t: r.t } });
       }
       await send({ t: 'done' }, pid);
+    } else if (m.t === 'ask') {
+      await hello(pid);
     } else if (m.t === 'done') {
       const q = pend.get(pid); if (q) { (q.batch || []).forEach(id => queued.delete(id)); q.batch = null; pump(pid); }
     }
@@ -3273,7 +3294,7 @@ const Sync = (() => {
   }
   function pump(pid) {
     const q = pend.get(pid); if (!q || q.batch) return;
-    if (!q.queue.length) { pend.delete(pid); if (!pend.size) { if (recv.want) log(`All ${recv.want} pages received`); recv.got = recv.want = 0; softRefresh(); } emit(); return; }
+    if (!q.queue.length) { pend.delete(pid); if (!pend.size) { if (recv.want) log(`All ${recv.want} pages received`); recv.got = recv.want = 0; softRefresh(); } askAgain(pid); emit(); return; }
     q.batch = q.queue.splice(0, 8);
     send({ t: 'need', ids: q.batch }, pid).catch(console.error);
   }
@@ -3335,6 +3356,8 @@ const Sync = (() => {
     async setEnabled(v) { st.enabled = v; await saveSt(); if (v) start(); else stop(); },
     async setLan(v) { st.lanOnly = v; await saveSt(); if (room) { stop(); start(); } },
     async restart() { stop(); await start(); },
+    /* ask every connected device to list its galleries again */
+    async resync() { if (!act) return start(); for (const pid of peers.keys()) { await hello(pid); await send({ t: 'ask' }, pid); } log('Checking again with connected devices'); },
   };
 })();
 
@@ -3471,7 +3494,8 @@ function openDevices() {
     body.replaceChildren(
       h('div', { class: 'panel', style: 'background:var(--surface2)' },
         h('div', { class: 'row' }, h('span', { class: 'sdot ' + Sync.status }), h('b', {}, SYNC_TEXT[Sync.status])),
-        h('p', { class: 'hint' }, syncLine())),
+        h('p', { class: 'hint' }, syncLine()),
+        Sync.st.enabled ? h('div', {}, h('button', { class: 'btn small', onclick: async () => { await Sync.resync(); toast(Sync.peers.size ? 'Checking again for anything missing…' : 'No device connected. Open the app on your other device too.', 3500); } }, 'Sync now')) : null),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'dev-name' }, 'This device\'s name'), nameIn),
       h('div', { class: 'row' },
         h('button', { class: 'btn primary', onclick: showPairCode }, 'Show pairing code'),
