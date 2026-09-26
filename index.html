@@ -289,6 +289,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 #reader.ui #pnum{opacity:0}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @media (min-width:720px){.hero{grid-template-columns:170px 1fr}.hero h1{font-size:32px}}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 
 </head>
@@ -733,9 +734,9 @@ function openAddSheet(existing) {
   };
   opts.append(
     existing ? null : h('button', { class: 'bigopt', onclick: createEmpty }, icon('plus'), h('div', {}, h('b', {}, 'Create an empty gallery'), h('span', {}, 'Start from nothing. Make your own chapters and add images to each one from anywhere on your phone.'))),
-    h('button', { class: 'bigopt', onclick: () => choose('folder') }, icon('folder'), h('div', {}, h('b', {}, 'Choose a folder'), h('span', {}, folderOK ? 'Images in subfolders become chapters. CBZ/ZIP files inside also count as chapters.' : 'Your browser may not support picking folders. Try the options below.'))),
-    h('button', { class: 'bigopt', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
-    h('button', { class: 'bigopt', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP or CBZ files'), h('span', {}, 'Folders inside a file become chapters. Picking several files makes one chapter per file.')))
+    h('button', { class: 'bigopt picks', onclick: () => choose('folder') }, icon('folder'), h('div', {}, h('b', {}, 'Choose a folder'), h('span', {}, folderOK ? 'Images in subfolders become chapters. CBZ/ZIP files inside also count as chapters.' : 'Your browser may not support picking folders. Try the options below.'))),
+    h('button', { class: 'bigopt picks', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
+    h('button', { class: 'bigopt picks', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP or CBZ files'), h('span', {}, 'Folders inside a file become chapters. Picking several files makes one chapter per file.')))
   );
   openSheet(existing ? 'Add pages to this gallery' : 'Add a gallery', h('div', { class: 'stack' },
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'add-name' }, existing ? 'Chapter name for loose images' : 'Gallery name'), name),
@@ -988,6 +989,12 @@ async function openGlobalSettings() {
       h('div', { class: 'setrow' }, h('div', { class: 'lab', id: 'lock-lbl' }, 'Lock the app after it has been in the background for'),
         (lockSeg = h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'lock-lbl' }, [[0, 'Right away'], [60, '1 min'], [300, '5 min'], [1800, '30 min']].map(([v, l]) =>
           h('button', { 'aria-pressed': String((UI.lockAfter ?? 60) === v), onclick: e => { UI.lockAfter = v; saveMeta(); $$('button', lockSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l))))),
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-full' }, 'Full screen (hide the browser and phone bars)'),
+        h('button', { class: 'switch', id: 'sw-full', role: 'switch', 'aria-checked': String(UI.fullscreen !== false), onclick: e => {
+          UI.fullscreen = UI.fullscreen === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.fullscreen));
+          if (!UI.fullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => { });
+          else if (UI.fullscreen && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
+        } })),
       h('div', { class: 'row' },
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password'),
@@ -1148,7 +1155,7 @@ async function renderEditor(id) {
       h('div', { class: 'stack', style: 'gap:8px;align-content:center' }, h('div', { class: 'label' }, 'Cover'),
         h('p', { class: 'hint' }, own ? 'Your own image.' : page ? 'A page from this gallery.' : 'The first page.'),
         h('div', { class: 'row' },
-          h('button', { class: 'btn small', onclick: chooseCover }, icon('image'), 'Choose an image'),
+          h('button', { class: 'btn small picks', onclick: chooseCover }, icon('image'), 'Choose an image'),
           g.cover ? h('button', { class: 'btn ghost small', onclick: async () => { await dropCustomCover(g); g.cover = null; await saveGallery(g); drawCover(); toast('Cover reset to the first page'); } }, 'Use the first page') : null),
         h('p', { class: 'hint' }, 'To use a page instead, open a chapter, tap the page, then tap Cover.')));
   };
@@ -1382,13 +1389,13 @@ async function renderPages(id, chId) {
       h('button', { class: 'btn primary small', onclick: () => back('editor', { id }) }, icon('check'), 'Done')),
     h('div', { class: 'stack' },
       h('div', { class: 'row' },
-        h('button', { class: 'btn small primary', onclick: addImagesHere }, icon('plus'), 'Add images'),
+        h('button', { class: 'btn small primary picks', onclick: addImagesHere }, icon('plus'), 'Add images'),
         h('button', { class: 'btn small', onclick: newFolder }, icon('folder'), 'New folder'),
         selBtn,
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
-      h('p', { class: 'hint' }, 'Press and hold, then drag to reorder. Drop onto a folder to put things inside it. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
+      h('p', { class: 'hint' }, 'Press and hold, then drag to reorder. Drop images anywhere on a folder to put them inside; folders stay in place while you drag images over them. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
       grid)), selbar);
   draw();
 
@@ -1400,7 +1407,7 @@ async function renderPages(id, chId) {
   const folderUnder = () => {
     for (const el of grid.querySelectorAll('.pcell.folder')) {
       if (!drag || el === drag.item || drag.carry.includes(el)) continue;
-      const r = el.getBoundingClientRect(), mx = r.width * .2, my = r.height * .2;
+      const r = el.getBoundingClientRect(), m = drag.pagesOnly ? 0 : .2, mx = r.width * m, my = r.height * m;
       if (pt.x > r.left + mx && pt.x < r.right - mx && pt.y > r.top + my && pt.y < r.bottom - my) return el;
     }
     return null;
@@ -1414,11 +1421,12 @@ async function renderPages(id, chId) {
       const k = keyOf(ev.item), multi = sel.has(k) && sel.size > 1;
       const order = tiles().map(keyOf);
       drag = { item: ev.item, key: k, keys: multi ? order.filter(x => sel.has(x)) : [k], carry: multi ? [...grid.children].filter(el => el !== ev.item && sel.has(keyOf(el))) : [], drop: null };
+      drag.pagesOnly = drag.keys.every(x => x[0] === 'p');
       drag.carry.forEach(el => el.classList.add('carried'));
       if (multi) ev.item.setAttribute('data-count', drag.keys.length);
       ['pointermove', 'touchmove', 'mousemove', 'dragover'].forEach(t => document.addEventListener(t, track, { passive: true, capture: true }));
     },
-    onMove: () => { const f = folderUnder(); setDrop(f); return f ? false : true; },
+    onMove: ev => { const f = folderUnder(); setDrop(f); if (f) return false; if (drag && drag.pagesOnly && ev.related && ev.related.dataset && ev.related.dataset.cid) return false; return true; },
     onEnd: async ev => {
       ['pointermove', 'touchmove', 'mousemove', 'dragover'].forEach(t => document.removeEventListener(t, track, { capture: true }));
       const d = drag; drag = null; if (!d) return;
@@ -1976,6 +1984,13 @@ document.addEventListener('keydown', e => {
   else if (k === 'PageUp') { e.preventDefault(); step(-1); }
 });
 
+/* ---- full screen: on phones, the first touch hides the browser bars (and again after returning to the app) ---- */
+const canFull = () => document.documentElement.requestFullscreen && matchMedia('(pointer: coarse)').matches && !matchMedia('(display-mode: fullscreen)').matches;
+document.addEventListener('pointerdown', e => {
+  if (UI.fullscreen === false || document.fullscreenElement || !canFull()) return;
+  if (e.target.closest && e.target.closest('.picks, input, textarea, select, label')) return;
+  document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
+}, true);
 /* ---- reader chrome ---- */
 $('#rZoomOut').append(icon('zoomout')); $('#rZoomIn').append(icon('zoomin'));
 $('#rZoomOut').addEventListener('click', () => zoomStep(-1)); $('#rZoomIn').addEventListener('click', () => zoomStep(1));
@@ -1983,7 +1998,7 @@ $('#rZoomLbl').addEventListener('click', () => zoomCenter(1)); $('#rZoomOpts').a
 $('#rBack').append(icon('back')); $('#rChapters').append(icon('list')); $('#rSettings').append(icon('tune')); $('#rFull').append(icon('full'));
 $('#rBack').addEventListener('click', () => back('detail', { id: R.g.id }));
 $('#rFull').addEventListener('click', async () => {
-  try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
+  try { if (document.fullscreenElement) { UI.fullscreen = false; saveMeta(); await document.exitFullscreen(); } else { UI.fullscreen = true; saveMeta(); await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } }
   catch (e) { toast('Full screen is not available here. Add the app to your home screen for a full-screen view.', 3500); }
 });
 $('#rPrevCh').addEventListener('click', e => jumpChapter(+e.currentTarget.dataset.dir || -1));
