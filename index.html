@@ -462,7 +462,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 33; // replaced by the build with the release number
+const APP_VERSION = 34; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -950,6 +950,86 @@ function newGallery(title) {
   return { id: uid(), title: title || 'Untitled gallery', createdAt: Date.now(), updatedAt: Date.now(), lastReadAt: 0, cover: null, chapters: [], meta: {}, prefs: {}, progress: null, read: [] };
 }
 
+/* ---------- files handed to the app: shared or opened from another app, dropped on the window ---------- */
+let RECEIVED = [];
+async function receiveFiles(files) {
+  const zips = files.filter(f => ZIP_EXT.test(f.name) || /zip|cbz|comicbook/i.test(f.type || '')), imgs = files.filter(f => !zips.includes(f) && (IMG_EXT.test(f.name) || (f.type || '').startsWith('image/')));
+  if (!zips.length && !imgs.length) { toast('Those files are not ZIP, CBZ or images, so nothing was added.', 3500); return; }
+  if (!Crypt.ready) { RECEIVED.push(...zips, ...imgs); return; }
+  zips.sort((a, b) => natural(a.name, b.name)); imgs.sort((a, b) => natural(a.name, b.name));
+  const single = zips.length + (imgs.length ? 1 : 0) === 1;
+  let perFile = true;
+  const name = h('input', { class: 'text', id: 'rcv-name', autocomplete: 'off', value: single ? (zips[0] ? baseName(zips[0].name) : 'Shared images') : '' });
+  const nameField = h('div', { class: 'field' }, h('label', { class: 'label', for: 'rcv-name' }, 'Gallery name'), name);
+  nameField.hidden = !single;
+  const seg = zips.length > 1 ? h('div', { class: 'seg', role: 'group', 'aria-label': 'How to make galleries' }, [[true, 'A gallery for each file'], [false, 'One gallery, a chapter per file']].map(([v, l]) =>
+    h('button', { 'aria-pressed': String(perFile === v), onclick: e => { perFile = v; $$('button', seg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); nameField.hidden = perFile; if (!perFile && !name.value) name.value = baseName(zips[0].name).replace(/[\s._-]*(v(ol)?|c(h|hapter)?)?[\s._-]*\d+$/i, '') || 'New gallery'; } }, l))) : null;
+  const status = h('div', { class: 'progress', hidden: true }), lbl = h('div', { class: 'num' }), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  status.append(lbl, bar);
+  let cancel = false;
+  const btn = h('button', { class: 'btn primary', onclick: async () => {
+    btn.disabled = true; status.hidden = false; busy++;
+    const made = []; let added = 0, skipped = 0;
+    try {
+      const jobs = [];
+      if (perFile || zips.length <= 1) zips.forEach(z => jobs.push({ title: single ? name.value.trim() : '', files: [z], kind: 'zip' }));
+      else jobs.push({ title: name.value.trim(), files: zips, kind: 'zip' });
+      if (imgs.length) jobs.push({ title: single ? name.value.trim() : 'Shared images', files: imgs, kind: 'images' });
+      for (let j = 0; j < jobs.length && !cancel; j++) {
+        const job = jobs[j];
+        lbl.textContent = `Reading ${job.files.length === 1 ? job.files[0].name : plural(job.files.length, 'file')}…`;
+        const { title, entries } = await collect(job.kind, job.files);
+        if (!entries.length) { skipped++; continue; }
+        const g = newGallery(job.title || title || baseName(job.files[0].name));
+        await saveGallery(g);
+        const r = await importInto(g, groupChapters(entries, g.title), (d, t) => { lbl.textContent = `${jobs.length > 1 ? `Gallery ${j + 1} of ${jobs.length}: ` : ''}page ${d.toLocaleString()} of ${t.toLocaleString()}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
+        if (!g.chapters.some(c => c.pages.length)) { await ST.del('galleries', g.id); skipped++; continue; }
+        made.push(g); added += r.done - r.skipped;
+      }
+    } catch (e) { console.error(e); toast('Could not read those files: ' + (e.message || e), 4500); }
+    finally { busy = Math.max(0, busy - 1); }
+    closeSheet();
+    if (!made.length) return toast('No images were found in those files.', 3500);
+    toast(`${plural(made.length, 'gallery').replace('gallerys', 'galleries')} made with ${plural(added, 'page')}${skipped ? `. ${plural(skipped, 'file')} had no images` : ''}.`, 4000);
+    if (made.length === 1) go('detail', { id: made[0].id }); else if (CUR.view === 'library') renderLibrary(); else go('library');
+  } }, icon('plus'), single ? 'Make the gallery' : 'Make galleries');
+  const list = [...zips, ...imgs];
+  openSheet(single ? 'New gallery from a file' : `New galleries from ${plural(list.length, 'file')}`, h('div', { class: 'stack' },
+    h('ul', { class: 'hint', style: 'margin:0;padding-left:18px;max-height:30vh;overflow:auto' }, list.slice(0, 50).map(f => h('li', {}, f.name)), list.length > 50 ? h('li', {}, `and ${list.length - 50} more`) : null),
+    seg, nameField, btn, status,
+    h('p', { class: 'hint' }, 'Folders inside a ZIP become chapters. The pages are copied into your encrypted library.')), () => { cancel = true; });
+}
+/* Files other apps gave to the Android or Windows app (Share, Open with, double-click). */
+async function takeIncoming() {
+  if (!NATIVE) return;
+  try {
+    if (ANDROID) {
+      const T = Nat('Tankobon'), r = await T.takeIncoming(), files = [];
+      for (const f of r.files || []) {
+        const res = await fetch(Capacitor.convertFileSrc('file://' + f.path), { cache: 'no-store' });
+        files.push(new File([await res.blob()], f.name, { type: f.type || '' }));
+        T.removeCached({ path: f.path }).catch(() => { });
+      }
+      if (files.length) receiveFiles(files);
+    } else if (DESK) {
+      const list = await TkbDesktop.takeIncoming(), files = [];
+      for (const f of list) files.push(new File([await TkbDesktop.readPicked(f.path)], f.name));
+      if (files.length) receiveFiles(files);
+    }
+  } catch (e) { console.error(e); toast('Could not open the file: ' + (e.message || e), 4000); }
+}
+function listenIncoming() {
+  if (ANDROID) { try { Nat('Tankobon').addListener('incoming', () => { if (Crypt.ready) takeIncoming(); }); } catch (e) { } }
+  if (DESK) TkbDesktop.onIncoming(() => { if (Crypt.ready) takeIncoming(); else { try { TkbDesktop.focus(); } catch (e) { } } });
+  // any version: drop ZIP, CBZ or image files onto the window
+  document.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  document.addEventListener('drop', e => {
+    const files = e.dataTransfer ? [...e.dataTransfer.files] : []; if (!files.length) return;
+    e.preventDefault();
+    if (!Crypt.ready) return toast('Unlock the app first, then drop the files again.', 3500);
+    receiveFiles(files);
+  });
+}
 function openAddSheet(existing) {
   const name = h('input', { class: 'text', id: 'add-name', placeholder: existing ? 'Added pages' : 'Uses the folder name if left empty', value: '' });
   const status = h('div', { class: 'progress', hidden: true });
@@ -3035,6 +3115,7 @@ async function afterUnlock(fresh) {
   if (st && st.view) render(st.view, st.params || {});
   else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
   Sync.start(); saveLockToFolder();
+  if (RECEIVED.length) { const f = RECEIVED; RECEIVED = []; receiveFiles(f); } else takeIncoming();
   if (NATIVE && UI.openUpdates) { UI.openUpdates = false; openUpdates(); }
 }
 function askPassword(title, text, onOk) {
@@ -3789,6 +3870,7 @@ async function restoreLockFromFolder() {
     if (DESK) await restoreLockFromFolder();
   }
   await Sync.load();
+  listenIncoming();
   let lock = null; try { lock = await DB.get('meta', 'lock'); } catch (e) { }
   if (lock) showUnlock(lock); else showSetup();
 })();

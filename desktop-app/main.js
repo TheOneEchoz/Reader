@@ -32,6 +32,14 @@ function inside(root, rel) {
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.css': 'text/css' };
 
 let win = null;
+/* ZIP / CBZ files opened with the app (double-click, Open with, dropped on the icon) */
+const incoming = [];
+function addIncoming(argv) {
+  const found = argv.slice(1).filter(a => !a.startsWith('-') && /\.(zip|cbz|jpe?g|png|webp|gif|avif|bmp)$/i.test(a) && fs.existsSync(a));
+  if (!found.length) return false;
+  incoming.push(...found); return true;
+}
+addIncoming(process.argv);
 function createWindow() {
   const b = cfg.win || { width: 1200, height: 860 };
   win = new BrowserWindow({
@@ -56,7 +64,10 @@ function createWindow() {
   win.loadURL('app://tkb/index.html');
 }
 
-app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+app.on('second-instance', (e, argv) => {
+  const got = addIncoming(argv);
+  if (win) { if (win.isMinimized()) win.restore(); win.focus(); if (got) win.webContents.send('incoming'); }
+});
 app.on('window-all-closed', () => app.quit());
 
 app.whenReady().then(async () => {
@@ -121,6 +132,11 @@ ipcMain.handle('pick:folder', async () => {
   const files = []; await walk(root, root, files, 0);
   return { name: path.basename(root), files };
 });
+ipcMain.handle('incoming:take', async () => {
+  const list = incoming.splice(0).map(p => { picked.add(p); return { path: p, name: path.basename(p) }; });
+  return list;
+});
+ipcMain.handle('win:focus', async () => { if (win) { win.show(); win.focus(); } });
 ipcMain.handle('pick:read', async (e, abs) => {
   const ok = [...picked].some(r => abs === r || abs.startsWith(r + path.sep));
   if (!ok) throw new Error('not a picked file');

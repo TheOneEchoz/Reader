@@ -24,4 +24,7 @@ contextBridge.exposeInMainWorld('TkbDesktop', {
   cleanupVersions: keep => ipcRenderer.invoke('upd:cleanup', keep),
   notify: (title, body) => ipcRenderer.invoke('notify', title, body),
   onOpenUpdates: cb => ipcRenderer.on('open-updates', () => cb()),
+  takeIncoming: () => ipcRenderer.invoke('incoming:take'),
+  onIncoming: cb => ipcRenderer.on('incoming', () => cb()),
+  focus: () => ipcRenderer.invoke('win:focus'),
 });

@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.DocumentsContract;
+import android.provider.OpenableColumns;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -28,6 +29,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Small native helpers for Tankobon:
@@ -37,6 +40,79 @@ import java.io.OutputStream;
  */
 @CapacitorPlugin(name = "Tankobon")
 public class TankobonPlugin extends Plugin {
+
+    /* ---------- files shared with the app or opened with it ---------- */
+
+    private static final List<Uri> incoming = new ArrayList<>();
+    private static TankobonPlugin instance;
+
+    @Override
+    public void load() {
+        instance = this;
+    }
+
+    /** Called by the activity for every intent it receives. */
+    @SuppressWarnings("deprecation")
+    public static void receive(Intent intent) {
+        if (intent == null || intent.getAction() == null) return;
+        List<Uri> uris = new ArrayList<>();
+        String action = intent.getAction();
+        if (Intent.ACTION_VIEW.equals(action) && intent.getData() != null) {
+            uris.add(intent.getData());
+        } else if (Intent.ACTION_SEND.equals(action)) {
+            Uri u = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (u != null) uris.add(u);
+        } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            ArrayList<Uri> list = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            if (list != null) uris.addAll(list);
+        }
+        if (uris.isEmpty()) return;
+        synchronized (incoming) { incoming.addAll(uris); }
+        if (instance != null) instance.notifyListeners("incoming", new JSObject(), true);
+    }
+
+    /** Copy every waiting file into the app's cache and say where they are. */
+    @PluginMethod
+    public void takeIncoming(PluginCall call) {
+        final List<Uri> list;
+        synchronized (incoming) { list = new ArrayList<>(incoming); incoming.clear(); }
+        new Thread(() -> {
+            JSArray files = new JSArray();
+            ContentResolver cr = getContext().getContentResolver();
+            File dir = new File(getContext().getCacheDir(), "import");
+            if (!dir.exists()) dir.mkdirs();
+            for (Uri u : list) {
+                try {
+                    String name = null, type = cr.getType(u);
+                    if ("content".equals(u.getScheme())) {
+                        try (Cursor c = cr.query(u, new String[] { OpenableColumns.DISPLAY_NAME }, null, null, null)) {
+                            if (c != null && c.moveToFirst()) name = c.getString(0);
+                        } catch (Exception ignored) {}
+                    }
+                    if (name == null) name = u.getLastPathSegment();
+                    if (name == null) name = "shared.zip";
+                    File out = File.createTempFile("in", ".bin", dir);
+                    try (InputStream in = cr.openInputStream(u); OutputStream os = new FileOutputStream(out)) {
+                        if (in == null) throw new Exception("cannot open");
+                        byte[] buf = new byte[1 << 16];
+                        int n;
+                        while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+                    }
+                    JSObject f = new JSObject();
+                    f.put("path", out.getAbsolutePath());
+                    f.put("name", name);
+                    f.put("type", type == null ? "" : type);
+                    f.put("size", out.length());
+                    files.put(f);
+                } catch (Exception e) {
+                    // skip files that cannot be read
+                }
+            }
+            JSObject ret = new JSObject();
+            ret.put("files", files);
+            call.resolve(ret);
+        }).start();
+    }
 
     /* ---------- folder picking ---------- */
 

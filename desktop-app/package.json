@@ -2,7 +2,7 @@
   "name": "tankobon-desktop",
   "productName": "Tankobon",
   "version": "1.0.0",
-  "description": "Tankōbon Reader for Windows",
+  "description": "Tank\u014dbon Reader for Windows",
   "author": "TheOneEchoz",
   "private": true,
   "main": "main.js",
@@ -31,9 +31,17 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Tankōbon",
+      "shortcutName": "Tank\u014dbon",
       "artifactName": "Tankobon-Setup.${ext}"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": "cbz",
+        "name": "Comic book archive",
+        "description": "Comic book archive",
+        "role": "Viewer"
+      }
+    ]
   },
   "devDependencies": {
     "electron": "44.4.5",
