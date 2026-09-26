@@ -462,7 +462,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 34; // replaced by the build with the release number
+const APP_VERSION = 35; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -664,6 +664,7 @@ function back(fallback = 'library', params = {}) {
 }
 window.addEventListener('popstate', e => { const s = e.state || { view: 'library', params: {} }; render(s.view, s.params || {}); });
 async function render(view, params) {
+  if (view === 'pages') { view = 'editor'; params = { id: params.id, folder: params.ch, view: 'folders' }; } // old address of a folder's page editor
   closeSheet();
   if (CUR.view === 'reader' && view !== 'reader') leaveReader();
   CUR = { view, params };
@@ -674,8 +675,8 @@ async function render(view, params) {
   try {
     if (view === 'library') await renderLibrary();
     else if (view === 'detail') await renderDetail(params.id, params.folder, tagQuery(params));
-    else if (view === 'editor') await renderEditor(params.id);
-    else if (view === 'pages') await renderPages(params.id, params.ch);
+    else if (view === 'editor') await renderEditor(params.id, params.folder, params.view);
+    else if (view === 'pages') await renderEditor(params.id, params.ch, 'folders');
     else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start, params.scope, params.only, tagQuery(params));
   } catch (e) { console.error(e); toast('Something went wrong: ' + (e.message || e)); }
   if (view !== 'reader') window.scrollTo(0, params.scroll || 0);
@@ -920,7 +921,8 @@ async function importInto(g, groups, onProgress, cancelled) {
   Tree.ensureRoot(g);
   const total = groups.reduce((n, c) => n + c.items.length, 0); let done = 0, skipped = 0;
   for (const grp of groups) {
-    let ch = grp.chId ? g.chapters.find(c => c.id === grp.chId) : Tree.ensurePath(g.chapters, grp.path || [grp.title]);
+    const baseIdx = grp.baseId ? Math.max(0, g.chapters.findIndex(c => c.id === grp.baseId)) : 0;
+    let ch = grp.chId ? g.chapters.find(c => c.id === grp.chId) : Tree.ensurePath(g.chapters, grp.path || [grp.title], baseIdx);
     if (!ch) { ch = { id: uid(), title: grp.title, pages: [] }; g.chapters.push(ch); }
     const queue = [...grp.items]; const results = new Array(queue.length);
     let k = 0;
@@ -1030,7 +1032,7 @@ function listenIncoming() {
     receiveFiles(files);
   });
 }
-function openAddSheet(existing) {
+function openAddSheet(existing, folder) {
   const name = h('input', { class: 'text', id: 'add-name', placeholder: existing ? 'Added pages' : 'Uses the folder name if left empty', value: '' });
   const status = h('div', { class: 'progress', hidden: true });
   const opts = h('div', { class: 'stack' });
@@ -1049,7 +1051,7 @@ function openAddSheet(existing) {
       const g = existing || newGallery(name.value.trim() || title || 'Untitled gallery');
       if (!existing) await saveGallery(g);
       const groups = groupChapters(entries, existing ? (name.value.trim() || 'Added pages') : g.title);
-      if (existing) groups.forEach(gr => { if (!gr.path.length) gr.path = [gr.title]; });
+      if (existing) groups.forEach(gr => { if (!gr.path.length) gr.path = [gr.title]; if (folder) gr.baseId = folder.id; });
       const r = await importInto(g, groups, (d, t) => { lbl.textContent = `Adding page ${d.toLocaleString()} of ${t.toLocaleString()}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
       if (!g.chapters.length) { await ST.del('galleries', g.id); closeSheet(); toast('Nothing was added.'); return render(CUR.view, CUR.params); }
       closeSheet();
@@ -1071,7 +1073,7 @@ function openAddSheet(existing) {
     h('button', { class: 'bigopt picks', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP or CBZ files'), h('span', {}, 'Folders inside a file become chapters. Picking several files makes one chapter per file.')))
   );
-  openSheet(existing ? 'Add pages to this gallery' : 'Add a gallery', h('div', { class: 'stack' },
+  openSheet(folder ? `Add pages to “${folder.title}”` : existing ? 'Add pages to this gallery' : 'Add a gallery', h('div', { class: 'stack' },
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'add-name' }, existing ? 'Chapter name for loose images' : 'Gallery name'), name),
     opts, status,
     h('p', { class: 'hint' }, 'Pages are copied into this app on your phone, so the gallery keeps working even if you move the original folder. Android will ask you to confirm access to the folder.')));
@@ -1208,11 +1210,12 @@ const Tree = (() => {
   function firstPage(chs, i, hid) { const ord = order(chs, hid), e = end(chs, i); const hit = ord.find(o => o.ch >= i && o.ch < e); return hit ? hit.ch : -1; }
   function firstFlat(chs, i, hid) { const ord = order(chs, hid), e = end(chs, i); return ord.findIndex(o => o.ch >= i && o.ch < e); }
   function subtreePages(chs, i) { let n = 0; const e = end(chs, i); for (let j = i; j < e; j++) n += chs[j].pages.length; return n; }
-  function ensurePath(chs, path) {
-    if (!path.length) return chs[0];
-    let lo = 1, hi = chs.length, idx = 0;
+  function ensurePath(chs, path, base = 0) {
+    if (!path.length) return chs[base];
+    const d0 = dep(chs[base]);
+    let lo = base + 1, hi = base ? end(chs, base) : chs.length, idx = base;
     path.forEach((t, k) => {
-      const d = k + 1; let f = -1;
+      const d = d0 + k + 1; let f = -1;
       for (let j = lo; j < hi; j++) if (dep(chs[j]) === d && chs[j].title === t) { f = j; break; }
       if (f < 0) { chs.splice(hi, 0, { id: uid(), title: t, pages: [], d, keep: k < path.length - 1 }); f = hi; }
       else if (k < path.length - 1) chs[f].keep = true;
@@ -1263,7 +1266,7 @@ const thumbIO = new IntersectionObserver(es => es.forEach(e => {
 }), { rootMargin: '800px 0px' });
 function lazyThumb(id, alt = '') { const img = h('img', { alt, decoding: 'async' }); if (id) { img.dataset.tid = id; thumbIO.observe(img); } return img; }
 /* First page of a folder, used as its picture. */
-function folderThumb(g, ci) { const ord = Tree.order(g.chapters), e = Tree.end(g.chapters, ci); const hit = ord.find(o => o.ch >= ci && o.ch < e); return hit ? hit.id : null; }
+function folderThumb(g, ci) { const c = g.chapters[ci]; if (c && c.cover && g.meta[c.cover]) return c.cover; const ord = Tree.order(g.chapters), e = Tree.end(g.chapters, ci); const hit = ord.find(o => o.ch >= ci && o.ch < e); return hit ? hit.id : null; }
 
 /* ================= library ================= */
 let LIBTAGS = { tags: [], any: false }; // tag filter in the library, kept while the app is open
@@ -1408,7 +1411,7 @@ async function renderDetail(id, folderId, tq) {
       h('button', { class: 'iconbtn', 'aria-label': atRoot ? 'Back to library' : 'Back', onclick: () => atRoot ? back('library') : back('detail', { id, folder: trail.length > 1 ? chs[trail[trail.length - 2]].id : undefined }) }, icon('back')),
       h('div', { class: 'grow' }, atRoot ? null : h('h2', {}, F.title)),
       atRoot ? h('button', { class: 'btn ghost small', onclick: () => exportZip(g) }, icon('download'), 'Save ZIP') : null,
-      h('button', { class: 'btn ghost small', onclick: () => atRoot ? go('editor', { id }) : go('pages', { id, ch: F.id }) }, icon('edit'), 'Edit')),
+      h('button', { class: 'btn ghost small', onclick: () => go('editor', atRoot ? { id } : { id, folder: F.id }) }, icon('edit'), 'Edit')),
     atRoot ? h('div', { class: 'hero' },
       h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
       h('div', {}, h('h1', {}, g.title),
@@ -1465,56 +1468,67 @@ function renderTagged(v, g, tq) {
 }
 
 /* ================= editor ================= */
-async function renderEditor(id) {
+/* One editing screen for the whole gallery and for every folder inside it. */
+async function renderEditor(id, folderId, view) {
   const v = $('#v-editor'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
+  const fi0 = folderId ? g.chapters.findIndex(c => c.id === folderId) : 0;
+  if (fi0 < 0) return go('editor', { id }, true);
+  const F = g.chapters[fi0], atRoot = !!F.root;
+  const fIdx = () => g.chapters.indexOf(F);
+  const inside = () => { const i = fIdx(); return new Set(g.chapters.slice(i + 1, Tree.end(g.chapters, i)).map(c => c.id)); };
+  const word = atRoot ? 'chapter' : 'folder';
   const list = h('div', { class: 'edlist' });
   const collapsed = new Set();
   const commit = async msg => { g.chapters = Tree.norm(g.chapters); await saveGallery(g); draw(); if (msg) toast(msg); };
+  const openFolder = (c, how) => go('editor', { id, folder: c.id, view: how });
   const draw = () => {
-    const chs = g.chapters, nums = Tree.nums(chs), rows = []; let hideDeeper = Infinity;
-    chs.forEach((c, i) => {
-      if (c.root) return;
-      const d = Tree.dep(c) - 1;
-      if (d > hideDeeper) return; hideDeeper = Infinity;
-      const kids = i + 1 < chs.length && Tree.dep(chs[i + 1]) > d + 1, closed = collapsed.has(c.id);
+    const chs = g.chapters, nums = Tree.nums(chs), rows = [], fi = fIdx(), fe = Tree.end(chs, fi), base = Tree.dep(F); let hideDeeper = Infinity;
+    for (let i = fi + 1; i < fe; i++) {
+      const c = chs[i], d = Tree.dep(c) - base - 1;
+      if (d > hideDeeper) continue; hideDeeper = Infinity;
+      const kids = i + 1 < fe && Tree.dep(chs[i + 1]) > Tree.dep(c), closed = collapsed.has(c.id);
       if (kids && closed) hideDeeper = d;
       rows.push(h('div', { class: 'edrow' + (c.pages.length ? '' : ' group') + (Tree.hiddenIn(chs, i) ? ' off' : ''), style: d ? `margin-left:${Math.min(d, 8) * 16}px` : null },
         kids ? h('button', { class: 'twisty' + (closed ? '' : ' open'), 'aria-expanded': String(!closed), 'aria-label': closed ? `Show what is inside ${c.title}` : `Hide what is inside ${c.title}`, onclick: () => { closed ? collapsed.delete(c.id) : collapsed.add(c.id); draw(); } }, icon('chevr')) : h('span'),
         h('span', { class: 'n' }, nums[i]),
-        h('input', { value: c.title, 'aria-label': `Chapter ${nums[i]} name`, id: 'ch-' + c.id, onchange: e => { c.title = e.target.value.trim() || c.title; saveGallery(g); } }),
-        h('button', { class: 'btn small', onclick: () => go('pages', { id, ch: c.id }) }, plural(c.pages.length, 'page')),
+        h('input', { value: c.title, 'aria-label': `${word === 'chapter' ? 'Chapter' : 'Folder'} ${nums[i]} name`, id: 'ch-' + c.id, onchange: e => { c.title = e.target.value.trim() || c.title; saveGallery(g); } }),
+        h('button', { class: 'btn small', onclick: () => openFolder(c, 'folders') }, plural(c.pages.length, 'page')),
         h('button', { class: 'iconbtn', 'aria-label': `More for ${c.title}`, onclick: () => menu(c) }, icon('more'))));
-    });
-    countLbl.textContent = `Chapters · ${chCount(g)}`;
-    if (!rows.length) rows.push(h('p', { class: 'hint' }, 'No chapters yet. Pages you add without a chapter go on the main level.'));
+    }
+    const n = inside().size;
+    countLbl.textContent = atRoot ? `Chapters · ${chCount(g)}` : `Folders inside · ${n}`;
+    if (!rows.length) rows.push(h('p', { class: 'hint' }, atRoot ? 'No chapters yet. Pages you add without a chapter go on the main level.' : 'No folders inside yet. Tap New folder to make one.'));
     list.replaceChildren(...rows);
   };
+  /* the ⋯ menu: the same for every chapter and folder, including the one being edited */
   const menu = c => {
-    const chs = g.chapters, i = chs.indexOf(c), d = Tree.dep(c), e = Tree.end(chs, i);
+    const chs = g.chapters, i = chs.indexOf(c), d = Tree.dep(c), e = Tree.end(chs, i), self = c === F;
     const subs = e - i - 1, direct = chs.slice(i + 1, e).filter(x => Tree.dep(x) === d + 1).length;
     const pagesIn = chs.slice(i, e).reduce((n, x) => n + x.pages.length, 0);
     const item = (ic, label, sub, fn) => h('button', { class: 'bigopt', onclick: async () => { closeSheet(); await fn(); } }, icon(ic), h('div', {}, h('b', {}, label), sub ? h('span', {}, sub) : null));
     let armed = false;
     const del = h('button', { class: 'btn danger', onclick: async () => {
-      if (!armed) { armed = true; del.textContent = subs ? `Tap again: delete it, ${plural(subs, 'sub-chapter')} and ${plural(pagesIn, 'page')}` : `Tap again: delete it and ${plural(pagesIn, 'page')}`; return; }
-      const b = g.chapters.slice(i, e); await removePages(g, b.flatMap(x => x.pages)); g.chapters = g.chapters.filter(x => !b.includes(x));
-      closeSheet(); await commit('Deleted');
-    } }, icon('trash'), subs ? 'Delete it with everything inside' : 'Delete this chapter');
+      if (!armed) { armed = true; del.textContent = subs ? `Tap again: delete it, ${plural(subs, 'folder')} inside and ${plural(pagesIn, 'page')}` : `Tap again: delete it and ${plural(pagesIn, 'page')}`; return; }
+      await deleteFolder(g, c); closeSheet();
+      if (self) { await saveGallery(g); toast('Deleted'); const p = Tree.parent(g.chapters, i); back('editor', { id }); return; }
+      await commit('Deleted');
+    } }, icon('trash'), subs ? 'Delete it with everything inside' : 'Delete it');
     openSheet(c.title, h('div', { class: 'stack' },
-      item('image', 'Open its pages', `${plural(c.pages.length, 'page')} directly in this chapter`, () => go('pages', { id, ch: c.id })),
-      item('plus', 'Add a sub-chapter inside', subs ? `It will go after the ${plural(direct, 'sub-chapter')} already inside` : 'Use it to group pages inside this chapter', async () => {
+      self ? null : item('edit', 'Edit it', 'Its name, cover, pages and the folders inside', () => openFolder(c)),
+      self ? null : item('image', 'Open its pages', `${plural(c.pages.length, 'page')} directly inside`, () => openFolder(c, 'folders')),
+      item('plus', 'Add a folder inside', subs ? `It will go after the ${plural(direct, 'folder')} already inside` : 'Use it to group pages inside', async () => {
         const n = { id: uid(), title: `Part ${direct + 1}`, pages: [], keep: true, d: d + 1 };
         g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(c)), 0, n); collapsed.delete(c.id);
-        await commit('Sub-chapter added. Type a name for it.');
+        await commit('Folder added. Type a name for it.');
         setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.focus(); f.select(); } }, 60);
       }),
-      item('up', 'Move up', 'Swaps it with the chapter above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
-      item('down', 'Move down', 'Swaps it with the chapter below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
-      item('move', 'Put it inside another chapter…', 'Or move it back to the top level', () => pickParent(c)),
-      item('tag', 'Tags…', tagsOf(g, 'c:' + c.id).length ? tagsOf(g, 'c:' + c.id).map(t => '#' + t).join(' ') : 'Tags on a folder apply to everything inside it', () => openTagSheet(g, ['c:' + c.id], `Tags for ${c.title}`, draw)),
-      item(c.hide ? 'eye' : 'eyeoff', c.hide ? 'Show it when reading' : 'Hide it from reading', c.hide ? 'Its pages go back into normal reading' : 'Skipped when reading, still opens from the gallery as extras', async () => { if (c.hide) delete c.hide; else c.hide = true; await commit(c.hide ? 'Hidden from reading' : 'Shown when reading'); }),
-      d > 1 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
+      item('up', 'Move up', 'Swaps it with the one above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
+      item('down', 'Move down', 'Swaps it with the one below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
+      item('move', 'Put it inside another folder…', 'Or move it back to the top level', () => pickParent(c)),
+      item('tag', 'Tags…', tagsOf(g, 'c:' + c.id).length ? tagsOf(g, 'c:' + c.id).map(t => '#' + t).join(' ') : 'Tags on a folder apply to everything inside it', () => openTagSheet(g, ['c:' + c.id], `Tags for ${c.title}`, () => { draw(); drawFolderTags(); })),
+      item(c.hide ? 'eye' : 'eyeoff', c.hide ? 'Show it when reading' : 'Hide it from reading', c.hide ? 'Its pages go back into normal reading' : 'Skipped when reading, still opens from the gallery as extras', async () => { if (c.hide) delete c.hide; else c.hide = true; await commit(c.hide ? 'Hidden from reading' : 'Shown when reading'); drawFolderTags(); }),
+      d > 1 ? item('back', 'Move out one level', 'It goes right after the folder it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
       del));
   };
   const pickParent = c => {
@@ -1529,54 +1543,83 @@ async function renderEditor(id) {
         h('span', { class: 'n' }, nums[j]), h('span', { class: 't' }, t.title), h('span')));
     });
     box.replaceChildren(...rows);
-    const find = chs.length > 6 ? h('input', { class: 'search', id: 'pp-find', type: 'search', autocomplete: 'off', placeholder: 'Find a chapter by name or number', oninput: ev => {
+    const find = chs.length > 6 ? h('input', { class: 'search', id: 'pp-find', type: 'search', autocomplete: 'off', placeholder: 'Find a folder by name or number', oninput: ev => {
       const q = ev.target.value.trim().toLowerCase(); rows.forEach((r, k) => { if (k) r.hidden = !!q && !r.dataset.q.includes(q); });
     } }) : null;
-    openSheet(`Put “${c.title}” inside…`, h('div', { class: 'stack' }, h('p', { class: 'hint' }, 'It becomes the last sub-chapter of the one you pick, together with everything inside it.'), find, box));
+    openSheet(`Put “${c.title}” inside…`, h('div', { class: 'stack' }, h('p', { class: 'hint' }, 'It becomes the last folder inside the one you pick, together with everything inside it.'), find, box));
   };
   const countLbl = h('div', { class: 'label' });
   draw();
+  /* sort the folders inside the one being edited (all levels below it) */
   const sortCh = how => {
+    const ids = inside(); if (!atRoot && !ids.size) return toast('There are no folders inside to sort');
     g.chapters = Tree.sortRec(g.chapters, kids => {
+      if (!kids.length || (!atRoot && !ids.has(kids[0].c.id))) return;
       if (how === 'asc') kids.sort((a, b) => natural(a.c.title, b.c.title));
       if (how === 'desc') kids.sort((a, b) => natural(b.c.title, a.c.title));
       if (how === 'rev') kids.reverse();
     });
-    commit('Chapter order saved');
+    commit(`${atRoot ? 'Chapter' : 'Folder'} order saved`);
   };
-  const arrows = g.chapters.some(c => Tree.dep(c) === 1 && c.title.includes('›'));
+  const arrows = atRoot && g.chapters.some(c => Tree.dep(c) === 1 && c.title.includes('›'));
+  /* cover: the gallery's, or this folder's (shown on its tile) */
   const coverBox = h('div', { class: 'coverrow' });
   const drawCover = () => {
-    const own = g.customCover && g.cover === g.customCover, page = !own && g.cover && g.meta[g.cover];
+    const cur = atRoot ? g.cover : F.cover, custom = atRoot ? g.customCover : F.customCover;
+    const own = custom && cur === custom, page = !own && cur && g.meta[cur];
+    const shown = atRoot ? coverId(g) : folderThumb(g, fIdx());
     coverBox.replaceChildren(
-      h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
+      h('div', { class: 'cover' }, shown ? thumbImg(shown, 'Cover') : h('span')),
       h('div', { class: 'stack', style: 'gap:8px;align-content:center' }, h('div', { class: 'label' }, 'Cover'),
-        h('p', { class: 'hint' }, own ? 'Your own image.' : page ? 'A page from this gallery.' : 'The first page.'),
+        h('p', { class: 'hint' }, own ? 'Your own image.' : page ? `A page from this ${atRoot ? 'gallery' : 'folder'}.` : 'The first page.'),
         h('div', { class: 'row' },
           h('button', { class: 'btn small picks', onclick: chooseCover }, icon('image'), 'Choose an image'),
-          g.cover ? h('button', { class: 'btn ghost small', onclick: async () => { await dropCustomCover(g); g.cover = null; await saveGallery(g); drawCover(); toast('Cover reset to the first page'); } }, 'Use the first page') : null),
-        h('p', { class: 'hint' }, 'To use a page instead, open a chapter, tap the page, then tap Cover.')));
+          cur ? h('button', { class: 'btn ghost small', onclick: async () => {
+            if (atRoot) { await dropCustomCover(g); g.cover = null; } else { await dropFolderCover(g, F); F.cover = null; }
+            await saveGallery(g); drawCover(); toast('Cover reset to the first page');
+          } }, 'Use the first page') : null),
+        h('p', { class: 'hint' }, 'To use a page instead, switch to Folders below, tap the page, then tap Cover.')));
   };
   const chooseCover = async () => {
     const [f] = await pickFiles({ accept: 'image/*', multiple: false }); if (!f) return;
     try {
       const t = await makeThumb(f), cid = uid();
       await S.putBlob('images', cid, f); await S.putBlob('thumbs', cid, t.thumb);
-      await dropCustomCover(g);
       g.meta[cid] = [t.w, t.h, 'cover' + ((f.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0])];
-      g.cover = g.customCover = cid; await saveGallery(g); drawCover(); toast('Cover updated');
+      if (atRoot) { await dropCustomCover(g); g.cover = g.customCover = cid; }
+      else { await dropFolderCover(g, F); F.cover = F.customCover = cid; }
+      await saveGallery(g); drawCover(); toast('Cover updated');
     } catch (e) { toast('That image could not be read. Try a JPG or PNG.', 3500); }
   };
   drawCover();
   let armedDel = false;
   const delBtn = h('button', { class: 'btn danger', onclick: async () => {
-    if (!armedDel) { armedDel = true; delBtn.textContent = 'Tap again to delete everything'; setTimeout(() => { armedDel = false; delBtn.textContent = 'Delete this gallery'; }, 3500); return; }
-    await purgeGallery(g); if (g.sample) { await DB.put('meta', { id: mk('sampleGone'), v: true }); } else await Sync.deleted(g.id);
-    toast('Gallery deleted'); go('library', {}, true);
-  } }, 'Delete this gallery');
+    if (!armedDel) { armedDel = true; delBtn.textContent = 'Tap again to delete everything'; setTimeout(() => { armedDel = false; delBtn.textContent = atRoot ? 'Delete this gallery' : 'Delete this folder'; }, 3500); return; }
+    if (atRoot) {
+      await purgeGallery(g); if (g.sample) { await DB.put('meta', { id: mk('sampleGone'), v: true }); } else await Sync.deleted(g.id);
+      toast('Gallery deleted'); go('library', {}, true);
+    } else { await deleteFolder(g, F); await saveGallery(g); toast('Folder deleted'); back('editor', { id }); }
+  } }, atRoot ? 'Delete this gallery' : 'Delete this folder');
+  const folderTags = h('div', { class: 'row' });
+  const drawFolderTags = () => {
+    if (atRoot) return;
+    const own = tagsOf(g, 'c:' + F.id), inh = inheritedTags(g, 'c:' + F.id);
+    folderTags.replaceChildren(...[
+      h('button', { class: 'btn small', onclick: () => openTagSheet(g, ['c:' + F.id], `Tags for ${F.title}`, drawFolderTags) }, icon('tag'), own.length ? own.map(t => '#' + t).join(' ') : 'Tags'),
+      inh.length ? h('span', { class: 'hint' }, 'Also: ' + inh.map(e => '#' + e.t).join(' ')) : null,
+      h('button', { class: 'btn small', onclick: async () => { if (F.hide) delete F.hide; else F.hide = true; await saveGallery(g); drawFolderTags(); toast(F.hide ? 'Hidden from reading' : 'Shown when reading'); } }, icon(F.hide ? 'eye' : 'eyeoff'), F.hide ? 'Show when reading' : 'Hide from reading'),
+      h('button', { class: 'btn small', 'aria-label': `More for ${F.title}`, onclick: () => menu(F) }, icon('more'), 'More')].filter(Boolean));
+  };
+  drawFolderTags();
+  const newFolderHere = async () => {
+    const i = fIdx(), direct = g.chapters.slice(i + 1, Tree.end(g.chapters, i)).filter(x => Tree.dep(x) === Tree.dep(F) + 1).length;
+    const n = { id: uid(), title: atRoot ? `Chapter ${direct + 1}` : `Part ${direct + 1}`, pages: [], keep: true, d: Tree.dep(F) + 1 };
+    g.chapters.splice(Tree.end(g.chapters, i), 0, n); await commit();
+    setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60);
+  };
   const listPart = h('div', { class: 'stack' },
-      h('button', { class: 'chrow', style: 'background:var(--surface);border-radius:12px', onclick: () => go('pages', { id, ch: g.chapters[0].id }) },
-        h('span', { class: 'n' }, icon('folder')), h('span', { class: 't' }, 'Main level'), h('span', { class: 's num' }, `${plural(g.chapters[0].pages.length, 'page')} · Open`)),
+      h('button', { class: 'chrow', style: 'background:var(--surface);border-radius:12px', onclick: () => showView('folders') },
+        h('span', { class: 'n' }, icon('folder')), h('span', { class: 't' }, atRoot ? 'Main level' : 'Pages directly in this folder'), h('span', { class: 's num' }, `${plural(F.pages.length, 'page')} · Open`)),
       h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, countLbl,
         h('div', { class: 'row' },
           h('button', { class: 'btn small', onclick: () => sortCh('asc') }, icon('sort'), 'A–Z'),
@@ -1584,36 +1627,56 @@ async function renderEditor(id) {
           h('button', { class: 'btn small', onclick: () => sortCh('rev') }, 'Reverse'))),
       arrows ? h('div', { class: 'banner stack', style: 'gap:8px' }, h('span', {}, 'Some chapter names look like folder paths, such as “Volume 1 › Chapter 2”. They can become real sub-chapters.'),
         h('div', {}, h('button', { class: 'btn small primary', onclick: async () => { g.chapters = Tree.splitArrows(g.chapters); await saveGallery(g); toast('Turned into sub-chapters'); renderEditor(id); } }, 'Turn them into sub-chapters'))) : null,
-      h('p', { class: 'hint' }, 'Tap ⋯ on a chapter to move it, put it inside another chapter, or add sub-chapters. Sub-chapters are only for organizing: when reading, every page follows in order. Tap a page count to see or add pages. Changes save on their own.'),
+      h('p', { class: 'hint' }, `Tap ⋯ on a ${word} to move it, put it inside another folder, tag it or add folders inside. Folders are only for organizing: when reading, every page follows in order. Tap a page count to see or add pages. Changes save on their own.`),
       list,
       h('div', { class: 'row' },
-        h('button', { class: 'btn', onclick: () => openAddSheet(g) }, icon('plus'), 'Add more pages'),
-        h('button', { class: 'btn ghost', onclick: async () => { const n = { id: uid(), title: `Chapter ${g.chapters.filter(c => Tree.dep(c) === 1).length + 1}`, pages: [], keep: true, d: 1 }; g.chapters.push(n); await commit(); setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60); } }, 'New chapter'))
+        h('button', { class: 'btn', onclick: () => openAddSheet(g, atRoot ? null : F) }, icon('plus'), 'Add more pages'),
+        h('button', { class: 'btn ghost', onclick: newFolderHere }, atRoot ? 'New chapter' : 'New folder'))
 );
   const gridPart = h('div', { class: 'stack' });
-  const viewSeg = h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, h('div', { class: 'label' }, 'Show chapters as'),
-    h('div', { class: 'seg', role: 'group', 'aria-label': 'Show chapters as' }, [['list', 'List'], ['folders', 'Folders']].map(([k, l]) =>
+  const viewSeg = h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, h('div', { class: 'label' }, `Show ${atRoot ? 'chapters' : 'what is inside'} as`),
+    h('div', { class: 'seg', role: 'group', 'aria-label': 'Show as' }, [['list', 'List'], ['folders', 'Folders']].map(([k, l]) =>
       h('button', { 'data-v': k, 'aria-pressed': 'false', onclick: () => showView(k) }, icon(k === 'list' ? 'list' : 'folder'), l))));
-  const showView = k => {
-    UI.edView = k; saveMeta();
+  const showView = (k, keep) => {
+    if (!keep) { UI.edView = k; saveMeta(); }
     $$('button', viewSeg).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === k)));
     listPart.hidden = k !== 'list'; gridPart.hidden = k === 'list';
-    if (k === 'list') { gridPart.replaceChildren(); g.chapters = Tree.norm(g.chapters); draw(); }
-    else renderPages(id, g.chapters[0].id, gridPart, g);
+    if (k === 'list') { gridPart.replaceChildren(); g.chapters = Tree.norm(g.chapters); draw(); drawCover(); }
+    else renderPages(id, F.id, gridPart, g);
   };
+  const trail = []; for (let k = fIdx(); k > 0; k = Tree.parent(g.chapters, k)) trail.unshift(k);
   v.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'appbar' },
       h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('detail', { id }) }, icon('back')),
-      h('div', { class: 'grow' }, h('h2', {}, 'Edit gallery')),
+      h('div', { class: 'grow' }, h('h2', {}, atRoot ? 'Edit gallery' : 'Edit folder')),
       h('button', { class: 'btn primary small', onclick: () => back('detail', { id }) }, icon('check'), 'Done')),
     h('div', { class: 'stack' },
+      atRoot ? null : h('nav', { class: 'crumbs', 'aria-label': 'Folders' },
+        h('button', { onclick: () => go('editor', { id }) }, g.title),
+        trail.map(k => [h('span', { 'aria-hidden': 'true' }, '›'), k === fIdx() ? h('b', {}, g.chapters[k].title) : h('button', { onclick: () => go('editor', { id, folder: g.chapters[k].id }) }, g.chapters[k].title)])),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
-        h('input', { class: 'text', id: 'g-title', value: g.title, onchange: e => { g.title = e.target.value.trim() || g.title; saveGallery(g); toast('Name saved'); } })),
+        h('input', { class: 'text', id: 'g-title', value: atRoot ? g.title : F.title, onchange: e => { const t = e.target.value.trim(); if (!t) return; if (atRoot) g.title = t; else F.title = t; saveGallery(g); toast('Name saved'); } })),
       coverBox,
+      atRoot ? null : folderTags,
       viewSeg, gridPart, listPart,
-      h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'), h('p', { class: 'hint' }, 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.'), h('div', {}, delBtn))
+      h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'),
+        h('p', { class: 'hint' }, atRoot ? 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.' : 'Deletes this folder, the folders inside it and their pages from this gallery. Your original files are not touched.'),
+        h('div', {}, delBtn))
     )));
-  showView(UI.edView || 'list');
+  showView(view || UI.edView || 'list', !!view);
+}
+/* Delete a folder with everything inside it (pages, folders, its own cover image). */
+async function deleteFolder(g, c) {
+  const i = g.chapters.indexOf(c); if (i <= 0) return;
+  const block = g.chapters.slice(i, Tree.end(g.chapters, i));
+  for (const b of block) await dropFolderCover(g, b);
+  await removePages(g, block.flatMap(x => x.pages));
+  g.chapters = Tree.norm(g.chapters.filter(x => !block.includes(x)));
+}
+async function dropFolderCover(g, c) {
+  const x = c.customCover; c.customCover = null;
+  if (!x || g.cover === x || g.chapters.some(ch => ch.pages.includes(x))) return;
+  delete g.meta[x]; forgetURL(x); await ST.del('images', x); await ST.del('thumbs', x);
 }
 async function dropCustomCover(g) {
   const c = g.customCover; g.customCover = null;
@@ -1655,13 +1718,13 @@ async function renderPages(id, chId, host, gIn) {
       if (it.t === 'c') {
         const c = g.chapters[it.ci], k = 'c:' + c.id;
         return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : '') + (c.hide ? ' off' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
-          onclick: e => selecting() ? toggle(k, e.currentTarget) : go('pages', { id, ch: c.id }) },
+          onclick: e => selecting() ? toggle(k, e.currentTarget) : go('editor', { id, folder: c.id, view: 'folders' }) },
           lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(allTagsOf(g, k)), c.hide ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, h('span', { class: 'ftitle' }, c.title));
       }
       const pid = it.id, num = ++n, k = 'p:' + pid, off = !!(g.hid && g.hid[pid]);
       return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : '') + (off ? ' off' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}${off ? ', hidden from reading' : ''}`, 'aria-pressed': String(sel.has(k)),
         onclick: e => toggle(k, e.currentTarget) },
-        lazyThumb(pid), tagMark(allTagsOf(g, k)), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+        lazyThumb(pid), tagMark(allTagsOf(g, k)), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, (ch.root ? g.cover : ch.cover) === pid ? h('span', { class: 'cv' }, 'COVER') : null);
     }));
     drawSel();
   };
@@ -1682,11 +1745,7 @@ async function renderPages(id, chId, host, gIn) {
     let armed = false;
     const del = h('button', { class: 'btn danger', onclick: async () => {
       if (!armed) { armed = true; del.textContent = folders.length ? `Delete ${plural(sel.size, 'item')} (${plural(pages.length + pagesInFolders, 'page')})?` : `Delete ${plural(pages.length, 'page')}?`; return; }
-      for (const fid of folders) {
-        const i = g.chapters.findIndex(c => c.id === fid); if (i < 0) continue;
-        const block = g.chapters.slice(i, Tree.end(g.chapters, i));
-        await removePages(g, block.flatMap(x => x.pages)); g.chapters = g.chapters.filter(x => !block.includes(x));
-      }
+      for (const fid of folders) { const c = g.chapters.find(x => x.id === fid); if (c) await deleteFolder(g, c); }
       if (pages.length) await removePages(g, pages);
       g.chapters = Tree.norm(g.chapters); await saveGallery(g); sel.clear(); draw(); toast('Deleted');
     } }, icon('trash'), 'Delete');
@@ -1715,7 +1774,10 @@ async function renderPages(id, chId, host, gIn) {
           toast(hide ? 'Hidden from reading. They stay here and in the gallery, where you can still open them.' : 'These will show when reading again.', 4000);
         } }, icon(allOff ? 'eye' : 'eyeoff'), allOff ? 'Show in reading' : 'Hide from reading');
       })(),
-      sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => { await dropCustomCover(g); g.cover = pages[0]; await saveGallery(g); sel.clear(); draw(); toast('Cover updated'); } }, icon('star'), 'Cover') : null,
+      sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => {
+        if (ch.root) { await dropCustomCover(g); g.cover = pages[0]; } else { await dropFolderCover(g, ch); ch.cover = pages[0]; }
+        await saveGallery(g); sel.clear(); draw(); toast(ch.root ? 'Gallery cover updated' : 'Folder cover updated');
+      } }, icon('star'), ch.root ? 'Cover' : 'Folder cover') : null,
       del,
       h('button', { class: 'btn', 'aria-label': 'Clear selection', onclick: () => { sel.clear(); selMode = false; draw(); } }, icon('x'))].filter(Boolean));
   };
@@ -1867,7 +1929,7 @@ async function renderPages(id, chId, host, gIn) {
   const aim = () => {
     const { x, y } = drag;
     const hit = document.elementFromPoint(x, y);
-    const el = hit && hit.closest && hit.closest('#v-pages .pcell');
+    let el = hit && hit.closest && hit.closest('.pcell'); if (el && !grid.contains(el)) el = null;
     if (!el || drag.carried.includes(el)) {
       // below the last tile: put at the end
       const all = tiles(), last = all[all.length - 1];
