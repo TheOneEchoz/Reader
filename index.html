@@ -214,7 +214,9 @@ input[type=range]{accent-color:var(--accent);width:100%}
 #reader[data-bg="gray"]{--rbg:#2A2C30}
 #reader[data-bg="white"]{--rbg:#F4F4F2}
 #reader{background:var(--rbg)}
-#stage{position:absolute;inset:0;overflow:auto;scrollbar-width:none;touch-action:none;overscroll-behavior:contain}
+#warm{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+#warm .spread{position:absolute;left:0;top:0;will-change:transform}
+#stage{position:absolute;inset:0;z-index:1;background:var(--rbg);overflow:auto;scrollbar-width:none;touch-action:none;overscroll-behavior:contain}
 #stage::-webkit-scrollbar{display:none}
 #stage.t-y{touch-action:pan-y}
 #stage.t-x{touch-action:pan-x}
@@ -287,6 +289,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 </div>
 
 <section id="reader" hidden aria-label="Reader">
+  <div id="warm" aria-hidden="true"><div id="warmN" class="spread"></div><div id="warmP" class="spread"></div></div>
   <div id="stage"><div id="spread" class="spread"></div></div>
   <div id="strip" hidden></div>
   <div id="dim"></div>
@@ -1327,6 +1330,7 @@ async function openReader(id, ch, page, start) {
   wakeOn();
 }
 function leaveReader() {
+  $('#warmN').replaceChildren(); $('#warmP').replaceChildren();
   PRE.clear(); PIN.clear(); R.pinned = []; R.groupKey = null; R.groupTok = (R.groupTok || 0) + 1;
   saveProgress(true); teardownStrip(); wakeOff(); clearTimeout(tapTimer);
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { }
@@ -1346,7 +1350,7 @@ function layout() {
     if (p.mode === 'double') R.pos = R.spreads[R.spreadOf[R.pos]][0];
     stage.className = { screen: '', width: 't-y', height: 't-x', original: 't-xy' }[p.fit] || '';
     renderPaged();
-  } else buildStrip();
+  } else { $('#warmN').replaceChildren(); $('#warmP').replaceChildren(); buildStrip(); }
   updateUI();
 }
 function dims(id) { const m = R.g.meta[id]; return m ? [m[0], m[1]] : [2, 3]; }
@@ -1420,7 +1424,29 @@ function preloadAround() {
   want.forEach(j => { if (j >= 0 && j < R.pages.length) ids.add(R.pages[j].id); });
   for (const id of [...PRE.keys()]) if (!ids.has(id)) PRE.delete(id);
   // load the next pages first, one after another, so the page you turn to next is ready soonest
-  (async () => { for (const id of ids) { if (!R.g) return; await getPage(id); } })();
+  const pos = R.pos;
+  (async () => {
+    let n = 0;
+    for (const id of ids) { if (!R.g || R.pos !== pos) return; await getPage(id); if (++n === 3) warmUp(); }
+    warmUp();
+  })();
+}
+/* The next and previous pages sit fully drawn behind the current one, so turning only swaps what is on top. */
+async function warmUp() {
+  if (!R.g || !paged(R.p.mode) || !R.pages.length) return;
+  const pos = R.pos, single = R.p.mode !== 'double';
+  const k = single ? pos : R.spreadOf[pos];
+  const pick = d => single ? ((pos + d >= 0 && pos + d < R.pages.length) ? [pos + d] : []) : (R.spreads[k + d] || []);
+  for (const [box, d] of [[$('#warmN'), 1], [$('#warmP'), -1]]) {
+    const idxs = pick(d);
+    const imgs = (await Promise.all(idxs.map(i => getPage(R.pages[i].id)))).filter(Boolean);
+    if (R.pos !== pos || !paged(R.p.mode)) return;
+    if (isRTL()) imgs.reverse();
+    const free = imgs.filter(im => im.parentElement !== spread);
+    box.className = `spread fit-${R.p.fit} n${imgs.length}`;
+    box.style.width = stage.clientWidth + 'px'; box.style.minHeight = stage.clientHeight + 'px';
+    box.replaceChildren(...free);
+  }
 }
 const currentIdx = () => R.p.mode === 'double' ? R.spreads[R.spreadOf[R.pos]] : [R.pos];
 async function renderPaged() {
@@ -1438,7 +1464,7 @@ async function renderPaged() {
   spread.replaceChildren(...nodes);
   if (!keep) { stage.scrollTop = 0; stage.scrollLeft = isRTL() ? stage.scrollWidth : 0; }
   applyStartZoom(keep ? prev : null);
-  preloadAround();
+  requestAnimationFrame(() => setTimeout(preloadAround, 0));
 }
 function step(d) {
   if (!R.pages.length) return;
