@@ -206,6 +206,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 #v-lock{padding-inline:16px}
 .lockbox{max-width:420px;margin:0 auto;padding-block:10vh 48px;display:grid;gap:16px}
 .lockbox h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:8px 0 0;text-wrap:balance}
+.clue{margin:0;padding:10px 12px;border-radius:10px;background:var(--surface2);font-size:14px;word-break:break-word}
 .err{color:var(--accent);font-size:14px;font-weight:500;min-height:1.2em;margin:0}
 .wordmark{white-space:nowrap;overflow:hidden}
 @media (max-width:440px){.wordmark{font-size:20px;gap:8px}.wordmark .hanko{width:24px;height:24px;font-size:13px}.appbar .btn.small{padding:0 10px}}
@@ -1005,7 +1006,7 @@ async function openGlobalSettings() {
         } })),
       h('div', { class: 'row' },
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
-        h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password'),
+        h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password or clue'),
         h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'))),
     settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
     h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), storagePanel(), store, ST.folder ? null : persisted,
@@ -2400,6 +2401,7 @@ async function openLibraryFolder() {
       STORE = { mode: 'folder', handle: dir, name: dir.name }; await DB.put('meta', { id: 'storage', v: STORE });
       afterUnlock(false);
     } }, pwField('of-pw', 'Password', 'current-password'), err, btn),
+    clueButton(info.lock.hint),
     h('button', { class: 'btn ghost small', type: 'button', onclick: () => showSetup() }, 'Back'));
   setTimeout(() => { const f = $('#of-pw'); if (f) f.focus(); }, 50);
 }
@@ -2498,9 +2500,20 @@ function lockShell(...kids) {
   const v = $('#v-lock'); v.hidden = false;
   v.replaceChildren(h('div', { class: 'lockbox' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'), ...kids));
 }
-function pwField(id, label, auto) {
+function hintField(value) {
+  return h('div', { class: 'field' }, h('label', { class: 'label', for: 'pw-hint' }, 'Password clue (optional)'),
+    h('input', { class: 'text', id: 'pw-hint', maxlength: 120, autocomplete: 'off', value: value || '', placeholder: 'Something only you would understand' }),
+    h('p', { class: 'hint' }, 'Shown on the unlock screen to anyone holding your phone, so never write the password itself.'));
+}
+function badHint(hint, pw) { return hint && pw && hint.toLowerCase().includes(pw.toLowerCase()); }
+function clueButton(hint) {
+  if (!hint) return null;
+  const out = h('p', { class: 'clue', hidden: true }, hint);
+  return h('div', { class: 'stack', style: 'gap:6px' }, h('button', { class: 'btn ghost small', type: 'button', onclick: e => { out.hidden = !out.hidden; e.currentTarget.textContent = out.hidden ? 'Show password clue' : 'Hide password clue'; } }, 'Show password clue'), out);
+}
+function pwField(id, label, auto, optional) {
   return h('div', { class: 'field' }, h('label', { class: 'label', for: id }, label),
-    h('input', { class: 'text', id, type: 'password', autocomplete: auto, required: true }));
+    h('input', { class: 'text', id, type: 'password', autocomplete: auto, required: !optional }));
 }
 async function showSetup(joinRaw) {
   const legacy = (await DB.keys('galleries')).length;
@@ -2512,15 +2525,17 @@ async function showSetup(joinRaw) {
     const a = $('#pw1').value, b = $('#pw2').value;
     if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
     if (a !== b) { err.textContent = 'The two passwords are different. Type them again.'; return; }
+    if (badHint($('#pw-hint').value, a)) { err.textContent = 'The clue must not contain the password.'; return; }
     err.textContent = ''; btn.disabled = true; btn.textContent = 'Setting up…';
     await withBusy(async () => {
       if (joinRaw) await Crypt.setRaw(joinRaw); else await Crypt.fresh();
-      await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
+      const lk = await Crypt.wrapRaw(Crypt.raw, a); const hint = ($('#pw-hint').value || '').trim(); if (hint) lk.hint = hint;
+      await DB.put('meta', lk);
       await reencrypt(null, Crypt.key, false, (i, n) => prog.textContent = `Encrypting your library: ${i} of ${n}`);
       if (joinRaw) { Sync.st.enabled = true; await Sync.saveSt(); }
     });
     afterUnlock(!joinRaw);
-  } }, pwField('pw1', 'Password', 'new-password'), pwField('pw2', 'Type it again', 'new-password'), err, btn, prog);
+  } }, pwField('pw1', 'Password', 'new-password'), pwField('pw2', 'Type it again', 'new-password'), hintField(''), err, btn, prog);
   lockShell(
     h('h1', {}, joinRaw ? 'Set a password for this device' : 'Protect your library'),
     h('p', { class: 'hint' }, joinRaw
@@ -2554,6 +2569,7 @@ function showUnlock(lock) {
       }
       afterUnlock(false);
     } }, pwField('pw', 'Password', 'current-password'), err, btn),
+    clueButton(lock.hint),
     h('button', { class: 'btn ghost small', type: 'button', onclick: () => { forgot.hidden = !forgot.hidden; } }, 'Forgot your password?'), forgot);
   setTimeout(() => { const f = $('#pw'); if (f) f.focus(); }, 50);
 }
@@ -2586,21 +2602,25 @@ function askPassword(title, text, onOk) {
   } }, h('p', { class: 'hint' }, text), pwField('ask-pw', 'Your password', 'current-password'), err, btn));
   setTimeout(() => { const f = $('#ask-pw'); if (f) f.focus(); }, 50);
 }
-function openChangePassword() {
+async function openChangePassword() {
+  const cur0 = await DB.get('meta', 'lock');
   const err = h('p', { class: 'err', role: 'alert' });
-  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Change password');
-  openSheet('Change password', h('form', { class: 'stack', onsubmit: async e => {
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Save');
+  openSheet('Change password or clue', h('form', { class: 'stack', onsubmit: async e => {
     e.preventDefault(); err.textContent = '';
-    const cur = $('#cp-old').value, a = $('#cp-new').value, b = $('#cp-new2').value;
-    if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
-    if (a !== b) { err.textContent = 'The new passwords are different.'; return; }
+    const cur = $('#cp-old').value, a = $('#cp-new').value, b = $('#cp-new2').value, keep = !a && !b;
+    if (!keep && a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+    if (!keep && a !== b) { err.textContent = 'The new passwords are different.'; return; }
+    if (badHint($('#pw-hint').value, keep ? cur : a)) { err.textContent = 'The clue must not contain the password.'; return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     try { const lock = await DB.get('meta', 'lock'); await Crypt.unwrapRaw(lock, cur); }
-    catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Change password'; return; }
-    await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
+    catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Save'; return; }
+    const lk = keep ? { ...cur0 } : await Crypt.wrapRaw(Crypt.raw, a); const hint = ($('#pw-hint').value || '').trim();
+    if (hint) lk.hint = hint; else delete lk.hint;
+    await DB.put('meta', lk);
     if (ST.folder) await FS.writeInfo().catch(() => { });
-    closeSheet(); toast('Password changed on this device.');
-  } }, pwField('cp-old', 'Current password', 'current-password'), pwField('cp-new', 'New password', 'new-password'), pwField('cp-new2', 'New password again', 'new-password'), err, btn,
+    closeSheet(); toast(keep ? 'Clue saved.' : 'Password changed on this device.');
+  } }, pwField('cp-old', 'Current password', 'current-password'), pwField('cp-new', 'New password (leave empty to keep it)', 'new-password', true), pwField('cp-new2', 'New password again', 'new-password', true), hintField(cur0 && cur0.hint), err, btn,
     h('p', { class: 'hint' }, 'This changes the password on this device only. Your other devices keep their own passwords.')));
 }
 
@@ -2873,6 +2893,7 @@ function joinLibrary(raw) {
     await withBusy(async () => {
       const oldRaw = Crypt.raw, oldK = Crypt.key, newK = await Crypt.importKey(raw);
       const lockNew = await Crypt.wrapRaw(raw, pw); lockNew.old = await Crypt.wrapRaw(oldRaw, pw);
+      { const l0 = await DB.get('meta', 'lock'); if (l0 && l0.hint) lockNew.hint = l0.hint; }
       await DB.put('meta', lockNew);
       await Crypt.setRaw(raw);
       await reencrypt(oldK, newK, false, (i, n) => lbl.textContent = `Moving your galleries: ${i} of ${n}`);
