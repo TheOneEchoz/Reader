@@ -1,0 +1,17 @@
+{
+ "version": 30,
+ "files": [
+  "Sortable.min.js",
+  "apple-touch-icon.png",
+  "capacitor.js",
+  "icon-192.png",
+  "icon-512.png",
+  "index.html",
+  "jsQR.js",
+  "jszip.min.js",
+  "manifest.webmanifest",
+  "maskable-512.png",
+  "p2p.js",
+  "qrcode.js"
+ ]
+}

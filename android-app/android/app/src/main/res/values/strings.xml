@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tankōbon</string>
+    <string name="title_activity_main">Tankōbon</string>
+    <string name="package_name">io.github.theoneechoz.tankobon</string>
+    <string name="custom_url_scheme">io.github.theoneechoz.tankobon</string>
+</resources>

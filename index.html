@@ -221,6 +221,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .tagopt.new .ic{width:16px;height:16px}
 .tagopt.none{color:var(--muted);font-size:13px}
 .tagchips{display:flex;flex-wrap:wrap;gap:6px}
+.updbanner{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tagsel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex-basis:100%}
 .tagchip{display:inline-flex;align-items:center;border-radius:999px;background:var(--accent-soft);color:var(--ink);font-size:14px;font-weight:600;min-height:34px;padding-left:12px}
 .tagchip.some{background:var(--surface2);border:1.5px dashed var(--line)}
@@ -372,6 +373,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 <div id="toast" style="opacity:0" role="status"></div>
 <div id="shield" hidden aria-hidden="true"><div class="wordmark"><span class="hanko">本</span>TANKŌBON</div></div>
 
+<script src="capacitor.js"></script>
 <script src="jszip.min.js"></script>
 <script src="Sortable.min.js"></script>
 <script src="p2p.js"></script>
@@ -454,6 +456,50 @@ function toast(msg, ms = 2200) {
 }
 
 /* ================= storage ================= */
+/* ================= Android app (Capacitor) =================
+   The same page runs as a website and inside the Android app. In the app, pages are stored as files
+   in the app's own storage, and updates to these screens are downloaded from the website when you ask. */
+const NATIVE = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
+const APP_VERSION = 30; // replaced by the build with the release number
+const SITE = 'https://theoneechoz.github.io/Reader/';
+const Nat = name => NATIVE ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
+const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const NFS = (() => {
+  let base = '';
+  const keyCache = {}, mem = { galleries: new Map(), thumbs: new Map() }, MEM_MAX = { galleries: Infinity, thumbs: 800 };
+  const remember = (store, id, buf) => { const m = mem[store]; if (!m) return; m.delete(id); m.set(id, buf); if (m.size > MEM_MAX[store]) m.delete(m.keys().next().value); };
+  const shard = id => (id.slice(-2).replace(/[^a-z0-9]/gi, '_') || '__');
+  const rel = (store, id) => store === 'galleries' ? `lib/galleries/${id}.tkb` : `lib/${store === 'images' ? 'pages' : 'thumbs'}/${shard(id)}/${id}.tkb`;
+  const F = () => Nat('Filesystem');
+  return {
+    get base() { return base; },
+    async init() { base = (await F().getUri({ path: '', directory: 'DATA' })).uri.replace(/\/$/, ''); },
+    async get(store, id) {
+      const m = mem[store] && mem[store].get(id); if (m) return { id, e: m };
+      let r; try { r = await fetch(Capacitor.convertFileSrc(base + '/' + rel(store, id)), { cache: 'no-store' }); } catch (e) { return undefined; }
+      if (!r.ok) return undefined;
+      const e = await r.arrayBuffer(); if (e.byteLength < 28) return undefined;
+      remember(store, id, e); return { id, e };
+    },
+    async put(store, rec) {
+      const buf = rec.e instanceof ArrayBuffer ? rec.e : new Uint8Array(rec.e).slice().buffer;
+      await F().writeFile({ path: rel(store, rec.id), data: u8ToB64(new Uint8Array(buf)), directory: 'DATA', recursive: true });
+      remember(store, rec.id, buf); if (keyCache[store]) keyCache[store].add(rec.id);
+    },
+    async del(store, id) { if (mem[store]) mem[store].delete(id); try { await F().deleteFile({ path: rel(store, id), directory: 'DATA' }); } catch (e) { } if (keyCache[store]) keyCache[store].delete(id); },
+    async delMany(store, ids) { for (const id of ids) await this.del(store, id); },
+    async keys(store) {
+      if (keyCache[store]) return [...keyCache[store]];
+      const set = new Set();
+      const ls = async path => { try { return (await F().readdir({ path, directory: 'DATA' })).files || []; } catch (e) { return []; } };
+      const nm = f => typeof f === 'string' ? f : f.name, isDir = f => typeof f !== 'string' && f.type === 'directory';
+      const add = list => list.forEach(f => { const n = nm(f); if (n.endsWith('.tkb')) set.add(n.slice(0, -4)); });
+      if (store === 'galleries') add(await ls('lib/galleries'));
+      else { const top = store === 'images' ? 'lib/pages' : 'lib/thumbs'; for (const d of await ls(top)) if (isDir(d)) add(await ls(top + '/' + nm(d))); }
+      keyCache[store] = set; return [...set];
+    },
+  };
+})();
 const DB = (() => {
   const STORES = ['galleries', 'images', 'thumbs', 'meta'];
   let db = null, mem = null;
@@ -743,7 +789,26 @@ function openTagSheet(g, keys, title, after) {
 }
 
 /* ================= import ================= */
+/* In the app, folders are picked with Android's own folder picker; each file is read when it is imported. */
+async function pickFolderNative() {
+  busy++;
+  try {
+    const r = await Nat('Tankobon').pickFolder();
+    const root = r.name || 'Folder';
+    return (r.files || []).map(f => ({ name: f.name, size: f.size, type: f.type, webkitRelativePath: root + '/' + f.path, nativeUri: f.uri }));
+  } finally { setTimeout(() => { busy = Math.max(0, busy - 1); }, 1500); }
+}
+async function loadPicked(f) {
+  if (!f.nativeUri) return f;
+  const T = Nat('Tankobon'), { path } = await T.copyToCache({ uri: f.nativeUri });
+  try {
+    const r = await fetch(Capacitor.convertFileSrc('file://' + path), { cache: 'no-store' });
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    return new File([await r.blob()], f.name, { type: f.type && f.type !== 'application/octet-stream' ? f.type : (MIME[ext] || '') });
+  } finally { T.removeCached({ path }).catch(() => { }); }
+}
 function pickFiles({ folder = false, accept = '', multiple = true } = {}) {
+  if (folder && NATIVE) return pickFolderNative();
   busy++; let fin = false; const release = () => { if (!fin) { fin = true; busy = Math.max(0, busy - 1); } }; setTimeout(release, 120000);
   return new Promise(res0 => {
     const res = v => { release(); res0(v); };
@@ -782,8 +847,8 @@ async function collect(kind, files) {
       if (hiddenPath(rel)) continue;
       const parts = rel.split('/'); if (parts.length > 1) title = title || parts[0];
       const inner = parts.slice(1, -1).join('/');
-      if (IMG_EXT.test(f.name)) entries.push({ dir: inner, name: f.name, get: async () => f });
-      else if (ZIP_EXT.test(f.name)) await expandArchive(f, [inner, baseName(f.name)].filter(Boolean).join('/'), entries);
+      if (IMG_EXT.test(f.name)) entries.push({ dir: inner, name: f.name, get: () => loadPicked(f) });
+      else if (ZIP_EXT.test(f.name)) await expandArchive(await loadPicked(f), [inner, baseName(f.name)].filter(Boolean).join('/'), entries);
     }
   } else if (kind === 'images') {
     files.filter(f => IMG_EXT.test(f.name) || (f.type || '').startsWith('image/')).forEach(f => entries.push({ dir: '', name: f.name, get: async () => f }));
@@ -856,7 +921,7 @@ function openAddSheet(existing) {
   const name = h('input', { class: 'text', id: 'add-name', placeholder: existing ? 'Added pages' : 'Uses the folder name if left empty', value: '' });
   const status = h('div', { class: 'progress', hidden: true });
   const opts = h('div', { class: 'stack' });
-  const folderOK = 'webkitdirectory' in document.createElement('input');
+  const folderOK = NATIVE || 'webkitdirectory' in document.createElement('input');
   const choose = async kind => {
     const files = kind === 'folder' ? await pickFiles({ folder: true }) : kind === 'images' ? await pickFiles({ accept: 'image/*' }) : await pickFiles({ accept: '.zip,.cbz,application/zip,application/x-cbz' });
     if (!files.length) return;
@@ -1131,6 +1196,7 @@ async function renderLibrary() {
       Sync.st.enabled ? h('button', { class: 'syncpill', id: 'syncpill', onclick: openDevices, 'aria-label': 'Devices and sync' }, h('span', { class: 'sdot ' + Sync.status }), h('span', {}, pillText())) : null,
       isStandalone() ? null : h('button', { class: 'btn small ' + (installEvt ? 'primary' : 'ghost'), onclick: doInstall }, installEvt ? 'Install app' : 'Install'),
       h('button', { class: 'iconbtn', 'aria-label': 'Settings', onclick: openGlobalSettings }, icon('tune'))),
+    NATIVE ? h('div', { class: 'banner updbanner', id: 'updbanner', hidden: true }) : null,
     ST.folder ? h('div', { class: 'banner' }, h('p', { style: 'margin:0 0 8px' }, 'Your library is still in a phone folder, which is slow. Move it back into the app; nothing is lost.'),
       h('button', { class: 'btn small primary', onclick: () => moveStorage('app', () => renderLibrary()) }, 'Move back into the app')) : null,
     DB.memory ? h('div', { class: 'banner' }, 'This browser is blocking storage, so your library will be lost when you close the page. Open the app in a normal Chrome tab (not incognito) to keep it.') : null,
@@ -1143,7 +1209,7 @@ async function renderLibrary() {
         h('button', { class: 'btn primary', onclick: () => openAddSheet() }, icon('plus'), 'Add a gallery'),
         h('button', { class: 'btn ghost', onclick: addSample }, 'Load a sample')))
   ), gals.length ? h('button', { class: 'btn primary fab', onclick: () => openAddSheet() }, icon('plus'), 'Add') : null);
-  drawGrid();
+  drawGrid(); drawUpdateBanner();
 }
 function card(g, tq) {
   const tag = tq ? tagLabel(tq) : null;
@@ -1170,11 +1236,12 @@ async function openGlobalSettings() {
       h('div', { class: 'setrow' }, h('div', { class: 'lab', id: 'lock-lbl' }, 'Lock the app after it has been in the background for'),
         (lockSeg = h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'lock-lbl' }, [[0, 'Right away'], [60, '1 min'], [300, '5 min'], [1800, '30 min']].map(([v, l]) =>
           h('button', { 'aria-pressed': String((UI.lockAfter ?? 60) === v), onclick: e => { UI.lockAfter = v; saveMeta(); $$('button', lockSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l))))),
-      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-shield' }, 'Hide what is on screen when you leave the app (recent apps list)'),
-        h('button', { class: 'switch', id: 'sw-shield', role: 'switch', 'aria-checked': String(UI.shield !== false), onclick: e => { UI.shield = UI.shield === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.shield)); } })),
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-shield' }, NATIVE ? 'Hide the app in the recent apps list (this also blocks screenshots)' : 'Hide what is on screen when you leave the app (recent apps list)'),
+        h('button', { class: 'switch', id: 'sw-shield', role: 'switch', 'aria-checked': String(UI.shield !== false), onclick: e => { UI.shield = UI.shield === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.shield)); if (NATIVE) nativeScreen(); } })),
       h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-full' }, 'Full screen (hide the browser and phone bars)'),
         h('button', { class: 'switch', id: 'sw-full', role: 'switch', 'aria-checked': String(UI.fullscreen !== false), onclick: e => {
           UI.fullscreen = UI.fullscreen === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.fullscreen));
+          if (NATIVE) return nativeScreen();
           if (!UI.fullscreen && document.fullscreenElement) exitFull().catch(() => { });
           else if (UI.fullscreen && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
         } })),
@@ -1182,7 +1249,8 @@ async function openGlobalSettings() {
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password or clue'),
         MODE === 'main' ? h('button', { class: 'btn small', onclick: () => { closeSheet(); openDecoy(); } }, icon('lock'), 'Decoy password') : null,
-        h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'))),
+        h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'),
+        NATIVE ? h('button', { class: 'btn small', onclick: () => { closeSheet(); openUpdates(); } }, icon('download'), `App updates · v${APP_VERSION}`) : null)),
     settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
     h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), storagePanel(), store, ST.folder ? null : persisted,
       h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { closeSheet(); addSample(); } }, 'Add the sample gallery')))));
@@ -2332,7 +2400,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---- full screen: on phones, the first touch hides the browser bars (and again after returning to the app) ---- */
-const canFull = () => document.documentElement.requestFullscreen && matchMedia('(pointer: coarse)').matches && !matchMedia('(display-mode: fullscreen)').matches;
+const canFull = () => !NATIVE && document.documentElement.requestFullscreen && matchMedia('(pointer: coarse)').matches && !matchMedia('(display-mode: fullscreen)').matches;
 document.addEventListener('pointerdown', e => {
   if (UI.fullscreen === false || document.fullscreenElement || !canFull()) return;
   if (e.target.closest && e.target.closest('.picks, input, textarea, select, label')) return;
@@ -2374,6 +2442,7 @@ $('#rZoomLbl').addEventListener('click', () => zoomCenter(1)); $('#rZoomOpts').a
 $('#rBack').append(icon('back')); $('#rChapters').append(icon('list')); $('#rSettings').append(icon('tune')); $('#rFull').append(icon('full'));
 $('#rBack').addEventListener('click', () => back('detail', { id: R.g.id }));
 $('#rFull').addEventListener('click', async () => {
+  if (NATIVE) { UI.fullscreen = UI.fullscreen === false; saveMeta(); return nativeScreen(); }
   try { if (document.fullscreenElement) { UI.fullscreen = false; saveMeta(); await exitFull(); } else { UI.fullscreen = true; saveMeta(); await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } }
   catch (e) { toast('Full screen is not available here. Add the app to your home screen for a full-screen view.', 3500); }
 });
@@ -2399,10 +2468,11 @@ $('#rSettings').addEventListener('click', () => {
       h('button', { class: 'btn ghost small', onclick: () => { R.g.prefs = {}; R.p = effPrefs(R.g); saveProgress(true); closeSheet(); layout(); toast('Back to your default settings'); } }, 'Reset to default'))));
 });
 async function wakeOn() {
+  if (NATIVE) { if (R.p && R.p.keepAwake) Nat('Tankobon').keepAwake({ on: true }).catch(() => { }); return; }
   if (!R.p || !R.p.keepAwake || R.wake) return;
   try { if ('wakeLock' in navigator) { R.wake = await navigator.wakeLock.request('screen'); R.wake.addEventListener('release', () => R.wake = null); } } catch (e) { }
 }
-function wakeOff() { try { R.wake && R.wake.release(); } catch (e) { } R.wake = null; }
+function wakeOff() { if (NATIVE) Nat('Tankobon').keepAwake({ on: false }).catch(() => { }); try { R.wake && R.wake.release(); } catch (e) { } R.wake = null; }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') { if (CUR.view === 'reader') saveProgress(true); }
   else if (CUR.view === 'reader') wakeOn();
@@ -2564,12 +2634,12 @@ const FS = (() => {
 })();
 let STORE = { mode: 'app' };
 const ST = {
-  get folder() { return STORE.mode === 'folder' && !!FS.root; },
-  get: (s, id) => ST.folder ? FS.get(s, id) : DB.get(s, id),
-  put: (s, r) => ST.folder ? FS.put(s, r) : DB.put(s, r),
-  del: (s, id) => ST.folder ? FS.del(s, id) : DB.del(s, id),
-  delMany: (s, ids) => ST.folder ? FS.delMany(s, ids) : DB.delMany(s, ids),
-  keys: s => ST.folder ? FS.keys(s) : DB.keys(s),
+  get folder() { return !NATIVE && STORE.mode === 'folder' && !!FS.root; },
+  get: (s, id) => NATIVE ? NFS.get(s, id) : ST.folder ? FS.get(s, id) : DB.get(s, id),
+  put: (s, r) => NATIVE ? NFS.put(s, r) : ST.folder ? FS.put(s, r) : DB.put(s, r),
+  del: (s, id) => NATIVE ? NFS.del(s, id) : ST.folder ? FS.del(s, id) : DB.del(s, id),
+  delMany: (s, ids) => NATIVE ? NFS.delMany(s, ids) : ST.folder ? FS.delMany(s, ids) : DB.delMany(s, ids),
+  keys: s => NATIVE ? NFS.keys(s) : ST.folder ? FS.keys(s) : DB.keys(s),
 };
 const canPickFolder = () => 'showDirectoryPicker' in window;
 async function pickLibraryFolder() {
@@ -2600,6 +2670,7 @@ async function folderIsOurs(info) {
 }
 /* Called after unlocking. Resolves when storage is ready (may show a screen asking for folder access). */
 async function prepareStorage() {
+  if (NATIVE) return;
   const m = await DB.get('meta', 'storage').catch(() => null);
   STORE = (m && m.v) || { mode: 'app' };
   if (STORE.mode !== 'folder') return;
@@ -2630,6 +2701,7 @@ async function prepareStorage() {
 function storagePanel() {
   const box = h('div', { class: 'stack', style: 'gap:10px' });
   const draw = () => box.replaceChildren(
+    NATIVE ? h('p', { class: 'hint' }, 'Your library is stored encrypted as files in the app\'s own storage on this phone. Clearing Chrome does not touch it; uninstalling the app deletes it, so keep a paired device as a backup.') :
     h('p', { class: 'hint' }, ST.folder
       ? `Your library is still in the folder “${STORE.name}” on your phone. Phone-folder storage has been retired: move it back into the app, where it loads faster.`
       : 'Your library is stored encrypted in the app\'s private storage on this phone.'),
@@ -2929,6 +3001,7 @@ async function afterUnlock(fresh) {
   if (st && st.view) render(st.view, st.params || {});
   else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
   Sync.start();
+  if (NATIVE && UI.openUpdates) { UI.openUpdates = false; openUpdates(); }
 }
 function askPassword(title, text, onOk) {
   const err = h('p', { class: 'err', role: 'alert' });
@@ -3040,6 +3113,23 @@ async function removeDecoy(onProg) {
 }
 
 /* ================= export ================= */
+/* Save a file into Documents/Tankobon on the phone (the app's own folder if Android refuses). */
+async function saveFileNative(blob, name) {
+  const F = Nat('Filesystem'), CH = 3 * 1024 * 1024;
+  try { await F.requestPermissions(); } catch (e) { }
+  const write = async (directory, path) => {
+    for (let off = 0; off < blob.size || off === 0; off += CH) {
+      const data = u8ToB64(new Uint8Array(await blob.slice(off, off + CH).arrayBuffer()));
+      if (off === 0) await F.writeFile({ path, data, directory, recursive: true }); else await F.appendFile({ path, data, directory });
+      if (blob.size === 0) break;
+    }
+  };
+  const stamp = name.replace(/(\.[^.]+)$/, ` ${new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-')}$1`);
+  for (const [dir, label] of [['DOCUMENTS', 'Documents › Tankobon'], ['EXTERNAL', 'Android › data › io.github.theoneechoz.tankobon › files › Tankobon']]) {
+    for (const nm of [name, stamp]) { try { await write(dir, 'Tankobon/' + nm); return `${label} › ${nm}`; } catch (e) { console.warn('save', dir, e); } }
+  }
+  throw new Error('Android did not allow saving the file');
+}
 async function exportZip(g) {
   if (typeof JSZip === 'undefined') return toast('The ZIP tool could not load. Check your connection and try again.', 3500);
   const total = totalPages(g); let done = 0, cancel = false;
@@ -3073,10 +3163,16 @@ async function exportZip(g) {
     lbl.textContent = 'Packing the ZIP…';
     const out = await zip.generateAsync({ type: 'blob', compression: 'STORE', streamFiles: true }, m => { bar.firstChild.style.width = (80 + m.percent * .2) + '%'; });
     if (cancel) throw new Error('stopped');
-    const url = URL.createObjectURL(out);
-    const a = h('a', { href: url, download: safe(g.title) + '.zip', style: 'display:none' }); document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 120000);
-    closeSheet(); toast('ZIP saved. Look for it in your Downloads folder.', 4000);
+    if (NATIVE) {
+      lbl.textContent = 'Saving…';
+      const where = await saveFileNative(out, safe(g.title) + '.zip');
+      closeSheet(); toast(`ZIP saved to ${where}.`, 5000);
+    } else {
+      const url = URL.createObjectURL(out);
+      const a = h('a', { href: url, download: safe(g.title) + '.zip', style: 'display:none' }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+      closeSheet(); toast('ZIP saved. Look for it in your Downloads folder.', 4000);
+    }
   } catch (e) {
     if (e.message === 'stopped') toast('Stopped');
     else { console.error(e); toast('Could not create the ZIP: ' + (e.message || e), 4500); }
@@ -3379,7 +3475,7 @@ function pillText() { return Sync.status === 'connected' && Sync.recv.want ? `${
 let installEvt = null, installOffered = false;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; installOffered = true; if (CUR.view === 'library') renderLibrary(); });
 window.addEventListener('appinstalled', () => { installEvt = null; toast('Installed. Open Tankōbon from your home screen or app drawer.', 5000); if (CUR.view === 'library') renderLibrary(); });
-const isStandalone = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+const isStandalone = () => NATIVE || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
 async function doInstall() {
   if (!installEvt) return openInstallHelp();
   try { installEvt.prompt(); await installEvt.userChoice; } catch (e) { }
@@ -3427,15 +3523,154 @@ async function openInstallHelp() {
 }
 let pre;
 
+/* ================= Android app: screen, pause/resume, updates ================= */
+function nativeScreen() {
+  if (!NATIVE) return;
+  const T = Nat('Tankobon');
+  T.setImmersive({ on: UI.fullscreen !== false }).catch(() => { });
+  T.setSecure({ on: UI.shield !== false }).catch(() => { });
+}
+const Upd = (() => {
+  let latest = null, checking = null, timer = 0;
+  const F = () => Nat('Filesystem');
+  const newer = () => latest && latest.version > APP_VERSION ? latest : null;
+  async function getJSON(url) {
+    try { const r = await fetch(url, { cache: 'no-store' }); if (r.ok) return await r.json(); } catch (e) { }
+    const r = await Nat('CapacitorHttp').get({ url, responseType: 'json' });
+    return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+  }
+  async function getB64(url) {
+    try { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return u8ToB64(new Uint8Array(await r.arrayBuffer())); }
+    catch (e) { const r = await Nat('CapacitorHttp').get({ url, responseType: 'arraybuffer' }); if (r.status >= 400) throw new Error('download failed'); return r.data; }
+  }
+  async function notify(v) {
+    if (UI.notifiedVersion === v.version) return;
+    UI.notifiedVersion = v.version; saveMeta();
+    const N = Nat('LocalNotifications');
+    try {
+      let p = await N.checkPermissions(); if (p.display !== 'granted') p = await N.requestPermissions();
+      if (p.display !== 'granted') return;
+      await N.schedule({ notifications: [{ id: 7001, title: 'Tankōbon update available', body: `Version ${v.version} is ready. Open the app and tap Update.`, smallIcon: 'ic_stat_tankobon' }] });
+    } catch (e) { console.warn('notify', e); }
+  }
+  /* Download every file of a version into the app's storage. Returns the folder. */
+  async function download(v, onProg) {
+    const dir = `web/v${v.version}`, files = v.files || ['index.html'];
+    let i = 0;
+    for (const f of files) {
+      await F().writeFile({ path: `${dir}/${f}`, data: await getB64(SITE + f + '?v=' + v.version), directory: 'DATA', recursive: true });
+      onProg && onProg(++i, files.length);
+    }
+    const st = await F().stat({ path: `${dir}/index.html`, directory: 'DATA' });
+    if (!st || !(st.size > 1000)) throw new Error('the download was incomplete');
+    return (await F().getUri({ path: dir, directory: 'DATA' })).uri.replace(/^file:\/\//, '');
+  }
+  async function cleanup() {
+    try {
+      const { files } = await F().readdir({ path: 'web', directory: 'DATA' });
+      const keep = new Set([`v${APP_VERSION}`]); const pend = await DB.get('meta', 'pendingUpdate').catch(() => null); if (pend) keep.add(`v${pend.v.version}`);
+      for (const f of files) { const n = typeof f === 'string' ? f : f.name; if (!keep.has(n)) await F().rmdir({ path: 'web/' + n, directory: 'DATA', recursive: true }).catch(() => { }); }
+    } catch (e) { }
+  }
+  const api = {
+    get latest() { return newer(); },
+    async check(manual) {
+      if (!NATIVE) return null;
+      if (checking) return checking;
+      checking = (async () => {
+        try { latest = await getJSON(SITE + 'version.json?t=' + Date.now()); }
+        catch (e) { if (manual) toast('Could not check for updates. Are you online?', 3500); return null; }
+        finally { setTimeout(() => { checking = null; }, 0); }
+        const v = newer();
+        drawUpdateBanner();
+        if (!v) { if (manual) toast(`You have the latest version (${APP_VERSION}).`); return null; }
+        if (UI.autoUpdate) {
+          try { await download(v); await DB.put('meta', { id: 'pendingUpdate', v: { version: v.version } }); toast(`Version ${v.version} downloaded. It will be used the next time you open the app.`, 4500); }
+          catch (e) { console.warn('auto update', e); }
+        } else notify(v);
+        return v;
+      })();
+      return checking;
+    },
+    /* Download and switch now. The app restarts and asks for the password again. */
+    async install(onProg) {
+      const v = newer() || await api.check(true); if (!v) return;
+      busy++;
+      try {
+        const path = await download(v, onProg);
+        try { if (CUR.view === 'reader') saveProgress(true); } catch (e) { }
+        await DB.del('meta', 'pendingUpdate').catch(() => { });
+        await Nat('Tankobon').useVersion({ path });
+      } finally { busy = Math.max(0, busy - 1); }
+    },
+    async useBuiltIn() { await DB.del('meta', 'pendingUpdate').catch(() => { }); await Nat('Tankobon').useBuiltIn(); },
+    /* At start: switch to a version that auto-update already downloaded, then keep checking now and then. */
+    async boot() {
+      if (!NATIVE) return;
+      nativeScreen();
+      const pend = await DB.get('meta', 'pendingUpdate').catch(() => null);
+      if (pend && pend.v.version > APP_VERSION) {
+        await DB.del('meta', 'pendingUpdate').catch(() => { });
+        try { const path = (await F().getUri({ path: `web/v${pend.v.version}`, directory: 'DATA' })).uri.replace(/^file:\/\//, ''); await Nat('Tankobon').useVersion({ path }); return true; } catch (e) { console.warn(e); }
+      }
+      cleanup();
+      try { Nat('LocalNotifications').addListener('localNotificationActionPerformed', () => { if (Crypt.ready) openUpdates(); else UI.openUpdates = true; }); } catch (e) { }
+      setTimeout(() => api.check(false), 4000);
+      clearInterval(timer); timer = setInterval(() => api.check(false), 6 * 3600 * 1000);
+      return false;
+    },
+  };
+  return api;
+})();
+function drawUpdateBanner() {
+  const b = $('#updbanner'); const v = Upd.latest;
+  if (!b) return;
+  b.hidden = !v; if (!v) return;
+  b.replaceChildren(h('span', {}, `Update available: version ${v.version}`), h('button', { class: 'btn small primary', onclick: openUpdates }, 'Update'));
+}
+function openUpdates() {
+  if (!NATIVE) return;
+  const box = h('div', { class: 'stack' });
+  const draw = () => {
+    const v = Upd.latest;
+    const prog = h('p', { class: 'hint num' });
+    box.replaceChildren(
+      h('p', { class: 'hint' }, `This app is on version ${APP_VERSION}.${v ? ` Version ${v.version} is available.` : ''}`),
+      v ? h('button', { class: 'btn primary', onclick: async e => {
+        e.currentTarget.disabled = true; prog.textContent = 'Downloading…';
+        try { await Upd.install((i, n) => prog.textContent = `Downloading ${i} of ${n}`); }
+        catch (x) { prog.textContent = 'The update could not be downloaded: ' + (x.message || x); e.currentTarget.disabled = false; }
+      } }, icon('download'), `Update to version ${v.version}`) : h('button', { class: 'btn', onclick: async () => { await Upd.check(true); draw(); } }, 'Check for updates'),
+      prog,
+      v ? h('p', { class: 'hint' }, 'The app restarts after updating, so you will need your password again. Your library is not touched.') : null,
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-auto' }, 'Update automatically (downloads in the background and switches the next time you open the app)'),
+        h('button', { class: 'switch', id: 'sw-auto', role: 'switch', 'aria-checked': String(!!UI.autoUpdate), onclick: e => { UI.autoUpdate = !UI.autoUpdate; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.autoUpdate)); if (UI.autoUpdate) Upd.check(false); } })),
+      h('div', {}, h('button', { class: 'btn ghost small', onclick: async () => { await Upd.useBuiltIn(); } }, 'Go back to the version that came with the app')));
+  };
+  draw(); openSheet('App updates', box);
+}
+
 /* ================= boot ================= */
 (async function boot() {
   await DB.open();
   try { const d = await DB.get('meta', 'defaults'); if (d) GLOBAL = { ...DEFAULTS, ...d.v }; const u = await DB.get('meta', 'ui'); if (u) UI = { ...UI, ...u.v }; } catch (e) { }
+  if (NATIVE) {
+    try { await NFS.init(); } catch (e) { console.error(e); }
+    if (await Upd.boot().catch(e => { console.error(e); return false; })) return; // switching to a downloaded version
+    // Android pauses the app instead of hiding the page: lock and cover the same way
+    const onPause = () => { hiddenAt = Date.now(); if (UI.shield !== false) $('#shield').hidden = false; if (CUR.view === 'reader') saveProgress(true); };
+    const onResume = () => {
+      if (Crypt.ready && hiddenAt && !busy && Date.now() - hiddenAt >= (UI.lockAfter ?? 60) * 1000) return lockNow();
+      hiddenAt = 0; setTimeout(() => { $('#shield').hidden = true; }, 60); nativeScreen(); Upd.check(false);
+    };
+    try { Nat('App').addListener('appStateChange', st => st.isActive ? onResume() : onPause()); }
+    catch (e) { document.addEventListener('pause', onPause); document.addEventListener('resume', onResume); }
+  }
   await Sync.load();
   let lock = null; try { lock = await DB.get('meta', 'lock'); } catch (e) { }
   if (lock) showUnlock(lock); else showSetup();
 })();
 </script>
-<script>if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+<script>if ('serviceWorker' in navigator && !NATIVE) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </body>
 </html>

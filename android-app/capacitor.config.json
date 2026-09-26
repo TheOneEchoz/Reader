@@ -1,0 +1,7 @@
+{
+  "appId": "io.github.theoneechoz.tankobon",
+  "appName": "Tankōbon",
+  "webDir": "www",
+  "android": { "allowMixedContent": false, "backgroundColor": "#0f1012" },
+  "plugins": { "LocalNotifications": { "smallIcon": "ic_stat_tankobon", "iconColor": "#d23a2a" } }
+}
