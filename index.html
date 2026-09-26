@@ -631,9 +631,10 @@ async function allTags() {
   for (const g of await S.gals()) for (const list of Object.values(g.tags || {})) for (const t of list) { const k = t.toLowerCase(), e = m.get(k); if (e) e.n++; else m.set(k, { name: t, n: 1 }); }
   return TAGS = m;
 }
-function addTag(g, key, t) { g.tags = g.tags || {}; const l = g.tags[key] || (g.tags[key] = []); if (!l.some(x => tagEq(x, t))) l.push(t); TAGS = null; }
-function dropTag(g, key, t) { const l = g.tags && g.tags[key]; if (!l) return; const r = l.filter(x => !tagEq(x, t)); if (r.length) g.tags[key] = r; else delete g.tags[key]; TAGS = null; }
+function addTag(g, key, t) { INH.delete(g); g.tags = g.tags || {}; const l = g.tags[key] || (g.tags[key] = []); if (!l.some(x => tagEq(x, t))) l.push(t); TAGS = null; }
+function dropTag(g, key, t) { INH.delete(g); const l = g.tags && g.tags[key]; if (!l) return; const r = l.filter(x => !tagEq(x, t)); if (r.length) g.tags[key] = r; else delete g.tags[key]; TAGS = null; }
 function pruneTags(g) {
+  INH.delete(g);
   if (!g.tags) return;
   const ok = new Set(); g.chapters.forEach(c => { ok.add('c:' + c.id); c.pages.forEach(p => ok.add('p:' + p)); });
   for (const k of Object.keys(g.tags)) if (!ok.has(k) || !g.tags[k].length) { delete g.tags[k]; TAGS = null; }
@@ -646,6 +647,28 @@ function taggedPages(g, tag) {
   chs.forEach((c, i) => { const p = Tree.parent(chs, i); inT[i] = on('c:' + c.id) || (p >= 0 && inT[p]); });
   return Tree.order(chs, null).filter(o => inT[o.ch] || on('p:' + o.id));
 }
+/* Tags a page or folder gets from the folders around it. Cached per gallery until its tags or folders change. */
+const INH = new WeakMap();
+function inheritIndex(g) {
+  let x = INH.get(g); if (x) return x;
+  const chs = g.chapters, up = [], pageCh = new Map();
+  chs.forEach((c, i) => {
+    const p = Tree.parent(chs, i), fromUp = p >= 0 ? up[p].concat(tagsOf(g, 'c:' + chs[p].id).map(t => ({ t, from: chs[p].title }))) : [];
+    up[i] = fromUp.filter((e, k) => fromUp.findIndex(o => tagEq(o.t, e.t)) === k);
+    c.pages.forEach(pid => pageCh.set(pid, i));
+  });
+  x = { up, pageCh, chIdx: new Map(chs.map((c, i) => [c.id, i])) }; INH.set(g, x); return x;
+}
+/* Inherited tags of a key: [{t, from}] (not counting its own tags). A page inherits from the folder it is in and every folder above. */
+function inheritedTags(g, key) {
+  const ix = inheritIndex(g), id = key.slice(2), chs = g.chapters;
+  if (key[0] === 'c') { const i = ix.chIdx.get(id); return i == null ? [] : ix.up[i]; }
+  const ci = ix.pageCh.get(id); if (ci == null) return [];
+  const own = tagsOf(g, 'c:' + chs[ci].id).map(t => ({ t, from: chs[ci].title }));
+  const all = ix.up[ci].concat(own); return all.filter((e, k) => all.findIndex(o => tagEq(o.t, e.t)) === k);
+}
+/* Own tags first, then inherited ones. */
+function allTagsOf(g, key) { const own = tagsOf(g, key); return own.concat(inheritedTags(g, key).map(e => e.t).filter(t => !own.some(o => tagEq(o, t)))); }
 function tagMark(list) { return list.length ? h('span', { class: 'tagmark', title: list.map(t => '#' + t).join(' ') }, icon('tag'), h('span', {}, list[0] + (list.length > 1 ? ` +${list.length - 1}` : ''))) : null; }
 /* A text box with a dropdown of the tags that already exist and fit what was typed. */
 function tagPicker({ id, input, placeholder, onPick, exclude = () => false, allowNew = true, refocus = true, showEmpty = true }) {
@@ -680,25 +703,33 @@ function tagPicker({ id, input, placeholder, onPick, exclude = () => false, allo
 }
 /* Add or remove tags on several pages / folders at once. keys: 'p:<id>' | 'c:<id>' */
 function openTagSheet(g, keys, title, after) {
-  const chips = h('div', { class: 'tagchips' });
+  const chips = h('div', { class: 'tagchips' }), inhBox = h('div', { class: 'stack', style: 'gap:6px', hidden: true });
   const apply = async fn => { keys.forEach(fn); await saveGallery(g); drawChips(); after && after(); };
   const drawChips = () => {
     const m = new Map();
     keys.forEach(k => tagsOf(g, k).forEach(t => { const e = m.get(t.toLowerCase()) || { name: t, n: 0 }; e.n++; m.set(t.toLowerCase(), e); }));
     const list = [...m.values()].sort((a, b) => natural(a.name, b.name));
+    // tags that come from a folder around the selection; removed only from that folder
+    const inh = new Map();
+    keys.forEach(k => inheritedTags(g, k).forEach(e => { const lk = e.t.toLowerCase(); if (m.has(lk)) return; const x = inh.get(lk) || { name: e.t, from: new Set(), n: 0 }; x.from.add(e.from); x.n++; inh.set(lk, x); }));
+    inhBox.hidden = !inh.size;
+    inhBox.replaceChildren(h('div', { class: 'label' }, 'From the folders they are in'),
+      h('div', { class: 'tagchips' }, [...inh.values()].sort((a, b) => natural(a.name, b.name)).map(t => h('span', { class: 'tagchip link', title: 'From ' + [...t.from].join(', ') }, '#' + t.name,
+        h('small', {}, ` · ${[...t.from].join(', ')}${t.n < keys.length ? ` · ${t.n}/${keys.length}` : ''}`)))),
+      h('p', { class: 'hint', style: 'margin:0' }, 'To remove one of these, remove it from that folder.'));
     chips.replaceChildren(...(list.length ? list.map(t => h('span', { class: 'tagchip' + (t.n < keys.length ? ' some' : '') },
       t.n < keys.length
         ? h('button', { class: 'tc-add', type: 'button', 'aria-label': `#${t.name} is on ${t.n} of ${keys.length}. Tap to add it to all`, onclick: () => apply(k => addTag(g, k, t.name)) }, '#' + t.name, h('small', { class: 'num' }, `${t.n}/${keys.length}`))
         : h('span', {}, '#' + t.name),
       h('button', { class: 'tc-x', type: 'button', 'aria-label': `Remove #${t.name}`, onclick: () => apply(k => dropTag(g, k, t.name)) }, icon('x'))))
-      : [h('p', { class: 'hint', style: 'margin:0' }, 'No tags yet.')]));
+      : [h('p', { class: 'hint', style: 'margin:0' }, inh.size ? 'No tags of their own yet.' : 'No tags yet.')]));
   };
   drawChips();
   const picker = tagPicker({ id: 'tag-add', placeholder: 'Type a tag, or pick one below', onPick: t => apply(k => addTag(g, k, t)),
-    exclude: name => keys.every(k => tagsOf(g, k).some(x => tagEq(x, name))) });
-  openSheet(title, h('div', { class: 'stack', style: 'min-height:320px;align-content:start' }, chips,
+    exclude: name => keys.every(k => allTagsOf(g, k).some(x => tagEq(x, name))) });
+  openSheet(title, h('div', { class: 'stack', style: 'min-height:320px;align-content:start' }, chips, inhBox,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'tag-add' }, 'Add a tag'), picker),
-    h('p', { class: 'hint' }, keys.some(k => k[0] === 'c') ? 'A tag on a folder counts for every page inside it.' : 'Pick an existing tag from the list or type a new one.')));
+    h('p', { class: 'hint' }, keys.some(k => k[0] === 'c') ? 'A tag on a folder also applies to every image and folder inside it, however deep.' : 'Pick an existing tag from the list or type a new one.')));
   setTimeout(() => { const f = $('#tag-add'); if (f) f.focus(); }, 60);
 }
 
@@ -1151,13 +1182,13 @@ async function renderDetail(id, folderId, tag) {
       pageNo++;
       const cur = pi && pi.ci === it.ci && pi.page === it.i, off = hid[it.id] || hiddenHere, offMark = hid0[it.id] || wasHidden;
       return h('button', { class: 'btile' + (cur ? ' current' : '') + (off ? ' off' : ''), 'aria-label': `Page ${pageNo}${off ? ', hidden from reading' : ''}${cur ? ', where you stopped' : ''}`, onclick: () => go('reader', off ? { id, scope: F.id, only: hiddenHere ? undefined : 1, ch: it.ci, page: it.i } : { id, ch: it.ci, page: it.i }) },
-        h('span', { class: 'bthumb' }, lazyThumb(it.id), tagMark(tagsOf(g, 'p:' + it.id)), cur ? h('span', { class: 'bchip' }, 'READING') : offMark ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
+        h('span', { class: 'bthumb' }, lazyThumb(it.id), tagMark(allTagsOf(g, 'p:' + it.id)), cur ? h('span', { class: 'bchip' }, 'READING') : offMark ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
         h('span', { class: 'bcap num' }, `${pageNo}`));
     }
     const c = chs[it.ci], n = Tree.subtreePages(chs, it.ci), sub = chs.slice(it.ci + 1, Tree.end(chs, it.ci)).filter(x => Tree.dep(x) === Tree.dep(c) + 1).length;
     const has = pi && pi.ci >= it.ci && pi.ci < Tree.end(chs, it.ci), done = read.has(c.id) && !has;
     return h('button', { class: 'btile folder' + (has ? ' current' : ''), 'aria-label': `Folder ${c.title}, ${plural(n, 'page')}`, onclick: () => go('detail', { id, folder: c.id }) },
-      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(tagsOf(g, 'c:' + c.id)), c.hide ? h('span', { class: 'bchip done' }, icon('eyeoff'), ' HIDDEN') : has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
+      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(allTagsOf(g, 'c:' + c.id)), c.hide ? h('span', { class: 'bchip done' }, icon('eyeoff'), ' HIDDEN') : has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
       h('span', { class: 'bcap' }, h('b', {}, c.title), h('span', { class: 'num' }, `${plural(n, 'page')}${sub ? ` · ${plural(sub, 'folder')}` : ''}`)));
   });
   const firstHere = hiddenHere ? -1 : Tree.firstFlat(chs, fi, hid);
@@ -1195,7 +1226,13 @@ async function renderDetail(id, folderId, tag) {
 }
 
 function renderTagged(v, g, tag) {
-  const id = g.id, ord = taggedPages(g, tag), tags = [...galTags(g).values()].sort(natural);
+  const id = g.id, ord = taggedPages(g, tag), tags = [...galTags(g).values()].sort(natural), chs = g.chapters;
+  // folders with the tag (their own or from a folder above); only the outermost ones are shown
+  const hasTag = i => allTagsOf(g, 'c:' + chs[i].id).some(t => tagEq(t, tag));
+  const folders = chs.map((c, i) => i).filter(i => !chs[i].root && hasTag(i) && !(Tree.parent(chs, i) > 0 && hasTag(Tree.parent(chs, i))));
+  const ftiles = folders.map(i => h('button', { class: 'btile folder', 'aria-label': `Folder ${chs[i].title}`, onclick: () => go('detail', { id, folder: chs[i].id }) },
+    h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, i)), h('span', { class: 'bfold' }, icon('folder'))),
+    h('span', { class: 'bcap' }, h('b', {}, chs[i].title), h('span', { class: 'num' }, plural(Tree.subtreePages(chs, i), 'page')))));
   const tiles = ord.map((o, k) => h('button', { class: 'btile' + ((g.hid || {})[o.id] || Tree.hiddenIn(g.chapters, o.ch) ? ' off' : ''), 'aria-label': `Page ${k + 1}, in ${Tree.crumb(g.chapters, o.ch)}`, onclick: () => go('reader', { id, tag, ch: o.ch, page: o.i }) },
     h('span', { class: 'bthumb' }, lazyThumb(o.id)), h('span', { class: 'bcap' }, h('b', { class: 'num' }, `${k + 1}`), h('span', {}, Tree.crumb(g.chapters, o.ch)))));
   v.replaceChildren(h('div', { class: 'wrap' },
@@ -1206,6 +1243,8 @@ function renderTagged(v, g, tag) {
       h('div', { class: 'sub num' }, `${plural(ord.length, 'page')} with this tag, including pages inside tagged folders.`),
       ord.length ? h('div', { class: 'row' }, h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id, tag }) }, icon('play'), `Read only #${tag}`)) : null,
       tags.length > 1 ? h('div', { class: 'tagchips' }, tags.map(t => h('button', { class: 'tagchip link', 'aria-pressed': String(tagEq(t, tag)), onclick: () => tagEq(t, tag) ? null : go('detail', { id, tag: t }, true) }, '#' + t))) : null,
+      ftiles.length ? h('div', { class: 'label' }, 'Folders') : null, ftiles.length ? h('div', { class: 'bgrid' }, ftiles) : null,
+      ftiles.length && tiles.length ? h('div', { class: 'label' }, 'Pages') : null,
       tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'No pages have this tag any more.')))));
 }
 
@@ -1257,7 +1296,7 @@ async function renderEditor(id) {
       item('up', 'Move up', 'Swaps it with the chapter above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
       item('down', 'Move down', 'Swaps it with the chapter below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
       item('move', 'Put it inside another chapter…', 'Or move it back to the top level', () => pickParent(c)),
-      item('tag', 'Tags…', tagsOf(g, 'c:' + c.id).length ? tagsOf(g, 'c:' + c.id).map(t => '#' + t).join(' ') : 'Tag the folder: every page inside counts as tagged', () => openTagSheet(g, ['c:' + c.id], `Tags for ${c.title}`, draw)),
+      item('tag', 'Tags…', tagsOf(g, 'c:' + c.id).length ? tagsOf(g, 'c:' + c.id).map(t => '#' + t).join(' ') : 'Tags on a folder apply to everything inside it', () => openTagSheet(g, ['c:' + c.id], `Tags for ${c.title}`, draw)),
       item(c.hide ? 'eye' : 'eyeoff', c.hide ? 'Show it when reading' : 'Hide it from reading', c.hide ? 'Its pages go back into normal reading' : 'Skipped when reading, still opens from the gallery as extras', async () => { if (c.hide) delete c.hide; else c.hide = true; await commit(c.hide ? 'Hidden from reading' : 'Shown when reading'); }),
       d > 1 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
       del));
@@ -1401,12 +1440,12 @@ async function renderPages(id, chId, host, gIn) {
         const c = g.chapters[it.ci], k = 'c:' + c.id;
         return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : '') + (c.hide ? ' off' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
           onclick: e => selecting() ? toggle(k, e.currentTarget) : go('pages', { id, ch: c.id }) },
-          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(tagsOf(g, k)), c.hide ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, h('span', { class: 'ftitle' }, c.title));
+          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), tagMark(allTagsOf(g, k)), c.hide ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, h('span', { class: 'ftitle' }, c.title));
       }
       const pid = it.id, num = ++n, k = 'p:' + pid, off = !!(g.hid && g.hid[pid]);
       return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : '') + (off ? ' off' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}${off ? ', hidden from reading' : ''}`, 'aria-pressed': String(sel.has(k)),
         onclick: e => toggle(k, e.currentTarget) },
-        lazyThumb(pid), tagMark(tagsOf(g, k)), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+        lazyThumb(pid), tagMark(allTagsOf(g, k)), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
     }));
     drawSel();
   };
