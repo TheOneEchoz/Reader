@@ -438,7 +438,7 @@ const DB = (() => {
 })();
 
 /* object-URL cache for image blobs */
-const URLS = new Map(), PENDING = new Map();
+const URLS = new Map(), PENDING = new Map(), PIN = new Set();
 function imgURL(id, store = 'images') {
   const key = store[0] + id;
   if (URLS.has(key)) { const u = URLS.get(key); URLS.delete(key); URLS.set(key, u); return Promise.resolve(u); }
@@ -448,7 +448,7 @@ function imgURL(id, store = 'images') {
     if (!b) return null;
     const u = URL.createObjectURL(b); URLS.set(key, u);
     const max = 420; // keep thumbnails and nearby pages alive
-    if (URLS.size > max) for (const [k, v] of URLS) { if (URLS.size <= max - 40) break; if (k[0] === 'i') { URLS.delete(k); URL.revokeObjectURL(v); } }
+    if (URLS.size > max) for (const [k, v] of URLS) { if (URLS.size <= max - 40) break; if (k[0] === 'i' && !PIN.has(k.slice(1))) { URLS.delete(k); URL.revokeObjectURL(v); } }
     return u;
   }).catch(() => { PENDING.delete(key); return null; });
   PENDING.set(key, p); return p;
@@ -456,7 +456,7 @@ function imgURL(id, store = 'images') {
 function forgetURL(id) { for (const s of ['i', 't']) { const k = s + id; if (URLS.has(k)) { URL.revokeObjectURL(URLS.get(k)); URLS.delete(k); } } }
 
 /* ================= settings ================= */
-const DEFAULTS = { mode: 'single', dir: 'ltr', fit: 'screen', coverAlone: true, gap: 0, stripWidth: 100, bg: 'black', dim: 0, tapZones: true, invertTaps: false, dblTapScale: 2.5, keepZoom: false, zoom: 1, pagedZoom: 1, pageNumber: true, keepAwake: true, chapterBreaks: true };
+const DEFAULTS = { mode: 'single', dir: 'ltr', fit: 'screen', coverAlone: true, gap: 0, stripWidth: 100, bg: 'black', dim: 0, tapZones: true, invertTaps: false, dblTapScale: 2.5, keepZoomPos: true, zoom: 1, pagedZoom: 1, pageNumber: true, keepAwake: true, chapterBreaks: true };
 let GLOBAL = { ...DEFAULTS }, UI = { libSort: 'recent' };
 const paged = m => m === 'single' || m === 'double';
 const FIELDS = [
@@ -472,7 +472,7 @@ const FIELDS = [
   { k: 'tapZones', label: 'Tap the screen edges to turn pages', type: 'bool' },
   { k: 'invertTaps', label: 'Swap the left and right tap zones', type: 'bool', when: p => p.tapZones && p.mode !== 'vertical' },
   { k: 'dblTapScale', label: 'Double-tap zooms to', type: 'seg', group: 'zoom', opts: [[0, 'Off'], [1.5, '150%'], [2, '200%'], [2.5, '250%'], [3, '300%']] },
-  { k: 'keepZoom', label: 'Keep the zoom level when turning pages', type: 'bool', group: 'zoom', when: p => paged(p.mode) },
+  { k: 'keepZoomPos', label: 'Keep the zoom and position when turning pages', type: 'bool', group: 'zoom', when: p => paged(p.mode) },
   { k: 'pageNumber', label: 'Show the page number', type: 'bool' },
   { k: 'keepAwake', label: 'Keep the screen on while reading', type: 'bool' },
 ];
@@ -1305,7 +1305,7 @@ const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 async function openReader(id, ch, page, start) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
-  R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters);
+  R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters); R.pinned = []; R.groupKey = null; PIN.clear();
   R.pages = Tree.order(g.chapters).map(o => ({ id: o.id, ch: o.ch, i: o.i }));
   R.idx = new Map(R.pages.map((pg, k) => [pg.ch + ':' + pg.i, k]));
   R.chStart = g.chapters.map((c, ci) => R.idx.has(ci + ':0') ? R.idx.get(ci + ':0') : -1);
@@ -1327,7 +1327,7 @@ async function openReader(id, ch, page, start) {
   wakeOn();
 }
 function leaveReader() {
-  PRE.clear();
+  PRE.clear(); PIN.clear(); R.pinned = []; R.groupKey = null; R.groupTok = (R.groupTok || 0) + 1;
   saveProgress(true); teardownStrip(); wakeOff(); clearTimeout(tapTimer);
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { }
   spread.replaceChildren();
@@ -1374,8 +1374,45 @@ function getPage(id) {
   });
   PRE.set(id, p); return p;
 }
+/* Decrypt every page of the chapter you are in (with all its sub-chapters) as soon as you enter it. */
+function groupRange(pos) {
+  const chs = R.g.chapters, ci = R.pages[pos].ch;
+  if (!ci) return [0, 1];
+  let a = ci; while (Tree.dep(chs[a]) > 1) a = Tree.parent(chs, a);
+  return [a, Tree.end(chs, a)];
+}
+/* Pages stay decrypted while the reader is open: the chapter you are in, every chapter you have
+   passed through, and the chapter before the current one. Only if this grows past PIN_MAX pages
+   are the chapters visited longest ago released. */
+const PIN_MAX = 1500;
+function pinGroup(a, b) {
+  const key = a + ':' + b, idxs = [];
+  R.pages.forEach((pg, k) => { if (pg.ch >= a && pg.ch < b) idxs.push(k); });
+  R.pinned = (R.pinned || []).filter(gp => gp.key !== key);
+  R.pinned.push({ key, ids: idxs.map(k => R.pages[k].id) });
+  let total = R.pinned.reduce((n, gp) => n + gp.ids.length, 0);
+  while (total > PIN_MAX && R.pinned.length > 1) total -= R.pinned.shift().ids.length;
+  PIN.clear(); R.pinned.forEach(gp => gp.ids.forEach(id => PIN.add(id)));
+  return idxs;
+}
+function preloadGroup() {
+  if (!R.g || !R.pages.length) return;
+  const [a, b] = groupRange(R.pos), key = R.g.id + ':' + a + ':' + b;
+  if (R.groupKey === key) return;
+  R.groupKey = key; const tok = R.groupTok = (R.groupTok || 0) + 1;
+  const idxs = pinGroup(a, b);
+  idxs.sort((x, y) => { const f = k => k >= R.pos ? k - R.pos : (R.pos - k) * 3; return f(x) - f(y); });
+  // the chapter before this one, so going back is instant too
+  const first = idxs.length ? Math.min(...idxs) : 0;
+  let prevIdxs = [];
+  if (first > 0) { const [pa, pb] = groupRange(first - 1); if (pa !== a) prevIdxs = pinGroup(pa, pb).sort((x, y) => y - x); pinGroup(a, b); }
+  const queue = [...idxs, ...prevIdxs]; let i = 0;
+  const worker = async () => { while (i < queue.length) { if (tok !== R.groupTok) return; await imgURL(R.pages[queue[i++]].id); } };
+  worker(); worker();
+}
 function preloadAround() {
-  const ahead = R.p.mode === 'double' ? 10 : 6, behind = R.p.mode === 'double' ? 4 : 3;
+  preloadGroup();
+  const ahead = R.p.mode === 'double' ? 10 : 6, behind = ahead;
   const want = [];
   for (let d = 1; d <= ahead; d++) want.push(R.pos + d);
   for (let d = 1; d <= behind; d++) want.push(R.pos - d);
@@ -1396,10 +1433,11 @@ async function renderPaged() {
   }));
   if (tok !== R.tok) return;
   if (isRTL()) nodes.reverse();
+  const prev = { ...R.zoom }, keep = R.p.keepZoomPos && Math.abs(prev.s - 1) > .01 && spread.childElementCount > 0;
   spread.className = `spread fit-${R.p.fit} n${nodes.length}`;
   spread.replaceChildren(...nodes);
-  stage.scrollTop = 0; stage.scrollLeft = isRTL() ? stage.scrollWidth : 0;
-  applyStartZoom();
+  if (!keep) { stage.scrollTop = 0; stage.scrollLeft = isRTL() ? stage.scrollWidth : 0; }
+  applyStartZoom(keep ? prev : null);
   preloadAround();
 }
 function step(d) {
@@ -1438,6 +1476,7 @@ function posChanged() {
     R.g.read = R.g.read || []; if (!R.g.read.includes(chp.id)) R.g.read.push(chp.id);
   }
   updateUI(); saveProgress();
+  if (!paged(R.p.mode)) preloadGroup();
 }
 let saveT;
 function saveProgress(now) {
@@ -1487,7 +1526,7 @@ function setReaderPref(k, v) {
   if (k === 'dim') { $('#dim').style.opacity = v / 100; return; }
   if (k === 'pageNumber') return updateUI();
   if (k === 'keepAwake') return v ? wakeOn() : wakeOff();
-  if (['tapZones', 'invertTaps', 'dblTapScale', 'keepZoom'].includes(k)) { if (k === 'keepZoom') rememberPaged(); return; }
+  if (['tapZones', 'invertTaps', 'dblTapScale', 'keepZoomPos'].includes(k)) { if (k === 'keepZoomPos') rememberPaged(); return; }
   if (k === 'bg') { reader.dataset.bg = v; return; }
   if (k === 'mode' && wasPaged && !paged(v)) R.anchor = { idx: R.pos, frac: 0 };
   if (k === 'mode' && !wasPaged && paged(v)) R.anchor = null;
@@ -1521,6 +1560,7 @@ function buildStrip() {
   $$('.pg', strip).forEach(e => R.io.observe(e));
   const a = R.anchor && R.pages[R.anchor.idx] && R.pages[R.anchor.idx].ch === R.pages[R.pos].ch ? R.anchor : { idx: R.pos, frac: 0 };
   requestAnimationFrame(() => scrollToIdx(a.idx, a.frac));
+  preloadGroup();
 }
 function loadPg(el) {
   el._want = true; if (el.firstChild) return;
@@ -1631,7 +1671,7 @@ function zoomStep(dir) {
   let n = dir > 0 ? ZSTEPS.find(s => s > z + .01) : [...ZSTEPS].reverse().find(s => s < z - .01);
   zoomCenter(clamp(n == null ? (dir > 0 ? b : a) : n, a, b));
 }
-function rememberPaged() { if (R.p.keepZoom) { R.p.pagedZoom = R.zoom.s; R.g.prefs = { ...(R.g.prefs || {}), pagedZoom: R.zoom.s }; saveProgress(); } }
+function rememberPaged() { if (R.p.keepZoomPos) { R.p.pagedZoom = R.zoom.s; R.g.prefs = { ...(R.g.prefs || {}), pagedZoom: R.zoom.s }; saveProgress(); } }
 function animOnce() { spread.classList.add('anim'); setTimeout(() => spread.classList.remove('anim'), 220); }
 const FIT_LABEL = { screen: 'Whole page', width: 'Screen width', height: 'Screen height', original: 'Original size' };
 function updateZoomUI() {
@@ -1668,8 +1708,9 @@ function resetZoom(anim) {
   R.zoom = { s: 1, x: 0, y: 0 }; applyZoom();
 }
 /* When a new page opens: reset, or keep the zoom and start at the top of the reading side. */
-function applyStartZoom() {
-  const s = R.p.keepZoom ? (R.p.pagedZoom || 1) : 1;
+function applyStartZoom(prev) {
+  if (prev && R.p.keepZoomPos && Math.abs(prev.s - 1) > .01) { setZoom(prev.s, prev.x, prev.y); return; }
+  const s = R.p.keepZoomPos ? (R.p.pagedZoom || 1) : 1;
   if (Math.abs(s - 1) < .01) return resetZoom();
   R.zoom = { s, x: 0, y: 0 }; setZoom(s, isRTL() ? -1e9 : 0, 0);
 }
@@ -1706,8 +1747,9 @@ stage.addEventListener('pointermove', e => {
     setZoom(s, m.x - px * s, m.y - py * s);
   } else if (gest.type === 'one') {
     const dx = e.clientX - gest.x0, dy = e.clientY - gest.y0;
-    if (Math.hypot(dx, dy) > 10) gest.moved = true;
+    if (Math.hypot(dx, dy) > 14) gest.moved = true;
     if (R.zoom.s > 1.01) setZoom(R.zoom.s, gest.zx + dx, gest.zy + dy);
+    else if (!gest.turned && Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3 && swipeAllowed(dx)) { gest.turned = true; step(dx < 0 ? (isRTL() ? -1 : 1) : (isRTL() ? 1 : -1)); }
   }
 });
 function endPtr(e, cancelled) {
@@ -1722,11 +1764,13 @@ function endPtr(e, cancelled) {
   gest = null; if (cancelled) return;
   const dx = e.clientX - g.x0, dy = e.clientY - g.y0, dt = performance.now() - g.t0;
   if (!g.moved && dt < 400) return onTap(e.clientX, e.clientY);
-  if (R.zoom.s <= 1.01 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3 && dt < 900) {
-    const canScrollX = stage.scrollWidth > stage.clientWidth + 2;
-    if (canScrollX) { const atL = stage.scrollLeft <= 2, atR = stage.scrollLeft + stage.clientWidth >= stage.scrollWidth - 2; if ((dx > 0 && !atL) || (dx < 0 && !atR)) return; }
-    step(dx < 0 ? (isRTL() ? -1 : 1) : (isRTL() ? 1 : -1));
-  }
+  if (g.turned) return;
+  if (R.zoom.s <= 1.01 && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.3 && dt < 1200 && swipeAllowed(dx)) step(dx < 0 ? (isRTL() ? -1 : 1) : (isRTL() ? 1 : -1));
+}
+function swipeAllowed(dx) {
+  if (stage.scrollWidth <= stage.clientWidth + 2) return true;
+  const atL = stage.scrollLeft <= 2, atR = stage.scrollLeft + stage.clientWidth >= stage.scrollWidth - 2;
+  return !((dx > 0 && !atL) || (dx < 0 && !atR));
 }
 stage.addEventListener('pointerup', e => endPtr(e, false));
 stage.addEventListener('pointercancel', e => endPtr(e, true));
@@ -1735,7 +1779,7 @@ function onTap(x, y) {
   if (!R.p.dblTapScale) return singleTap(x, y);
   // taps on the page-turn edges act right away; double-tap zoom lives in the middle of the screen
   { const r = stage.getBoundingClientRect(), fx = (x - r.left) / r.width;
-    if (R.p.tapZones && (fx <= .3 || fx >= .7) && R.zoom.s <= 1.01 && !reader.classList.contains('ui')) { clearTimeout(tapTimer); lastTap = null; return singleTap(x, y); } }
+    if (R.p.tapZones && (fx <= .3 || fx >= .7) && !reader.classList.contains('ui')) { clearTimeout(tapTimer); lastTap = null; return singleTap(x, y); } }
   if (lastTap && performance.now() - lastTap.t < 280 && Math.hypot(x - lastTap.x, y - lastTap.y) < 40) {
     clearTimeout(tapTimer); lastTap = null; return doubleTap(x, y);
   }
@@ -1748,7 +1792,6 @@ function singleTap(x) {
   if (!R.p.tapZones || (fx > .3 && fx < .7)) return toggleUI(true);
   let left = fx <= .3; if (R.p.invertTaps) left = !left;
   const fwd = left === isRTL();
-  if (R.zoom.s > 1.01 && panWithin(fwd)) return;
   if (R.zoom.s <= 1.01 && stage.scrollHeight > stage.clientHeight + 2) {
     const H = stage.clientHeight;
     if (fwd && stage.scrollTop + H < stage.scrollHeight - 2) return stage.scrollBy({ top: H * .8, behavior: 'smooth' });
