@@ -122,6 +122,8 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .edrow input:focus{border-color:var(--line);background:var(--bg)}
 .sortable-ghost{opacity:.35}
 .edrow.group input{font-weight:700}
+.edrow.off{opacity:.55}
+
 .twisty{width:30px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:8px}
 .twisty .ic{width:18px;height:18px;transition:transform .15s}
 .twisty.open .ic{transform:rotate(90deg)}
@@ -134,6 +136,10 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .pcell.sel{border-color:var(--accent)}
 .pcell.folder{border-radius:4px 10px 10px 10px}
 .pcell.carried{opacity:.3}
+.pcell.off img{opacity:.4;filter:grayscale(.6)}
+.offmark{position:absolute;right:4px;bottom:4px;z-index:2;width:24px;height:24px;border-radius:6px;background:rgba(10,11,13,.75);color:#fff;display:grid;place-items:center}
+.offmark .ic{width:15px;height:15px}
+.pcell.folder .offmark{right:4px;top:4px;bottom:auto}
 .pcell.folder.sel::after{background:linear-gradient(180deg,var(--accent-soft),rgba(10,11,13,.7))}
 .pcell.droptarget{outline:3px dashed var(--accent);outline-offset:2px;transform:scale(1.06);transition:transform .12s}
 .pcell[data-count]::before{content:attr(data-count);position:absolute;right:4px;top:4px;z-index:3;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;display:grid;place-items:center}
@@ -183,7 +189,9 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .bfold{position:absolute;left:6px;bottom:6px;z-index:1;width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
 .bfold .ic{width:18px;height:18px}
 .bchip{position:absolute;right:6px;top:6px;z-index:1;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;letter-spacing:.05em;border-radius:6px;padding:1px 6px}
-.bchip.done{background:rgba(10,11,13,.7);color:#fff}
+.bchip.done{background:rgba(10,11,13,.7);color:#fff;display:inline-flex;align-items:center;gap:3px}
+.bchip .ic{width:13px;height:13px}
+.btile.off .bthumb img{opacity:.45;filter:grayscale(.6)}
 .bcap{display:grid;gap:1px;font-size:12px;color:var(--muted);min-width:0}
 .bcap b{color:var(--ink);font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 .crumbs{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:13px;color:var(--muted)}
@@ -389,6 +397,7 @@ const ICONS = {
   zoomin: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5M11 8v6M8 11h6"/>', zoomout: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5M8 11h6"/>',
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', devices: '<rect x="2.5" y="5" width="12" height="9" rx="1.5"/><rect x="16" y="8" width="5.5" height="11" rx="1.2"/><path d="M5 18h8"/>',
   more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>', chevr: '<path d="M9 6l6 6-6 6"/>',
+  eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.5 6.6C4.4 8 2.9 10 2 12c1 2.5 5 7 10 7 1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 004.2 4.2"/>', eye: '<path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z"/><circle cx="12" cy="12" r="3"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
@@ -555,7 +564,7 @@ async function render(view, params) {
     else if (view === 'detail') await renderDetail(params.id, params.folder);
     else if (view === 'editor') await renderEditor(params.id);
     else if (view === 'pages') await renderPages(params.id, params.ch);
-    else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start);
+    else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start, params.scope, params.only);
   } catch (e) { console.error(e); toast('Something went wrong: ' + (e.message || e)); }
   if (view !== 'reader') window.scrollTo(0, params.scroll || 0);
 }
@@ -797,12 +806,26 @@ const Tree = (() => {
   }
   const items = (chs, ci) => mixed(chs, kidsOf(chs), ci);
   /* Every page in reading order. */
-  function order(chs) {
+  /* hid: hidden page ids (object). When given, hidden pages and hidden folders are left out. */
+  function order(chs, hid) {
     const kids = kidsOf(chs), out = [];
-    const walk = ci => { for (const it of mixed(chs, kids, ci)) it.t === 'p' ? out.push({ ch: ci, i: it.i, id: it.id }) : walk(it.ci); };
+    const walk = ci => {
+      if (hid && chs[ci].hide) return;
+      for (const it of mixed(chs, kids, ci)) it.t === 'p' ? ((!hid || !hid[it.id]) && out.push({ ch: ci, i: it.i, id: it.id })) : walk(it.ci);
+    };
     chs.forEach((c, i) => { if (!dep(c)) walk(i); });
     return out;
   }
+  /* Everything inside one folder, hidden items included (for viewing extras). */
+  function orderIn(chs, ci, onlyHid) {
+    const kids = kidsOf(chs), out = [];
+    const walk = (c, inHid) => {
+      inHid = inHid || !!chs[c].hide;
+      for (const it of mixed(chs, kids, c)) it.t === 'p' ? ((!onlyHid || inHid || onlyHid[it.id]) && out.push({ ch: c, i: it.i, id: it.id })) : walk(it.ci, inHid);
+    };
+    walk(ci, false); return out;
+  }
+  const hiddenIn = (chs, i) => { for (let k = i; k >= 0; k = parent(chs, k)) if (chs[k].hide) return true; return false; };
   /* Apply a new mixed order (pages and sub-chapters) for chapter ci. tokens: [{t:'p', id} | {t:'c', id}] */
   function setOrder(chs, ci, tokens) {
     const c = chs[ci], pages = [], kidIds = [];
@@ -848,8 +871,8 @@ const Tree = (() => {
     for (let i = chs.length - 1; i >= 0; i--) if (keep[i]) { const p = parent(chs, i); if (p >= 0) keep[p] = true; }
     return chs.filter((c, i) => keep[i]);
   }
-  function firstPage(chs, i) { const ord = order(chs), e = end(chs, i); const hit = ord.find(o => o.ch >= i && o.ch < e); return hit ? hit.ch : -1; }
-  function firstFlat(chs, i) { const ord = order(chs), e = end(chs, i); return ord.findIndex(o => o.ch >= i && o.ch < e); }
+  function firstPage(chs, i, hid) { const ord = order(chs, hid), e = end(chs, i); const hit = ord.find(o => o.ch >= i && o.ch < e); return hit ? hit.ch : -1; }
+  function firstFlat(chs, i, hid) { const ord = order(chs, hid), e = end(chs, i); return ord.findIndex(o => o.ch >= i && o.ch < e); }
   function subtreePages(chs, i) { let n = 0; const e = end(chs, i); for (let j = i; j < e; j++) n += chs[j].pages.length; return n; }
   function ensurePath(chs, path) {
     if (!path.length) return chs[0];
@@ -879,17 +902,18 @@ const Tree = (() => {
     const kids = kidsOf(chs);
     chs.forEach((c, ci) => kids[ci].forEach(k => { const at = chs[k].at; if (at !== undefined) chs[k].at = c.pages.slice(0, at).filter(p => !removed.has(p)).length; }));
   }
-  return { dep, end, parent, norm, ensureRoot, nums, crumb, items, order, setOrder, moveUp, moveDown, moveInto, outdent, sortRec, prune, firstPage, firstFlat, subtreePages, ensurePath, splitArrows, fixAt };
+  return { dep, end, parent, norm, ensureRoot, nums, crumb, items, order, orderIn, hiddenIn, setOrder, moveUp, moveDown, moveInto, outdent, sortRec, prune, firstPage, firstFlat, subtreePages, ensurePath, splitArrows, fixAt };
 })();
 const chTitle = c => c.root ? `${c.title} (main level)` : c.title;
 const chCount = g => g.chapters.filter(c => !c.root).length;
 const chLabel = (g, ci) => { const n = Tree.nums(g.chapters)[ci]; return n ? `Ch. ${n}` : 'Start'; };
 /* Chapter list used by the reader: indented, numbered 1, 1.1, 1.2 … */
-function chapterRows(g, { cur, read, onPick }) {
+function chapterRows(g, { cur, read, onPick, show, has }) {
   const chs = g.chapters, nums = Tree.nums(chs);
   return chs.map((c, i) => {
     if (c.root && !c.pages.length) return null;
-    const d = Math.max(0, Tree.dep(c) - 1), own = c.pages.length, first = Tree.firstPage(chs, i), isCur = cur && cur.ci === i;
+    if (show && !show(i)) return null;
+    const d = Math.max(0, Tree.dep(c) - 1), own = c.pages.length, first = has ? (has(i) ? i : -1) : Tree.firstPage(chs, i), isCur = cur && cur.ci === i;
     const inside = own ? 0 : Tree.subtreePages(chs, i);
     return h('button', { class: 'chrow' + (isCur ? ' current' : '') + (read.has(c.id) && !isCur ? ' read' : '') + (own ? '' : ' group'), style: d ? `padding-left:${14 + Math.min(d, 8) * 18}px` : null, disabled: first < 0, onclick: () => onPick(first, i) },
       h('span', { class: 'n' }, nums[i] || '•'),
@@ -988,24 +1012,24 @@ async function renderDetail(id, folderId) {
   // path from the main level down to this folder
   const trail = []; for (let k = fi; k > 0; k = Tree.parent(chs, k)) trail.unshift(k);
   const inHere = pi && pi.ci >= fi && pi.ci < Tree.end(chs, fi);
-  const its = Tree.items(chs, fi);
+  const its = Tree.items(chs, fi), hid = g.hid || {}, hiddenHere = Tree.hiddenIn(chs, fi);
   let pageNo = 0;
   const tiles = its.map(it => {
     if (it.t === 'p') {
       pageNo++;
-      const cur = pi && pi.ci === it.ci && pi.page === it.i;
-      return h('button', { class: 'btile' + (cur ? ' current' : ''), 'aria-label': `Page ${pageNo}${cur ? ', where you stopped' : ''}`, onclick: () => go('reader', { id, ch: it.ci, page: it.i }) },
-        h('span', { class: 'bthumb' }, lazyThumb(it.id), cur ? h('span', { class: 'bchip' }, 'READING') : null),
+      const cur = pi && pi.ci === it.ci && pi.page === it.i, off = hid[it.id] || hiddenHere;
+      return h('button', { class: 'btile' + (cur ? ' current' : '') + (off ? ' off' : ''), 'aria-label': `Page ${pageNo}${off ? ', hidden from reading' : ''}${cur ? ', where you stopped' : ''}`, onclick: () => go('reader', off ? { id, scope: F.id, only: hiddenHere ? undefined : 1, ch: it.ci, page: it.i } : { id, ch: it.ci, page: it.i }) },
+        h('span', { class: 'bthumb' }, lazyThumb(it.id), cur ? h('span', { class: 'bchip' }, 'READING') : off ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
         h('span', { class: 'bcap num' }, `${pageNo}`));
     }
     const c = chs[it.ci], n = Tree.subtreePages(chs, it.ci), sub = chs.slice(it.ci + 1, Tree.end(chs, it.ci)).filter(x => Tree.dep(x) === Tree.dep(c) + 1).length;
     const has = pi && pi.ci >= it.ci && pi.ci < Tree.end(chs, it.ci), done = read.has(c.id) && !has;
     return h('button', { class: 'btile folder' + (has ? ' current' : ''), 'aria-label': `Folder ${c.title}, ${plural(n, 'page')}`, onclick: () => go('detail', { id, folder: c.id }) },
-      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
+      h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), c.hide ? h('span', { class: 'bchip done' }, icon('eyeoff'), ' HIDDEN') : has ? h('span', { class: 'bchip' }, 'READING') : done ? h('span', { class: 'bchip done' }, 'READ') : null),
       h('span', { class: 'bcap' }, h('b', {}, c.title), h('span', { class: 'num' }, `${plural(n, 'page')}${sub ? ` · ${plural(sub, 'folder')}` : ''}`)));
   });
-  const firstHere = Tree.firstFlat(chs, fi);
-  const ord = firstHere >= 0 ? Tree.order(chs)[firstHere] : null;
+  const firstHere = hiddenHere ? -1 : Tree.firstFlat(chs, fi, hid);
+  const ord = firstHere >= 0 ? Tree.order(chs, hid)[firstHere] : null;
   v.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'appbar' },
       h('button', { class: 'iconbtn', 'aria-label': atRoot ? 'Back to library' : 'Back', onclick: () => atRoot ? back('library') : back('detail', { id, folder: trail.length > 1 ? chs[trail[trail.length - 2]].id : undefined }) }, icon('back')),
@@ -1028,7 +1052,9 @@ async function renderDetail(id, folderId) {
         h('div', { class: 'sub num' }, `${nums[fi] ? 'Chapter ' + nums[fi] + ' · ' : ''}${plural(Tree.subtreePages(chs, fi), 'page')}`),
         h('div', { class: 'row' },
           inHere ? h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id }) }, icon('play'), `Continue · p. ${pi.page + 1}`) : null,
-          ord ? h('button', { class: 'btn ' + (inHere ? 'ghost' : 'primary'), style: inHere ? null : 'flex:1', onclick: () => go('reader', { id, ch: ord.ch, page: ord.i }) }, inHere ? 'From the start' : [icon('play'), 'Read this folder']) : null)),
+          ord ? h('button', { class: 'btn ' + (inHere ? 'ghost' : 'primary'), style: inHere ? null : 'flex:1', onclick: () => go('reader', { id, ch: ord.ch, page: ord.i }) }, inHere ? 'From the start' : [icon('play'), 'Read this folder']) : null,
+          !ord && Tree.subtreePages(chs, fi) ? h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id, scope: F.id }) }, icon('play'), 'View these extras') : null),
+        hiddenHere ? h('div', { class: 'banner' }, 'This folder is hidden from reading. It is skipped when you read the gallery, but you can open its pages here.') : null),
       atRoot ? h('div', { class: 'panel' }, h('div', { class: 'label' }, 'How pages appear'), modes, dirRow) : null,
       tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Edit to add images or folders.'))
     )));
@@ -1049,7 +1075,7 @@ async function renderEditor(id) {
       if (d > hideDeeper) return; hideDeeper = Infinity;
       const kids = i + 1 < chs.length && Tree.dep(chs[i + 1]) > d + 1, closed = collapsed.has(c.id);
       if (kids && closed) hideDeeper = d;
-      rows.push(h('div', { class: 'edrow' + (c.pages.length ? '' : ' group'), style: d ? `margin-left:${Math.min(d, 8) * 16}px` : null },
+      rows.push(h('div', { class: 'edrow' + (c.pages.length ? '' : ' group') + (Tree.hiddenIn(chs, i) ? ' off' : ''), style: d ? `margin-left:${Math.min(d, 8) * 16}px` : null },
         kids ? h('button', { class: 'twisty' + (closed ? '' : ' open'), 'aria-expanded': String(!closed), 'aria-label': closed ? `Show what is inside ${c.title}` : `Hide what is inside ${c.title}`, onclick: () => { closed ? collapsed.delete(c.id) : collapsed.add(c.id); draw(); } }, icon('chevr')) : h('span'),
         h('span', { class: 'n' }, nums[i]),
         h('input', { value: c.title, 'aria-label': `Chapter ${nums[i]} name`, id: 'ch-' + c.id, onchange: e => { c.title = e.target.value.trim() || c.title; saveGallery(g); } }),
@@ -1082,6 +1108,7 @@ async function renderEditor(id) {
       item('up', 'Move up', 'Swaps it with the chapter above at the same level', async () => { if (Tree.moveUp(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already first at this level'); }),
       item('down', 'Move down', 'Swaps it with the chapter below at the same level', async () => { if (Tree.moveDown(g.chapters, g.chapters.indexOf(c))) await commit(); else toast('It is already last at this level'); }),
       item('move', 'Put it inside another chapter…', 'Or move it back to the top level', () => pickParent(c)),
+      item(c.hide ? 'eye' : 'eyeoff', c.hide ? 'Show it when reading' : 'Hide it from reading', c.hide ? 'Its pages go back into normal reading' : 'Skipped when reading, still opens from the gallery as extras', async () => { if (c.hide) delete c.hide; else c.hide = true; await commit(c.hide ? 'Hidden from reading' : 'Shown when reading'); }),
       d > 1 ? item('back', 'Move out one level', 'It goes right after the chapter it is in now', async () => { Tree.outdent(g.chapters, g.chapters.indexOf(c)); await commit(); }) : null,
       del));
   };
@@ -1207,14 +1234,14 @@ async function renderPages(id, chId) {
     grid.replaceChildren(...its.map(it => {
       if (it.t === 'c') {
         const c = g.chapters[it.ci], k = 'c:' + c.id;
-        return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
+        return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : '') + (c.hide ? ' off' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
           onclick: e => selecting() ? toggle(k, e.currentTarget) : go('pages', { id, ch: c.id }) },
-          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), h('span', { class: 'ftitle' }, c.title));
+          lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), c.hide ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, h('span', { class: 'ftitle' }, c.title));
       }
-      const pid = it.id, num = ++n, k = 'p:' + pid;
-      return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}`, 'aria-pressed': String(sel.has(k)),
+      const pid = it.id, num = ++n, k = 'p:' + pid, off = !!(g.hid && g.hid[pid]);
+      return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : '') + (off ? ' off' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}${off ? ', hidden from reading' : ''}`, 'aria-pressed': String(sel.has(k)),
         onclick: e => toggle(k, e.currentTarget) },
-        lazyThumb(pid), h('span', { class: 'no' }, num), g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+        lazyThumb(pid), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
     }));
     drawSel();
   };
@@ -1251,6 +1278,18 @@ async function renderPages(id, chId) {
       h('button', { class: 'btn', onclick: moveSheet }, icon('move'), 'Move'),
       h('button', { class: 'btn', onclick: () => shift(-1) }, icon('up'), 'To start'),
       h('button', { class: 'btn', onclick: () => shift(1) }, icon('down'), 'To end'),
+      (() => {
+        const allOff = [...sel].every(k => k[0] === 'p' ? !!(g.hid && g.hid[k.slice(2)]) : !!(chOf(k.slice(2)) || {}).hide);
+        return h('button', { class: 'btn', onclick: async () => {
+          const hide = !allOff; g.hid = g.hid || {};
+          for (const k of sel) {
+            if (k[0] === 'p') { if (hide) g.hid[k.slice(2)] = 1; else delete g.hid[k.slice(2)]; }
+            else { const c = chOf(k.slice(2)); if (c) { if (hide) c.hide = true; else delete c.hide; } }
+          }
+          await saveGallery(g); draw();
+          toast(hide ? 'Hidden from reading. They stay here and in the gallery, where you can still open them.' : 'These will show when reading again.', 4000);
+        } }, icon(allOff ? 'eye' : 'eyeoff'), allOff ? 'Show in reading' : 'Hide from reading');
+      })(),
       sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => { await dropCustomCover(g); g.cover = pages[0]; await saveGallery(g); sel.clear(); draw(); toast('Cover updated'); } }, icon('star'), 'Cover') : null,
       del,
       h('button', { class: 'btn', 'aria-label': 'Clear selection', onclick: () => { sel.clear(); selMode = false; draw(); } }, icon('x'))].filter(Boolean));
@@ -1349,7 +1388,7 @@ async function renderPages(id, chId) {
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
-      h('p', { class: 'hint' }, 'Press and hold, then drag to reorder. Drop onto a folder to put things inside it. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection.'),
+      h('p', { class: 'hint' }, 'Press and hold, then drag to reorder. Drop onto a folder to put things inside it. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
       grid)), selbar);
   draw();
 
@@ -1398,28 +1437,32 @@ const R = { g: null, p: null, pages: [], chStart: [], pos: 0, spreads: [], sprea
 const reader = $('#reader'), stage = $('#stage'), spread = $('#spread'), strip = $('#strip');
 const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 
-async function openReader(id, ch, page, start) {
+async function openReader(id, ch, page, start, scope, only) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters); PIN.clear();
-  R.pages = Tree.order(g.chapters).map(o => ({ id: o.id, ch: o.ch, i: o.i }));
+  const sci = scope ? g.chapters.findIndex(c => c.id === scope) : -1;
+  R.extra = sci >= 0; R.scope = sci;
+  R.pages = (R.extra ? Tree.orderIn(g.chapters, sci, only ? (g.hid || {}) : null) : Tree.order(g.chapters, g.hid || {})).map(o => ({ id: o.id, ch: o.ch, i: o.i }));
+  R.chPages = g.chapters.map(() => []); R.pages.forEach((pg, k) => R.chPages[pg.ch].push(k));
   R.idx = new Map(R.pages.map((pg, k) => [pg.ch + ':' + pg.i, k]));
-  R.chStart = g.chapters.map((c, ci) => R.idx.has(ci + ':0') ? R.idx.get(ci + ':0') : -1);
+  R.chStart = R.chPages.map(l => l.length ? l[0] : -1);
   R.runs = []; R.pages.forEach((pg, k) => { if (!k || R.pages[k - 1].ch !== pg.ch) R.runs.push(k); });
   const at = (ci, i) => R.idx.has(ci + ':' + i) ? R.idx.get(ci + ':' + i) : (R.chStart[ci] >= 0 ? R.chStart[ci] : -1);
   R.anchor = null;
   if (start) R.pos = 0;
   else if (ch != null && at(ch, page || 0) >= 0) R.pos = at(ch, page || 0);
+  else if (R.extra) R.pos = 0;
   else { const pi = progressInfo(g); R.pos = pi && at(pi.ci, pi.page) >= 0 ? at(pi.ci, pi.page) : 0; if (pi && g.progress.anchor != null && at(pi.ci, g.progress.anchor.page) >= 0) R.anchor = { idx: at(pi.ci, g.progress.anchor.page), frac: g.progress.anchor.frac }; }
   R.pos = clamp(R.pos, 0, Math.max(0, R.pages.length - 1));
-  try { if ((ch != null || start) && history.state && history.state.view === 'reader') history.replaceState({ ...history.state, params: { id } }, ''); } catch (e) { }
+  try { if ((ch != null || start) && history.state && history.state.view === 'reader') history.replaceState({ ...history.state, params: { id, scope, only } }, ''); } catch (e) { }
   R.lastCh = -1;
   reader.classList.remove('ui');
   if (!R.pages.length) { layout(); reader.classList.add('ui'); rToast('No pages yet', 'Add pages from Edit'); return; }
   layout();
   const c = R.pages[R.pos]; R.lastCh = c.ch;
   R.nums = Tree.nums(g.chapters);
-  rToast(R.nums[c.ch] ? `Chapter ${R.nums[c.ch]}` : '', Tree.crumb(g.chapters, c.ch));
+  if (R.extra) rToast('Extras', 'Not counted as reading progress'); else rToast(R.nums[c.ch] ? `Chapter ${R.nums[c.ch]}` : '', Tree.crumb(g.chapters, c.ch));
   wakeOn();
 }
 function leaveReader() {
@@ -1584,14 +1627,15 @@ function posChanged() {
   R.lastCh = c.ch;
   const shown = currentIdx(), lastShown = shown[shown.length - 1];
   const chp = R.g.chapters[c.ch];
-  if (paged(R.p.mode) ? R.pages[lastShown].i === chp.pages.length - 1 : c.i === chp.pages.length - 1) {
+  const lastOfCh = R.chPages[c.ch][R.chPages[c.ch].length - 1];
+  if (!R.extra && (paged(R.p.mode) ? lastShown === lastOfCh : R.pos === lastOfCh)) {
     R.g.read = R.g.read || []; if (!R.g.read.includes(chp.id)) R.g.read.push(chp.id);
   }
   updateUI(); saveProgress();
 }
 let saveT;
 function saveProgress(now) {
-  if (!R.g || !R.pages.length) return;
+  if (!R.g || !R.pages.length || R.extra) return;
   clearTimeout(saveT);
   const doit = async () => {
     const c = R.pages[R.pos]; if (!c) return;
@@ -1610,15 +1654,15 @@ function saveProgress(now) {
   now ? doit() : (saveT = setTimeout(doit, 350));
 }
 function updateUI() {
-  const g = R.g; $('#rTitle').textContent = g.title;
+  const g = R.g; $('#rTitle').textContent = R.extra ? `${g.title} · extras` : g.title;
   const c = R.pages[R.pos];
   if (!c) { $('#rChap').textContent = ''; $('#rLabel').textContent = ''; $('#pnum').hidden = true; return; }
-  const chp = g.chapters[c.ch], n = chp.pages.length;
+  const list = R.chPages[c.ch], n = list.length, posIn = k => list.indexOf(k) + 1;
   $('#rChap').textContent = (R.nums[c.ch] ? R.nums[c.ch] + ' · ' : '') + Tree.crumb(g.chapters, c.ch);
-  const shown = paged(R.p.mode) ? currentIdx().map(i => R.pages[i].i + 1) : [c.i + 1];
+  const shown = paged(R.p.mode) ? currentIdx().map(posIn) : [posIn(R.pos)];
   const pageTxt = shown.length > 1 ? `${shown[0]}–${shown[1]}` : shown[0];
   $('#rLabel').textContent = `Page ${pageTxt} of ${n}`;
-  const r = $('#rRange'); r.max = n; r.value = c.i + 1; r.disabled = n < 2;
+  const r = $('#rRange'); r.max = n; r.value = posIn(R.pos); r.disabled = n < 2;
   updateZoomUI();
   const pn = $('#pnum'); pn.hidden = !R.p.pageNumber; pn.textContent = `${pageTxt} / ${n}`;
   const rr = runOf(R.pos), hasPrev = rr > 0, hasNext = rr < R.runs.length - 1;
@@ -1944,10 +1988,13 @@ $('#rFull').addEventListener('click', async () => {
 });
 $('#rPrevCh').addEventListener('click', e => jumpChapter(+e.currentTarget.dataset.dir || -1));
 $('#rNextCh').addEventListener('click', e => jumpChapter(+e.currentTarget.dataset.dir || 1));
-$('#rRange').addEventListener('input', e => { const c = R.pages[R.pos]; if (!c) return; const k = R.idx.get(c.ch + ':' + ((+e.target.value) - 1)); if (k != null) goToIdx(k); });
+$('#rRange').addEventListener('input', e => { const c = R.pages[R.pos]; if (!c) return; const k = R.chPages[c.ch][(+e.target.value) - 1]; if (k != null) goToIdx(k); });
 $('#rChapters').addEventListener('click', () => {
   const c = R.pages[R.pos]; const read = new Set(R.g.read || []);
-  const list = h('div', { class: 'chlist' }, chapterRows(R.g, { cur: c ? { ci: c.ch, page: c.i } : null, read, onPick: i => { closeSheet(); goToIdx(R.chStart[i]); } }));
+  const chs = R.g.chapters, firstIn = i => { const e = Tree.end(chs, i); return R.pages.findIndex(pg => pg.ch >= i && pg.ch < e); };
+  const list = h('div', { class: 'chlist' }, chapterRows(R.g, { cur: c ? { ci: c.ch, page: c.i } : null, read,
+    show: i => R.extra ? (i >= R.scope && i < Tree.end(chs, R.scope)) : !Tree.hiddenIn(chs, i),
+    has: i => firstIn(i) >= 0, onPick: (f, i) => { closeSheet(); const k = firstIn(i); if (k >= 0) goToIdx(k); } }));
   openSheet('Chapters', list);
   const cur = $('.chrow.current', list); if (cur) setTimeout(() => cur.scrollIntoView({ block: 'center' }), 30);
 });
