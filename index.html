@@ -51,7 +51,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .appbar .grow{flex:1;min-width:0}
 .appbar h1,.appbar h2{margin:0;font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wordmark{font-family:var(--display);font-size:24px;letter-spacing:.02em;line-height:1;display:flex;align-items:center;gap:10px}
-.wordmark .hanko{width:28px;height:28px;border-radius:6px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:15px;font-family:var(--display);transform:rotate(-4deg)}
+.wordmark .hanko{flex:none;width:28px;height:28px;border-radius:6px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:15px;font-family:var(--display);transform:rotate(-4deg)}
 .sub{color:var(--muted);font-size:13px}
 .iconbtn{width:44px;height:44px;border-radius:50%;display:inline-grid;place-items:center;flex:none}
 .iconbtn:hover{background:var(--surface2)}
@@ -139,7 +139,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 @keyframes up{from{transform:translateY(24px);opacity:.6}}
 #sheet header{display:flex;align-items:center;gap:8px;padding:10px 8px 6px 18px}
 #sheet header h2{flex:1;margin:0;font-size:17px}
-#sheet .sb{overflow:auto;padding:4px 18px 20px;display:grid;gap:16px;overscroll-behavior:contain}
+#sheet .sb{min-height:0;flex:1 1 auto;overflow:auto;padding:4px 18px 20px;display:grid;gap:16px;overscroll-behavior:contain}
 .setrow{display:grid;gap:8px}
 .setrow.inline{grid-template-columns:1fr auto;align-items:center}
 .setrow .lab{font-weight:500;font-size:14px}
@@ -156,6 +156,21 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .progress .bar{height:6px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
+.coverrow{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:start;background:var(--surface);border-radius:14px;padding:12px}
+#v-lock{padding-inline:16px}
+.lockbox{max-width:420px;margin:0 auto;padding-block:10vh 48px;display:grid;gap:16px}
+.lockbox h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:8px 0 0;text-wrap:balance}
+.err{color:var(--accent);font-size:14px;font-weight:500;min-height:1.2em;margin:0}
+.wordmark{white-space:nowrap;overflow:hidden}
+@media (max-width:440px){.wordmark{font-size:20px;gap:8px}.wordmark .hanko{width:24px;height:24px;font-size:13px}.appbar .btn.small{padding:0 10px}}
+.syncpill{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;background:var(--surface2);font-size:12px;font-weight:700;white-space:nowrap}
+.sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.sdot.waiting{background:#D69A1E}.sdot.connected{background:var(--ok)}.sdot.unavailable{background:var(--accent)}
+.qrbox{display:grid;place-items:center}
+.qrbox svg{width:min(260px,72vw);height:auto;background:#fff;border-radius:12px}
+.code{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;background:var(--surface2);padding:10px 12px;border-radius:8px;font-size:13px;user-select:all}
+.scanvid{width:100%;max-height:48dvh;border-radius:12px;background:#000;object-fit:cover}
+.steps{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px}
 .checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .checks li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
 .checks .mark{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px}
@@ -239,6 +254,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
   <section id="v-detail" hidden></section>
   <section id="v-editor" hidden></section>
   <section id="v-pages" hidden></section>
+  <section id="v-lock" hidden></section>
 </div>
 
 <section id="reader" hidden aria-label="Reader">
@@ -281,6 +297,9 @@ input[type=range]{accent-color:var(--accent);width:100%}
 
 <script src="jszip.min.js"></script>
 <script src="Sortable.min.js"></script>
+<script src="p2p.js"></script>
+<script src="qrcode.js"></script>
+<script src="jsQR.js"></script>
 <script>
 "use strict";
 /* ================= helpers ================= */
@@ -331,6 +350,7 @@ const ICONS = {
   up: '<path d="M12 19V5M5 12l7-7 7 7"/>', down: '<path d="M12 5v14M5 12l7 7 7-7"/>',
   sort: '<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>', move: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   zoomin: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5M11 8v6M8 11h6"/>', zoomout: '<circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5M8 11h6"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>', devices: '<rect x="2.5" y="5" width="12" height="9" rx="1.5"/><rect x="16" y="8" width="5.5" height="11" rx="1.2"/><path d="M5 18h8"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
@@ -382,6 +402,8 @@ const DB = (() => {
     del: (s, id) => mem ? (mem[s].delete(id), Promise.resolve()) : run(s, 'readwrite', st => st.delete(id)),
     all: s => mem ? Promise.resolve([...mem[s].values()]) : run(s, 'readonly', st => st.getAll()),
     delMany: (s, ids) => mem ? (ids.forEach(i => mem[s].delete(i)), Promise.resolve()) : run(s, 'readwrite', st => { ids.forEach(i => st.delete(i)); }),
+    keys: s => mem ? Promise.resolve([...mem[s].keys()]) : run(s, 'readonly', st => st.getAllKeys()),
+    nuke: () => new Promise(res => { try { if (db) db.close(); const r = indexedDB.deleteDatabase('tankobon'); r.onsuccess = r.onerror = r.onblocked = () => res(); } catch (e) { res(); } }),
   };
 })();
 
@@ -391,10 +413,10 @@ function imgURL(id, store = 'images') {
   const key = store[0] + id;
   if (URLS.has(key)) { const u = URLS.get(key); URLS.delete(key); URLS.set(key, u); return Promise.resolve(u); }
   if (PENDING.has(key)) return PENDING.get(key);
-  const p = DB.get(store, id).then(rec => {
+  const p = S.blob(store, id).then(b => {
     PENDING.delete(key);
-    if (!rec) return null;
-    const u = URL.createObjectURL(rec.blob); URLS.set(key, u);
+    if (!b) return null;
+    const u = URL.createObjectURL(b); URLS.set(key, u);
     const max = 420; // keep thumbnails and nearby pages alive
     if (URLS.size > max) for (const [k, v] of URLS) { if (URLS.size <= max - 40) break; if (k[0] === 'i') { URLS.delete(k); URL.revokeObjectURL(v); } }
     return u;
@@ -514,11 +536,13 @@ function thumbImg(id, alt = '') {
   if (id) imgURL(id, 'thumbs').then(u => { if (u) img.src = u; });
   return img;
 }
-const saveGallery = g => { g.updatedAt = Date.now(); return DB.put('galleries', g); };
+const saveGallery = async g => { g.updatedAt = Date.now(); await S.putGal(g); Sync.touched(g.id); };
 
 /* ================= import ================= */
 function pickFiles({ folder = false, accept = '', multiple = true } = {}) {
-  return new Promise(res => {
+  busy++; let fin = false; const release = () => { if (!fin) { fin = true; busy = Math.max(0, busy - 1); } }; setTimeout(release, 120000);
+  return new Promise(res0 => {
+    const res = v => { release(); res0(v); };
     const inp = h('input', { type: 'file', style: 'position:fixed;left:-9999px', accept, multiple });
     if (folder) { inp.webkitdirectory = true; inp.setAttribute('webkitdirectory', ''); }
     inp.addEventListener('change', () => { const f = [...inp.files]; inp.remove(); res(f); });
@@ -592,7 +616,7 @@ async function makeThumb(blob) {
 async function importInto(g, groups, onProgress, cancelled) {
   const total = groups.reduce((n, c) => n + c.items.length, 0); let done = 0, skipped = 0;
   for (const grp of groups) {
-    let ch = g.chapters.find(c => c.title === grp.title);
+    let ch = grp.chId ? g.chapters.find(c => c.id === grp.chId) : g.chapters.find(c => c.title === grp.title);
     if (!ch) { ch = { id: uid(), title: grp.title, pages: [] }; g.chapters.push(ch); }
     const queue = [...grp.items]; const results = new Array(queue.length);
     let k = 0;
@@ -602,7 +626,7 @@ async function importInto(g, groups, onProgress, cancelled) {
         const i = k++; const e = queue[i];
         try {
           const blob = await e.get(); const t = await makeThumb(blob); const id = uid();
-          await DB.put('images', { id, blob }); await DB.put('thumbs', { id, blob: t.thumb });
+          await S.putBlob('images', id, blob); await S.putBlob('thumbs', id, t.thumb);
           g.meta[id] = [t.w, t.h, e.name]; results[i] = id;
         } catch (err) { skipped++; }
         done++; onProgress(done, total);
@@ -634,6 +658,7 @@ function openAddSheet(existing) {
     opts.hidden = true; status.hidden = false;
     const lbl = h('div', { class: 'num' }, 'Reading files…'); const bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
     status.replaceChildren(lbl, bar, h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; lbl.textContent = 'Stopping…'; } }, 'Stop')));
+    busy++;
     try {
       const { title, entries } = await collect(kind, files);
       if (!entries.length) { toast('No images found there. Supported: JPG, PNG, WEBP, GIF, AVIF, BMP, ZIP, CBZ.', 3500); opts.hidden = false; status.hidden = true; return; }
@@ -646,8 +671,17 @@ function openAddSheet(existing) {
       toast(`${cancel ? 'Stopped. ' : ''}${plural(r.done - r.skipped, 'page')} added${r.skipped ? `, ${r.skipped} could not be read` : ''}.`, 3500);
       if (existing) render(CUR.view, CUR.params); else go('detail', { id: g.id });
     } catch (e) { console.error(e); toast(e.message || 'Import failed', 4000); opts.hidden = false; status.hidden = true; }
+    finally { busy = Math.max(0, busy - 1); }
+  };
+  const createEmpty = async () => {
+    const g = newGallery(name.value.trim() || 'New gallery');
+    g.chapters.push({ id: uid(), title: 'Chapter 1', pages: [], keep: true });
+    await saveGallery(g); closeSheet();
+    toast('Gallery created. Add chapters, then open a chapter to add images.', 4500);
+    go('editor', { id: g.id });
   };
   opts.append(
+    existing ? null : h('button', { class: 'bigopt', onclick: createEmpty }, icon('plus'), h('div', {}, h('b', {}, 'Create an empty gallery'), h('span', {}, 'Start from nothing. Make your own chapters and add images to each one from anywhere on your phone.'))),
     h('button', { class: 'bigopt', onclick: () => choose('folder') }, icon('folder'), h('div', {}, h('b', {}, 'Choose a folder'), h('span', {}, folderOK ? 'Images in subfolders become chapters. CBZ/ZIP files inside also count as chapters.' : 'Your browser may not support picking folders. Try the options below.'))),
     h('button', { class: 'bigopt', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
     h('button', { class: 'bigopt', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP or CBZ files'), h('span', {}, 'Folders inside a file become chapters. Picking several files makes one chapter per file.')))
@@ -661,7 +695,7 @@ function openAddSheet(existing) {
 /* ================= library ================= */
 async function renderLibrary() {
   const v = $('#v-library');
-  let gals = await DB.all('galleries');
+  let gals = await S.gals();
   const sorters = { recent: (a, b) => (b.lastReadAt || b.createdAt) - (a.lastReadAt || a.createdAt), title: (a, b) => natural(a.title, b.title), added: (a, b) => b.createdAt - a.createdAt };
   gals.sort(sorters[UI.libSort] || sorters.recent);
   const pages = gals.reduce((n, g) => n + totalPages(g), 0);
@@ -676,6 +710,7 @@ async function renderLibrary() {
     h('header', { class: 'appbar' },
       h('div', { class: 'grow' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'),
         h('div', { class: 'sub num', style: 'margin-top:4px' }, gals.length ? `${plural(gals.length, 'gallery').replace('gallerys', 'galleries')} · ${plural(pages, 'page')}` : 'Your reading shelf')),
+      Sync.st.enabled ? h('button', { class: 'syncpill', id: 'syncpill', onclick: openDevices, 'aria-label': 'Devices and sync' }, h('span', { class: 'sdot ' + Sync.status }), h('span', {}, pillText())) : null,
       isStandalone() ? null : h('button', { class: 'btn small ' + (installEvt ? 'primary' : 'ghost'), onclick: doInstall }, installEvt ? 'Install app' : 'Install'),
       h('button', { class: 'iconbtn', 'aria-label': 'Settings', onclick: openGlobalSettings }, icon('tune'))),
     DB.memory ? h('div', { class: 'banner' }, 'This browser is blocking storage, so your library will be lost when you close the page. Open the app in a normal Chrome tab (not incognito) to keep it.') : null,
@@ -700,6 +735,7 @@ function card(g) {
     h('div', { style: 'display:grid;gap:4px' }, h('h3', {}, g.title), h('p', { class: 'meta num' }, meta),
       h('div', { class: 'bar' }, h('i', { style: `width:${pi ? (100 * pi.flat / tp).toFixed(1) : 0}%` }))));
 }
+let lockSeg;
 async function openGlobalSettings() {
   const vals = { ...GLOBAL };
   const store = h('p', { class: 'hint num' }, 'Checking storage…');
@@ -709,6 +745,14 @@ async function openGlobalSettings() {
   if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p => persisted.textContent = p ? 'Chrome has marked your library as protected from automatic cleanup.' : 'Chrome may clear stored pages if your phone runs very low on space. Adding the app to your home screen makes this less likely.');
   openSheet('Default reading settings', h('div', { class: 'stack' },
     h('p', { class: 'hint' }, 'New galleries use these. Each gallery can override them from the reader.'),
+    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Privacy & devices'),
+      h('div', { class: 'setrow' }, h('div', { class: 'lab', id: 'lock-lbl' }, 'Lock the app after it has been in the background for'),
+        (lockSeg = h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'lock-lbl' }, [[0, 'Right away'], [60, '1 min'], [300, '5 min'], [1800, '30 min']].map(([v, l]) =>
+          h('button', { 'aria-pressed': String((UI.lockAfter ?? 60) === v), onclick: e => { UI.lockAfter = v; saveMeta(); $$('button', lockSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l))))),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
+        h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password'),
+        h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'))),
     settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
     h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), store, persisted,
       h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { closeSheet(); addSample(); } }, 'Add the sample gallery')))));
@@ -716,7 +760,7 @@ async function openGlobalSettings() {
 
 /* ================= detail ================= */
 async function renderDetail(id) {
-  const v = $('#v-detail'); const g = await DB.get('galleries', id);
+  const v = $('#v-detail'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   const p = effPrefs(g), pi = progressInfo(g), tp = totalPages(g);
   const setPref = (k, val) => { g.prefs = { ...(g.prefs || {}), [k]: val }; saveGallery(g); };
@@ -729,6 +773,7 @@ async function renderDetail(id) {
     h('header', { class: 'appbar' },
       h('button', { class: 'iconbtn', 'aria-label': 'Back to library', onclick: () => back('library') }, icon('back')),
       h('div', { class: 'grow' }),
+      h('button', { class: 'btn ghost small', onclick: () => exportZip(g) }, icon('download'), 'Save ZIP'),
       h('button', { class: 'btn ghost small', onclick: () => go('editor', { id }) }, icon('edit'), 'Edit')),
     h('div', { class: 'hero' },
       h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
@@ -753,7 +798,7 @@ async function renderDetail(id) {
 
 /* ================= editor ================= */
 async function renderEditor(id) {
-  const v = $('#v-editor'); const g = await DB.get('galleries', id);
+  const v = $('#v-editor'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   const list = h('div', { class: 'edlist' });
   const draw = () => {
@@ -782,11 +827,33 @@ async function renderEditor(id) {
     if (how === 'rev') g.chapters.reverse();
     saveGallery(g); draw(); toast('Chapter order saved');
   };
+  const coverBox = h('div', { class: 'coverrow' });
+  const drawCover = () => {
+    const own = g.customCover && g.cover === g.customCover, page = !own && g.cover && g.meta[g.cover];
+    coverBox.replaceChildren(
+      h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
+      h('div', { class: 'stack', style: 'gap:8px;align-content:center' }, h('div', { class: 'label' }, 'Cover'),
+        h('p', { class: 'hint' }, own ? 'Your own image.' : page ? 'A page from this gallery.' : 'The first page.'),
+        h('div', { class: 'row' },
+          h('button', { class: 'btn small', onclick: chooseCover }, icon('image'), 'Choose an image'),
+          g.cover ? h('button', { class: 'btn ghost small', onclick: async () => { await dropCustomCover(g); g.cover = null; await saveGallery(g); drawCover(); toast('Cover reset to the first page'); } }, 'Use the first page') : null),
+        h('p', { class: 'hint' }, 'To use a page instead, open a chapter, tap the page, then tap Cover.')));
+  };
+  const chooseCover = async () => {
+    const [f] = await pickFiles({ accept: 'image/*', multiple: false }); if (!f) return;
+    try {
+      const t = await makeThumb(f), cid = uid();
+      await S.putBlob('images', cid, f); await S.putBlob('thumbs', cid, t.thumb);
+      await dropCustomCover(g);
+      g.meta[cid] = [t.w, t.h, 'cover' + ((f.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0])];
+      g.cover = g.customCover = cid; await saveGallery(g); drawCover(); toast('Cover updated');
+    } catch (e) { toast('That image could not be read. Try a JPG or PNG.', 3500); }
+  };
+  drawCover();
   let armedDel = false;
   const delBtn = h('button', { class: 'btn danger', onclick: async () => {
     if (!armedDel) { armedDel = true; delBtn.textContent = 'Tap again to delete everything'; setTimeout(() => { armedDel = false; delBtn.textContent = 'Delete this gallery'; }, 3500); return; }
-    const ids = Object.keys(g.meta); await DB.delMany('images', ids); await DB.delMany('thumbs', ids); ids.forEach(forgetURL);
-    await DB.del('galleries', g.id); if (g.sample) { await DB.put('meta', { id: 'sampleGone', v: true }); }
+    await purgeGallery(g); if (g.sample) { await DB.put('meta', { id: 'sampleGone', v: true }); } else await Sync.deleted(g.id);
     toast('Gallery deleted'); go('library', {}, true);
   } }, 'Delete this gallery');
   v.replaceChildren(h('div', { class: 'wrap' },
@@ -797,18 +864,24 @@ async function renderEditor(id) {
     h('div', { class: 'stack' },
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
         h('input', { class: 'text', id: 'g-title', value: g.title, onchange: e => { g.title = e.target.value.trim() || g.title; saveGallery(g); toast('Name saved'); } })),
+      coverBox,
       h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, h('div', { class: 'label' }, `Chapters · ${g.chapters.length}`),
         h('div', { class: 'row' },
           h('button', { class: 'btn small', onclick: () => sortCh('asc') }, icon('sort'), 'A–Z'),
           h('button', { class: 'btn small', onclick: () => sortCh('desc') }, 'Z–A'),
           h('button', { class: 'btn small', onclick: () => sortCh('rev') }, 'Reverse'))),
-      h('p', { class: 'hint' }, 'Drag the handle to change the chapter order. Rename a chapter by tapping its name. Changes save on their own.'),
+      h('p', { class: 'hint' }, 'Drag the handle to change the chapter order. Rename a chapter by tapping its name. Tap a chapter\'s page count to see its pages or add images to it. Changes save on their own.'),
       list,
       h('div', { class: 'row' },
         h('button', { class: 'btn', onclick: () => openAddSheet(g) }, icon('plus'), 'Add more pages'),
         h('button', { class: 'btn ghost', onclick: async () => { g.chapters.push({ id: uid(), title: `Chapter ${g.chapters.length + 1}`, pages: [], keep: true }); await saveGallery(g); draw(); } }, 'New empty chapter')),
       h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'), h('p', { class: 'hint' }, 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.'), h('div', {}, delBtn))
     )));
+}
+async function dropCustomCover(g) {
+  const c = g.customCover; g.customCover = null;
+  if (!c || g.chapters.some(ch => ch.pages.includes(c))) return;
+  delete g.meta[c]; forgetURL(c); await DB.del('images', c); await DB.del('thumbs', c);
 }
 async function removePages(g, ids) {
   const set = new Set(ids);
@@ -819,13 +892,14 @@ async function removePages(g, ids) {
 }
 
 async function renderPages(id, chId) {
-  const v = $('#v-pages'); const g = await DB.get('galleries', id);
+  const v = $('#v-pages'); const g = await S.gal(id);
   const ch = g && g.chapters.find(c => c.id === chId);
   if (!ch) return back('editor', { id });
   const sel = new Set();
   const grid = h('div', { class: 'pgrid' });
   const selbar = h('div', { class: 'selbar', hidden: true });
   const draw = () => {
+    if (!ch.pages.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'This chapter has no pages yet. Tap Add images to pick pictures from anywhere on your phone.'))); head.textContent = `${ch.title} · no pages`; return; }
     grid.replaceChildren(...ch.pages.map((pid, i) => h('div', { class: 'pcell' + (sel.has(pid) ? ' sel' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${i + 1}, ${(g.meta[pid] || [])[2] || ''}`, 'aria-pressed': String(sel.has(pid)),
       onclick: e => { sel.has(pid) ? sel.delete(pid) : sel.add(pid); e.currentTarget.classList.toggle('sel'); e.currentTarget.setAttribute('aria-pressed', String(sel.has(pid))); drawSel(); } },
       thumbImg(pid), h('span', { class: 'no' }, i + 1), g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null)));
@@ -843,7 +917,7 @@ async function renderPages(id, chId) {
       h('button', { class: 'btn', onclick: moveSheet }, icon('move'), 'Move'),
       h('button', { class: 'btn', onclick: () => shift(-1) }, icon('up'), 'To start'),
       h('button', { class: 'btn', onclick: () => shift(1) }, icon('down'), 'To end'),
-      sel.size === 1 ? h('button', { class: 'btn', onclick: async () => { g.cover = [...sel][0]; await saveGallery(g); sel.clear(); draw(); drawSel(); toast('Cover updated'); } }, icon('star'), 'Cover') : null,
+      sel.size === 1 ? h('button', { class: 'btn', onclick: async () => { await dropCustomCover(g); g.cover = [...sel][0]; await saveGallery(g); sel.clear(); draw(); drawSel(); toast('Cover updated'); } }, icon('star'), 'Cover') : null,
       del, h('button', { class: 'btn', 'aria-label': 'Clear selection', onclick: () => { sel.clear(); draw(); drawSel(); } }, icon('x')));
   };
   const shift = async dir => {
@@ -852,16 +926,41 @@ async function renderPages(id, chId) {
     await saveGallery(g); draw(); toast('Order saved');
   };
   const moveSheet = () => {
-    openSheet(`Move ${plural(sel.size, 'page')} to…`, h('div', { class: 'chlist' },
-      g.chapters.filter(c => c !== ch).map(c => h('button', { class: 'chrow', onclick: async () => {
-        const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p)); c.pages.push(...picked);
-        await saveGallery(g); sel.clear(); closeSheet(); draw(); drawSel(); toast(`Moved to ${c.title}`);
-      } }, h('span', { class: 'n' }, String(g.chapters.indexOf(c) + 1).padStart(2, '0')), h('span', { class: 't' }, c.title), h('span', { class: 's' }, plural(c.pages.length, 'page')))),
-      h('button', { class: 'chrow', onclick: async () => {
-        const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p));
-        g.chapters.splice(g.chapters.indexOf(ch) + 1, 0, { id: uid(), title: `${ch.title} (part 2)`, pages: picked });
-        await saveGallery(g); sel.clear(); closeSheet(); draw(); drawSel(); toast('Moved to a new chapter');
-      } }, h('span', { class: 'n' }, icon('plus')), h('span', { class: 't' }, 'A new chapter after this one'), h('span'))));
+    const others = g.chapters.filter(c => c !== ch);
+    const list = h('div', { class: 'chlist' });
+    const done = async msg => { await saveGallery(g); sel.clear(); closeSheet(); draw(); drawSel(); toast(msg); };
+    const row = c => h('button', { class: 'chrow', onclick: async () => {
+      const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p)); c.pages.push(...picked);
+      await done(`Moved to ${c.title}`);
+    } }, h('span', { class: 'n' }, String(g.chapters.indexOf(c) + 1).padStart(2, '0')), h('span', { class: 't' }, c.title), h('span', { class: 's' }, plural(c.pages.length, 'page')));
+    const newRow = h('button', { class: 'chrow', onclick: async () => {
+      const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p));
+      g.chapters.splice(g.chapters.indexOf(ch) + 1, 0, { id: uid(), title: `${ch.title} (part 2)`, pages: picked });
+      await done('Moved to a new chapter');
+    } }, h('span', { class: 'n' }, icon('plus')), h('span', { class: 't' }, 'A new chapter after this one'), h('span'));
+    const drawList = q => {
+      q = (q || '').trim().toLowerCase();
+      const hits = others.filter(c => !q || c.title.toLowerCase().includes(q) || String(g.chapters.indexOf(c) + 1) === q.replace(/^0+/, ''));
+      list.replaceChildren(...[...hits.map(row), hits.length ? null : h('div', { class: 'chrow' }, h('span'), h('span', { class: 't hint' }, 'No chapter matches'), h('span')), newRow].filter(Boolean));
+    };
+    const find = others.length > 5 ? h('input', { class: 'search', id: 'move-find', type: 'search', placeholder: 'Find a chapter by name or number', autocomplete: 'off', oninput: e => drawList(e.target.value) }) : null;
+    drawList('');
+    openSheet(`Move ${plural(sel.size, 'page')} to…`, h('div', { class: 'stack' }, find, list));
+  };
+  const addImagesHere = async () => {
+    const files = (await pickFiles({ accept: 'image/*' })).filter(f => IMG_EXT.test(f.name) || (f.type || '').startsWith('image/'));
+    if (!files.length) return;
+    let cancel = false;
+    const lbl = h('div', { class: 'num' }, 'Reading images…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+    openSheet('Adding images', h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar), h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; } }, 'Stop'))), () => { cancel = true; });
+    busy++;
+    try {
+      const items = files.sort((a, b) => natural(a.name, b.name)).map(f => ({ dir: '', name: f.name, get: async () => f }));
+      const r = await importInto(g, [{ title: ch.title, chId: ch.id, items }], (d, t) => { lbl.textContent = `Adding image ${d} of ${t}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
+      closeSheet(); draw();
+      toast(`${plural(r.done - r.skipped, 'image')} added to ${ch.title}${r.skipped ? `, ${r.skipped} could not be read` : ''}.`, 3500);
+    } catch (e) { console.error(e); closeSheet(); toast('Adding images failed: ' + (e.message || e), 4000); }
+    finally { busy = Math.max(0, busy - 1); }
   };
   const sortPages = async how => {
     const nm = p => (g.meta[p] || [])[2] || '';
@@ -878,6 +977,7 @@ async function renderPages(id, chId) {
       h('button', { class: 'btn primary small', onclick: () => back('editor', { id }) }, icon('check'), 'Done')),
     h('div', { class: 'stack' },
       h('div', { class: 'row' },
+        h('button', { class: 'btn small primary', onclick: addImagesHere }, icon('plus'), 'Add images'),
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
@@ -896,7 +996,7 @@ const reader = $('#reader'), stage = $('#stage'), spread = $('#spread'), strip =
 const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 
 async function openReader(id, ch, page) {
-  const g = await DB.get('galleries', id);
+  const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   R.g = g; R.p = effPrefs(g); R.pages = []; R.chStart = [];
   g.chapters.forEach((c, ci) => { R.chStart[ci] = c.pages.length ? R.pages.length : -1; c.pages.forEach((pid, i) => R.pages.push({ id: pid, ch: ci, i })); });
@@ -1006,11 +1106,19 @@ let saveT;
 function saveProgress(now) {
   if (!R.g || !R.pages.length) return;
   clearTimeout(saveT);
-  const doit = () => {
+  const doit = async () => {
     const c = R.pages[R.pos]; if (!c) return;
-    R.g.progress = { chapterId: R.g.chapters[c.ch].id, page: c.i };
-    if (R.p.mode === 'vertical' && R.anchor) { const a = R.pages[R.anchor.idx]; if (a && a.ch === c.ch) R.g.progress.anchor = { page: a.i, frac: R.anchor.frac }; }
-    R.g.lastReadAt = Date.now(); DB.put('galleries', R.g).catch(() => { });
+    const g = R.g;
+    g.progress = { chapterId: g.chapters[c.ch].id, page: c.i };
+    if (R.p.mode === 'vertical' && R.anchor) { const a = R.pages[R.anchor.idx]; if (a && a.ch === c.ch) g.progress.anchor = { page: a.i, frac: R.anchor.frac }; }
+    g.lastReadAt = g.progressAt = Date.now();
+    try {
+      const cur = (await S.gal(g.id)) || g;
+      const prefsChanged = JSON.stringify(cur.prefs || {}) !== JSON.stringify(g.prefs || {});
+      Object.assign(cur, { progress: g.progress, lastReadAt: g.lastReadAt, progressAt: g.progressAt, prefs: g.prefs, read: [...new Set([...(cur.read || []), ...(g.read || [])])] });
+      if (prefsChanged) cur.updatedAt = Date.now();
+      await S.putGal(cur); Sync.touched(cur.id);
+    } catch (e) { console.error(e); }
   };
   now ? doit() : (saveT = setTimeout(doit, 350));
 }
@@ -1414,6 +1522,507 @@ async function addSample() {
   if (CUR.view === 'library') renderLibrary();
 }
 
+/* ================= encryption ================= */
+const Crypt = (() => {
+  const te = new TextEncoder(), td = new TextDecoder();
+  let key = null, raw = null;
+  const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); };
+  const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const b64u = u8 => b64(u8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = s => unb64(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4));
+  const importKey = u8 => crypto.subtle.importKey('raw', u8, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  async function kdf(pw, salt, iter) {
+    const base = await crypto.subtle.importKey('raw', te.encode(pw), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  async function enc(buf, k = key) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, buf);
+    const out = new Uint8Array(12 + ct.byteLength); out.set(iv); out.set(new Uint8Array(ct), 12); return out.buffer;
+  }
+  async function dec(buf, k = key) {
+    const u = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.subarray(0, 12) }, k, u.subarray(12));
+  }
+  return {
+    get ready() { return !!key; }, get raw() { return raw; }, get key() { return key; },
+    b64u, unb64u, importKey, enc, dec, te,
+    async setRaw(u8) { raw = new Uint8Array(u8); key = await importKey(raw); },
+    fresh() { return this.setRaw(crypto.getRandomValues(new Uint8Array(32))); },
+    encJSON: o => enc(te.encode(JSON.stringify(o))),
+    decJSON: async (b, k) => JSON.parse(td.decode(await dec(b, k || key))),
+    async wrapRaw(u8, pw) {
+      const salt = crypto.getRandomValues(new Uint8Array(16)), iter = 310000;
+      return { id: 'lock', v: 1, salt: b64(salt), iter, data: b64(new Uint8Array(await enc(u8, await kdf(pw, salt, iter)))) };
+    },
+    async unwrapRaw(rec, pw) { return new Uint8Array(await dec(unb64(rec.data), await kdf(pw, unb64(rec.salt), rec.iter))); },
+    async hash(label) {
+      const d = await crypto.subtle.digest('SHA-256', new Uint8Array([...raw, ...te.encode(label)]));
+      return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('');
+    },
+  };
+})();
+
+/* Encrypted records on top of IndexedDB. Galleries: {id, e}. Images/thumbs: {id, t: mime, e}. */
+const S = {
+  async open(r) { if (!r) return null; if (!r.e) return r; try { return await Crypt.decJSON(r.e); } catch (e) { return null; } },
+  async gal(id) { return S.open(await DB.get('galleries', id)); },
+  async gals() { const ids = await DB.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
+  async putGal(g) { await DB.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
+  async putBlob(store, id, blob) { await DB.put(store, { id, t: blob.type || 'image/jpeg', e: await Crypt.enc(await blob.arrayBuffer()) }); },
+  async blob(store, id) {
+    const r = await DB.get(store, id); if (!r) return null;
+    if (r.blob) return r.blob;
+    return new Blob([await Crypt.dec(r.e)], { type: r.t || 'image/jpeg' });
+  },
+};
+/* Re-encrypt every record with newK. Unencrypted records get encrypted; records under oldK get moved to newK. */
+async function reencrypt(oldK, newK, resume, onProg) {
+  const stores = ['galleries', 'thumbs', 'images'];
+  const all = []; for (const s of stores) (await DB.keys(s)).forEach(id => all.push([s, id]));
+  let i = 0;
+  for (const [store, id] of all) {
+    i++; const r = await DB.get(store, id); if (!r) continue;
+    let plain;
+    if (!r.e) plain = store === 'galleries' ? Crypt.te.encode(JSON.stringify(r)) : await r.blob.arrayBuffer();
+    else {
+      if (!oldK) continue;
+      if (resume) { try { await Crypt.dec(r.e, newK); continue; } catch (e) { } }
+      try { plain = await Crypt.dec(r.e, oldK); } catch (e) { continue; }
+    }
+    const e = await Crypt.enc(plain, newK);
+    await DB.put(store, store === 'galleries' ? { id, e } : { id, t: r.t || (r.blob && r.blob.type) || 'image/jpeg', e });
+    if (onProg && (i % 5 === 0 || i === all.length)) onProg(i, all.length);
+  }
+}
+async function purgeGallery(g) {
+  const ids = Object.keys(g.meta || {});
+  await DB.delMany('images', ids); await DB.delMany('thumbs', ids); ids.forEach(forgetURL);
+  await DB.del('galleries', g.id);
+}
+
+/* ================= lock screen ================= */
+let busy = 0, hiddenAt = 0;
+const withBusy = async fn => { busy++; try { return await fn(); } finally { busy--; } };
+function lockNow() { try { if (CUR.view === 'reader') saveProgress(true); } catch (e) { } setTimeout(() => location.reload(), 150); }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+  else if (Crypt.ready && hiddenAt && !busy && Date.now() - hiddenAt >= (UI.lockAfter ?? 60) * 1000) lockNow();
+});
+function lockShell(...kids) {
+  for (const v of ['library', 'detail', 'editor', 'pages']) $('#v-' + v).hidden = true;
+  $('#reader').hidden = true; document.body.classList.remove('reading');
+  const v = $('#v-lock'); v.hidden = false;
+  v.replaceChildren(h('div', { class: 'lockbox' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'), ...kids));
+}
+function pwField(id, label, auto) {
+  return h('div', { class: 'field' }, h('label', { class: 'label', for: id }, label),
+    h('input', { class: 'text', id, type: 'password', autocomplete: auto, required: true }));
+}
+async function showSetup(joinRaw) {
+  const legacy = (await DB.keys('galleries')).length;
+  const err = h('p', { class: 'err', role: 'alert' });
+  const prog = h('p', { class: 'hint num' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, icon('lock'), 'Create password');
+  const form = h('form', { class: 'stack', onsubmit: async e => {
+    e.preventDefault();
+    const a = $('#pw1').value, b = $('#pw2').value;
+    if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+    if (a !== b) { err.textContent = 'The two passwords are different. Type them again.'; return; }
+    err.textContent = ''; btn.disabled = true; btn.textContent = 'Setting up…';
+    await withBusy(async () => {
+      if (joinRaw) await Crypt.setRaw(joinRaw); else await Crypt.fresh();
+      await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
+      await reencrypt(null, Crypt.key, false, (i, n) => prog.textContent = `Encrypting your library: ${i} of ${n}`);
+      if (joinRaw) { Sync.st.enabled = true; await Sync.saveSt(); }
+    });
+    afterUnlock(!joinRaw);
+  } }, pwField('pw1', 'Password', 'new-password'), pwField('pw2', 'Type it again', 'new-password'), err, btn, prog);
+  lockShell(
+    h('h1', {}, joinRaw ? 'Set a password for this device' : 'Protect your library'),
+    h('p', { class: 'hint' }, joinRaw
+      ? 'Your pairing code worked. Choose a password for this device. It can be the same as on your other device. Your galleries will arrive when both devices are open on the same Wi‑Fi.'
+      : 'Choose a password. Your pages are stored encrypted on this device, and the app asks for the password when you open it.'),
+    legacy ? h('div', { class: 'banner' }, `Your ${plural(legacy, 'gallery').replace('gallerys', 'galleries')} on this device will be encrypted now.`) : null,
+    form,
+    h('p', { class: 'hint' }, 'Nobody can reset this password, not even the app. If you forget it, the library on this device cannot be opened.'),
+    joinRaw ? null : h('div', { class: 'stack', style: 'margin-top:8px' }, h('div', { class: 'label' }, 'Already use Tankōbon on another device?'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => scanPairCode(raw => showSetup(raw)) }, icon('devices'), 'Join my library from another device')));
+  setTimeout(() => { const f = $('#pw1'); if (f) f.focus(); }, 50);
+}
+function showUnlock(lock) {
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Unlock');
+  const forgot = h('div', { class: 'danger-zone', hidden: true },
+    h('p', { class: 'hint' }, 'Without the password the pages on this device cannot be decrypted. You can erase this device and start again. If another paired device still has your library, pair with it again and your galleries will sync back.'),
+    eraseButton());
+  lockShell(
+    h('h1', {}, 'Unlock your library'),
+    h('form', { class: 'stack', onsubmit: async e => {
+      e.preventDefault(); btn.disabled = true; btn.textContent = 'Unlocking…'; err.textContent = '';
+      try { await Crypt.setRaw(await Crypt.unwrapRaw(lock, $('#pw').value)); }
+      catch (x) { err.textContent = 'That password is not right. Try again.'; btn.disabled = false; btn.textContent = 'Unlock'; $('#pw').select(); return; }
+      if (lock.old) {
+        btn.textContent = 'Finishing an earlier change…';
+        const oldRaw = await Crypt.unwrapRaw(lock.old, $('#pw').value);
+        await withBusy(async () => reencrypt(await Crypt.importKey(oldRaw), Crypt.key, true));
+        const { old, ...clean } = lock; await DB.put('meta', clean);
+      }
+      afterUnlock(false);
+    } }, pwField('pw', 'Password', 'current-password'), err, btn),
+    h('button', { class: 'btn ghost small', type: 'button', onclick: () => { forgot.hidden = !forgot.hidden; } }, 'Forgot your password?'), forgot);
+  setTimeout(() => { const f = $('#pw'); if (f) f.focus(); }, 50);
+}
+function eraseButton() {
+  let armed = false;
+  const b = h('button', { class: 'btn danger', type: 'button', onclick: async () => {
+    if (!armed) { armed = true; b.textContent = 'Tap again to erase everything on this device'; return; }
+    b.disabled = true; b.textContent = 'Erasing…'; await DB.nuke(); location.reload();
+  } }, 'Erase this device');
+  return b;
+}
+async function afterUnlock(fresh) {
+  $('#v-lock').hidden = true; $('#v-lock').replaceChildren();
+  if (fresh) { try { const n = (await DB.keys('galleries')).length; const gone = await DB.get('meta', 'sampleGone'); if (!n && !gone) await addSample(); } catch (e) { console.error(e); } }
+  const st = history.state;
+  if (st && st.view) render(st.view, st.params || {});
+  else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
+  Sync.start();
+}
+function askPassword(title, text, onOk) {
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Continue');
+  openSheet(title, h('form', { class: 'stack', onsubmit: async e => {
+    e.preventDefault(); btn.disabled = true;
+    const pw = $('#ask-pw').value;
+    try { const lock = await DB.get('meta', 'lock'); await Crypt.unwrapRaw(lock, pw); }
+    catch (x) { err.textContent = 'That password is not right.'; btn.disabled = false; return; }
+    onOk(pw);
+  } }, h('p', { class: 'hint' }, text), pwField('ask-pw', 'Your password', 'current-password'), err, btn));
+  setTimeout(() => { const f = $('#ask-pw'); if (f) f.focus(); }, 50);
+}
+function openChangePassword() {
+  const err = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Change password');
+  openSheet('Change password', h('form', { class: 'stack', onsubmit: async e => {
+    e.preventDefault(); err.textContent = '';
+    const cur = $('#cp-old').value, a = $('#cp-new').value, b = $('#cp-new2').value;
+    if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+    if (a !== b) { err.textContent = 'The new passwords are different.'; return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try { const lock = await DB.get('meta', 'lock'); await Crypt.unwrapRaw(lock, cur); }
+    catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Change password'; return; }
+    await DB.put('meta', await Crypt.wrapRaw(Crypt.raw, a));
+    closeSheet(); toast('Password changed on this device.');
+  } }, pwField('cp-old', 'Current password', 'current-password'), pwField('cp-new', 'New password', 'new-password'), pwField('cp-new2', 'New password again', 'new-password'), err, btn,
+    h('p', { class: 'hint' }, 'This changes the password on this device only. Your other devices keep their own passwords.')));
+}
+
+/* ================= export ================= */
+async function exportZip(g) {
+  if (typeof JSZip === 'undefined') return toast('The ZIP tool could not load. Check your connection and try again.', 3500);
+  const total = totalPages(g); let done = 0, cancel = false;
+  const lbl = h('div', { class: 'num' }, 'Preparing…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  openSheet('Save as ZIP', h('div', { class: 'stack' },
+    h('p', { class: 'hint' }, 'The ZIP is a normal copy of this gallery that any app can open, so it is not encrypted. Each chapter becomes a folder, in your order.'),
+    h('div', { class: 'progress' }, lbl, bar), h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; closeSheet(); } }, 'Stop'))), () => { cancel = true; });
+  busy++;
+  try {
+    const zip = new JSZip();
+    const pad = (n, l) => String(n).padStart(l, '0');
+    const safe = s => (s || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 80) || 'Untitled';
+    const multi = g.chapters.length > 1;
+    for (const [ci, c] of g.chapters.entries()) {
+      const folder = multi ? zip.folder(`${pad(ci + 1, 2)} ${safe(c.title)}`) : zip;
+      for (const [pi, id] of c.pages.entries()) {
+        if (cancel) throw new Error('stopped');
+        const b = await S.blob('images', id); if (!b) continue;
+        const nm = (g.meta[id] || [])[2] || '';
+        const ext = ((nm.match(/\.[a-z0-9]{2,5}$/i) || [])[0] || '.' + ((b.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'))).toLowerCase();
+        folder.file(pad(pi + 1, 3) + ext, b, { binary: true });
+        done++; lbl.textContent = `Adding page ${done.toLocaleString()} of ${total.toLocaleString()}`; bar.firstChild.style.width = (80 * done / total) + '%';
+      }
+    }
+    if (g.customCover && g.cover === g.customCover) { const cb = await S.blob('images', g.customCover); if (cb) zip.file('cover' + (((g.meta[g.cover] || [])[2] || '').match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase(), cb, { binary: true }); }
+    lbl.textContent = 'Packing the ZIP…';
+    const out = await zip.generateAsync({ type: 'blob', compression: 'STORE', streamFiles: true }, m => { bar.firstChild.style.width = (80 + m.percent * .2) + '%'; });
+    if (cancel) throw new Error('stopped');
+    const url = URL.createObjectURL(out);
+    const a = h('a', { href: url, download: safe(g.title) + '.zip', style: 'display:none' }); document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+    closeSheet(); toast('ZIP saved. Look for it in your Downloads folder.', 4000);
+  } catch (e) {
+    if (e.message === 'stopped') toast('Stopped');
+    else { console.error(e); toast('Could not create the ZIP: ' + (e.message || e), 4500); }
+  } finally { busy--; }
+}
+
+/* ================= device sync ================= */
+const Sync = (() => {
+  let room = null, act = null, fact = null, device = null, tombs = {}, status = 'off', lastSync = 0;
+  const st = { enabled: false, lanOnly: true, devices: {} };
+  const peers = new Map(), pend = new Map(), queued = new Set(), wanting = new Set(), subs = new Set();
+  const recv = { got: 0, want: 0 };
+  let changed = new Set(), changedT = 0, refreshT = 0, refreshIds = new Set();
+  const emit = () => subs.forEach(f => { try { f(); } catch (e) { } });
+  const guessName = () => { const ua = navigator.userAgent; return /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet') : /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : 'Computer'; };
+  async function load() {
+    try {
+      const d = await DB.get('meta', 'device'); device = d && d.v;
+      if (!device) { device = { id: uid(), name: guessName() }; await DB.put('meta', { id: 'device', v: device }); }
+      const t = await DB.get('meta', 'tombs'); tombs = (t && t.v) || {};
+      const s = await DB.get('meta', 'sync'); if (s) Object.assign(st, s.v);
+    } catch (e) { device = device || { id: uid(), name: guessName() }; }
+  }
+  const saveSt = () => DB.put('meta', { id: 'sync', v: st }).catch(() => { });
+  const saveTombs = () => DB.put('meta', { id: 'tombs', v: tombs }).catch(() => { });
+  async function listing(ids) {
+    const gs = ids ? (await Promise.all(ids.map(S.gal))).filter(Boolean) : await S.gals();
+    return gs.filter(g => !g.sample).map(g => ({ id: g.id, u: g.updatedAt || 0, p: g.progressAt || 0 }));
+  }
+  async function send(m, target) { if (!act) return; const b = new Uint8Array(await Crypt.encJSON(m)); return act.send(b, target ? { target } : {}); }
+  async function start() {
+    if (!st.enabled || room || !Crypt.ready) return;
+    if (typeof P2P === 'undefined') { status = 'unavailable'; return emit(); }
+    const cfg = { appId: 'tankobon-reader-sync-1', password: await Crypt.hash('signal') };
+    if (st.lanOnly) cfg.rtcConfig = { iceServers: [] };
+    if (window.P2P_URLS) cfg.relayConfig = { urls: window.P2P_URLS };
+    try {
+      room = P2P.joinRoom(cfg, (await Crypt.hash('room')).slice(0, 40), { onJoinError: d => console.warn('sync join', d && d.error) });
+      act = room.makeAction('m'); fact = room.makeAction('f');
+    } catch (e) { console.error(e); room = null; status = 'unavailable'; return emit(); }
+    room.onPeerJoin = pid => { peers.set(pid, { name: 'Another device' }); status = 'connected'; emit(); hello(pid).catch(console.error); };
+    room.onPeerLeave = pid => { peers.delete(pid); dropPeer(pid); status = peers.size ? 'connected' : 'waiting'; emit(); };
+    act.onMessage = async (data, { peerId }) => {
+      let m; try { m = await Crypt.decJSON(data); } catch (e) { return; }
+      try { await handle(m, peerId); } catch (e) { console.error('sync', e); }
+    };
+    fact.onMessage = (data, { peerId, metadata }) => onFile(data, metadata, peerId).catch(console.error);
+    status = 'waiting'; emit();
+  }
+  function stop() { try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); recv.got = recv.want = 0; status = 'off'; emit(); }
+  function dropPeer(pid) { const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
+  async function hello(pid) { await send({ t: 'hello', dev: device, list: await listing(), tomb: tombs }, pid); }
+  async function handle(m, pid) {
+    if (m.t === 'hello') {
+      const p = peers.get(pid) || {}; p.name = m.dev.name; p.dev = m.dev.id; peers.set(pid, p);
+      st.devices[m.dev.id] = { name: m.dev.name, seen: Date.now() }; saveSt(); emit();
+    }
+    if (m.t === 'hello' || m.t === 'changed') {
+      await applyTombs(m.tomb || {});
+      const have = new Set(await DB.keys('images')), want = [];
+      for (const r of m.list || []) {
+        if (tombs[r.id] && tombs[r.id] >= r.u) continue;
+        if (wanting.has(r.id)) continue;
+        const g = await S.gal(r.id);
+        if (!g || r.u > (g.updatedAt || 0) || r.p > (g.progressAt || 0)) want.push(r.id);
+        else if (r.u === (g.updatedAt || 0)) queueMissing(g, pid, have);
+      }
+      if (want.length) {
+        want.forEach(id => wanting.add(id)); setTimeout(() => want.forEach(id => wanting.delete(id)), 30000);
+        await send({ t: 'want', ids: want }, pid);
+      }
+      lastSync = Date.now(); emit();
+    } else if (m.t === 'want') {
+      for (const id of m.ids) { const g = await S.gal(id); if (g && !g.sample) await send({ t: 'gal', g }, pid); }
+    } else if (m.t === 'gal') {
+      wanting.delete(m.g.id); await merge(m.g, pid);
+    } else if (m.t === 'need') {
+      for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
+        const r = await DB.get(store, id);
+        if (r && r.e) await fact.send(new Uint8Array(r.e), { target: pid, metadata: { id, s, t: r.t } });
+      }
+      await send({ t: 'done' }, pid);
+    } else if (m.t === 'done') {
+      const q = pend.get(pid); if (q) { (q.batch || []).forEach(id => queued.delete(id)); q.batch = null; pump(pid); }
+    }
+  }
+  function queueMissing(g, pid, have) {
+    const ids = Object.keys(g.meta || {}).filter(id => !have.has(id) && !queued.has(id));
+    if (!ids.length) return;
+    let q = pend.get(pid); if (!q) { q = { queue: [], batch: null }; pend.set(pid, q); }
+    ids.forEach(id => { queued.add(id); q.queue.push(id); }); recv.want += ids.length; emit(); pump(pid);
+  }
+  function pump(pid) {
+    const q = pend.get(pid); if (!q || q.batch) return;
+    if (!q.queue.length) { pend.delete(pid); if (!pend.size) { recv.got = recv.want = 0; softRefresh(); } emit(); return; }
+    q.batch = q.queue.splice(0, 8);
+    send({ t: 'need', ids: q.batch }, pid).catch(console.error);
+  }
+  async function onFile(data, md, pid) {
+    if (!md || !md.id || !data || !data.byteLength) return;
+    await DB.put(md.s === 't' ? 'thumbs' : 'images', { id: md.id, t: md.t, e: data });
+    if (md.s === 'i') { if (recv.want) recv.got = Math.min(recv.want, recv.got + 1); emit(); softRefresh(); }
+  }
+  async function merge(R, pid) {
+    if (!R || !R.id || (tombs[R.id] && tombs[R.id] >= (R.updatedAt || 0))) return;
+    const L = await S.gal(R.id); let M;
+    if (!L) M = R;
+    else {
+      M = (R.updatedAt || 0) > (L.updatedAt || 0) ? { ...R } : { ...L };
+      const P = (R.progressAt || 0) > (L.progressAt || 0) ? R : L;
+      M.progress = P.progress; M.progressAt = P.progressAt || 0;
+      M.lastReadAt = Math.max(R.lastReadAt || 0, L.lastReadAt || 0);
+      M.read = [...new Set([...(L.read || []), ...(R.read || [])])];
+    }
+    await S.putGal(M);
+    if (L) {
+      const gone = Object.keys(L.meta || {}).filter(id => !(M.meta || {})[id]);
+      if (gone.length) { await DB.delMany('images', gone); await DB.delMany('thumbs', gone); gone.forEach(forgetURL); }
+    }
+    queueMissing(M, pid, new Set(await DB.keys('images')));
+    softRefresh(M.id);
+  }
+  async function applyTombs(t) {
+    let ch = false;
+    for (const [id, time] of Object.entries(t)) {
+      if ((tombs[id] || 0) >= time) continue;
+      tombs[id] = time; ch = true;
+      const g = await S.gal(id); if (g && (g.updatedAt || 0) <= time) await purgeGallery(g);
+    }
+    if (ch) { await saveTombs(); softRefresh(); }
+  }
+  function softRefresh(id) {
+    if (id) refreshIds.add(id); clearTimeout(refreshT);
+    refreshT = setTimeout(() => {
+      const ids = refreshIds; refreshIds = new Set();
+      const a = document.activeElement; if (a && /INPUT|TEXTAREA/.test(a.tagName)) return;
+      const y = window.scrollY;
+      const done = () => window.scrollTo(0, y);
+      if (CUR.view === 'library') renderLibrary().then(done);
+      else if (CUR.view === 'detail' && (!ids.size || ids.has(CUR.params.id))) renderDetail(CUR.params.id).then(done);
+    }, 700);
+  }
+  function touched(id) {
+    if (!act || !peers.size) return;
+    changed.add(id); clearTimeout(changedT);
+    changedT = setTimeout(async () => { const ids = [...changed]; changed.clear(); await send({ t: 'changed', list: await listing(ids), tomb: tombs }).catch(console.error); }, 600);
+  }
+  async function deleted(id) { tombs[id] = Date.now(); await saveTombs(); if (act && peers.size) send({ t: 'changed', list: [], tomb: tombs }).catch(console.error); }
+  return {
+    load, start, stop, touched, deleted, saveSt, st, subs, recv,
+    get status() { return status; }, get peers() { return peers; }, get device() { return device; }, get lastSync() { return lastSync; },
+    async rename(n) { device.name = n || device.name; await DB.put('meta', { id: 'device', v: device }); if (act) peers.forEach((_, pid) => hello(pid)); },
+    async setEnabled(v) { st.enabled = v; await saveSt(); if (v) start(); else stop(); },
+    async setLan(v) { st.lanOnly = v; await saveSt(); if (room) { stop(); start(); } },
+    async restart() { stop(); await start(); },
+  };
+})();
+
+/* ---- pairing ---- */
+const pairCode = () => 'TKB1:' + Crypt.b64u(Crypt.raw);
+function parseCode(t) {
+  const m = String(t || '').replace(/\s+/g, '').match(/TKB1[:\-]?([A-Za-z0-9_\-]{43})/);
+  if (!m) return null;
+  try { const u = Crypt.unb64u(m[1]); return u.length === 32 ? u : null; } catch (e) { return null; }
+}
+function scanPairCode(onCode) {
+  const video = h('video', { class: 'scanvid', muted: true, playsinline: true, autoplay: true });
+  const msg = h('p', { class: 'hint' }, 'Starting the camera…');
+  const input = h('input', { class: 'text', id: 'pair-code', placeholder: 'Or paste the code here (starts with TKB1)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+  let stream = null, timer = 0, done = false;
+  const stopCam = () => { clearInterval(timer); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; };
+  const finish = raw => { if (done) return; done = true; stopCam(); closeSheet(); onCode(raw); };
+  const tryText = t => { const raw = parseCode(t); if (raw) finish(raw); return !!raw; };
+  openSheet('Scan the pairing code', h('div', { class: 'stack' },
+    h('p', { class: 'hint' }, 'On your other device, open Tankōbon, then Settings → Devices & sync → Show pairing code.'),
+    video, msg,
+    h('div', { class: 'field' }, input, h('button', { class: 'btn', type: 'button', onclick: () => { if (!tryText(input.value)) toast('That code is not valid. Check it and try again.', 3000); } }, 'Use this code'))), stopCam);
+  (async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      if (done) return stopCam();
+      video.srcObject = stream; await video.play();
+      msg.textContent = 'Point the camera at the code on your other device.';
+      const det = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+      const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
+      timer = setInterval(async () => {
+        if (!video.videoWidth || done) return;
+        try {
+          if (det) { for (const b of await det.detect(video)) if (tryText(b.rawValue)) return; }
+          else if (window.jsQR) {
+            const w = Math.min(640, video.videoWidth), hh = Math.round(video.videoHeight * w / video.videoWidth);
+            c.width = w; c.height = hh; x.drawImage(video, 0, 0, w, hh);
+            const q = jsQR(x.getImageData(0, 0, w, hh).data, w, hh); if (q) tryText(q.data);
+          }
+        } catch (e) { }
+      }, 300);
+    } catch (e) { msg.textContent = 'The camera is not available here. Paste the code from your other device instead.'; video.hidden = true; }
+  })();
+}
+function showPairCode() {
+  askPassword('Show pairing code', 'Enter your password to show the code that lets another device join your library.', async () => {
+    const code = pairCode();
+    let svg = '';
+    try { const q = qrcode(0, 'M'); q.addData(code); q.make(); svg = q.createSvgTag({ cellSize: 6, margin: 3, scalable: true }); } catch (e) { }
+    await Sync.setEnabled(true);
+    const codeEl = h('code', { class: 'code' }, code);
+    openSheet('Pair a new device', h('div', { class: 'stack' },
+      h('ol', { class: 'steps' },
+        h('li', {}, 'On the new device, open Tankōbon.'),
+        h('li', {}, 'If it is new, choose "Join my library from another device". If it already has a library, go to Settings → Devices & sync → Scan a pairing code.'),
+        h('li', {}, 'Scan this code. Keep both apps open on the same Wi‑Fi until your galleries arrive.')),
+      svg ? h('div', { class: 'qrbox', html: svg, role: 'img', 'aria-label': 'Pairing QR code' }) : null,
+      h('div', { class: 'label' }, 'Or copy the code'), codeEl,
+      h('div', {}, h('button', { class: 'btn ghost small', onclick: async () => { try { await navigator.clipboard.writeText(code); toast('Code copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents(codeEl); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Select and copy the code'); } } }, 'Copy code')),
+      h('div', { class: 'banner' }, 'This code is the key to your library. Only show it to your own devices, and never post or send it to anyone.')));
+  });
+}
+function joinLibrary(raw) {
+  if (Crypt.raw && raw.every((b, i) => b === Crypt.raw[i])) { toast('This device is already in that library.'); return Sync.setEnabled(true); }
+  askPassword('Join that library', 'Your galleries on this device will be moved into the other library and shared with your paired devices. Enter this device\'s password to continue.', async pw => {
+    const lbl = h('p', { class: 'hint num' }, 'Moving your galleries…');
+    openSheet('Joining your library', h('div', { class: 'stack' }, lbl, h('p', { class: 'hint' }, 'Keep the app open until this finishes.')));
+    await withBusy(async () => {
+      const oldRaw = Crypt.raw, oldK = Crypt.key, newK = await Crypt.importKey(raw);
+      const lockNew = await Crypt.wrapRaw(raw, pw); lockNew.old = await Crypt.wrapRaw(oldRaw, pw);
+      await DB.put('meta', lockNew);
+      await Crypt.setRaw(raw);
+      await reencrypt(oldK, newK, false, (i, n) => lbl.textContent = `Moving your galleries: ${i} of ${n}`);
+      const { old, ...clean } = lockNew; await DB.put('meta', clean);
+      URLS.forEach(u => URL.revokeObjectURL(u)); URLS.clear();
+      Sync.st.enabled = true; await Sync.saveSt(); await Sync.restart();
+    });
+    closeSheet(); toast('Joined. Your devices sync when both apps are open on the same Wi‑Fi.', 4500);
+    render(CUR.view, CUR.params);
+  });
+}
+const SYNC_TEXT = { off: 'Sync is off', waiting: 'Looking for your devices', connected: 'Connected', unavailable: 'Sync unavailable' };
+function syncLine() {
+  const s = Sync.status, names = [...Sync.peers.values()].map(p => p.name).filter(Boolean);
+  if (s === 'connected') return Sync.recv.want ? `Receiving pages: ${Sync.recv.got.toLocaleString()} of ${Sync.recv.want.toLocaleString()} from ${names.join(', ')}` : `Connected to ${names.join(', ')}. Everything is up to date.`;
+  if (s === 'waiting') return Sync.st.lanOnly ? 'Looking for your other devices on this Wi‑Fi. Open Tankōbon on them.' : 'Looking for your other devices. Open Tankōbon on them.';
+  if (s === 'unavailable') return 'Sync could not start. Check the internet connection and open the app again.';
+  return 'Sync is off on this device.';
+}
+function openDevices() {
+  const body = h('div', { class: 'stack' });
+  const draw = () => {
+    const known = Object.entries(Sync.st.devices).filter(([id]) => id !== Sync.device.id).sort((a, b) => b[1].seen - a[1].seen);
+    const online = new Set([...Sync.peers.values()].map(p => p.dev));
+    const nameIn = h('input', { class: 'text', id: 'dev-name', value: Sync.device.name, onchange: e => { Sync.rename(e.target.value.trim()); toast('Name saved'); } });
+    body.replaceChildren(
+      h('div', { class: 'panel', style: 'background:var(--surface2)' },
+        h('div', { class: 'row' }, h('span', { class: 'sdot ' + Sync.status }), h('b', {}, SYNC_TEXT[Sync.status])),
+        h('p', { class: 'hint' }, syncLine())),
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'dev-name' }, 'This device\'s name'), nameIn),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn primary', onclick: showPairCode }, 'Show pairing code'),
+        h('button', { class: 'btn ghost', onclick: () => scanPairCode(joinLibrary) }, 'Scan a pairing code')),
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-sync' }, 'Sync with my other devices'),
+        h('button', { class: 'switch', id: 'sw-sync', role: 'switch', 'aria-checked': String(Sync.st.enabled), onclick: async () => { await Sync.setEnabled(!Sync.st.enabled); draw(); } })),
+      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-lan' }, 'Only connect on the same Wi‑Fi'),
+        h('button', { class: 'switch', id: 'sw-lan', role: 'switch', 'aria-checked': String(Sync.st.lanOnly), onclick: async () => { await Sync.setLan(!Sync.st.lanOnly); draw(); } })),
+      known.length ? h('div', { class: 'stack' }, h('div', { class: 'label' }, 'Your devices'),
+        h('div', { class: 'chlist' }, known.map(([id, d]) => h('div', { class: 'chrow' }, h('span', { class: 'sdot ' + (online.has(id) ? 'connected' : 'off') }), h('span', { class: 't' }, d.name), h('span', { class: 's' }, online.has(id) ? 'Connected' : ago(d.seen).replace('Read ', 'Seen ')))))) : null,
+      h('p', { class: 'hint' }, 'Galleries, chapter order, settings and reading progress sync automatically while the app is open on both devices. Pages travel directly between your devices and are encrypted with your library key. The internet is only used for a moment so the devices can find each other.'));
+  };
+  draw(); Sync.subs.add(draw);
+  openSheet('Devices & sync', body, () => Sync.subs.delete(draw));
+}
+Sync.subs.add(() => { const p = $('#syncpill'); if (p) { p.firstChild.className = 'sdot ' + Sync.status; p.lastChild.textContent = pillText(); } });
+function pillText() { return Sync.status === 'connected' && Sync.recv.want ? `${Sync.recv.got}/${Sync.recv.want}` : { off: 'Sync off', waiting: 'Looking', connected: 'Synced', unavailable: 'Offline' }[Sync.status]; }
+
 /* ================= install as an app ================= */
 let installEvt = null, installOffered = false;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; installOffered = true; if (CUR.view === 'library') renderLibrary(); });
@@ -1470,13 +2079,9 @@ let pre;
 (async function boot() {
   await DB.open();
   try { const d = await DB.get('meta', 'defaults'); if (d) GLOBAL = { ...DEFAULTS, ...d.v }; const u = await DB.get('meta', 'ui'); if (u) UI = { ...UI, ...u.v }; } catch (e) { }
-  try {
-    const gals = await DB.all('galleries'); const gone = await DB.get('meta', 'sampleGone');
-    if (!gals.length && !gone) await addSample();
-  } catch (e) { console.error(e); }
-  const st = history.state;
-  if (st && st.view) render(st.view, st.params || {});
-  else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
+  await Sync.load();
+  let lock = null; try { lock = await DB.get('meta', 'lock'); } catch (e) { }
+  if (lock) showUnlock(lock); else showSetup();
 })();
 </script>
 <script>if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
