@@ -2276,7 +2276,9 @@ const ST = {
 };
 const canPickFolder = () => 'showDirectoryPicker' in window;
 async function pickLibraryFolder() {
-  const picked = await window.showDirectoryPicker({ id: 'tankobon', mode: 'readwrite', startIn: 'documents' });
+  busy++; let picked;
+  try { picked = await window.showDirectoryPicker({ id: 'tankobon', mode: 'readwrite', startIn: 'documents' }); }
+  finally { setTimeout(() => { busy = Math.max(0, busy - 1); }, 1500); }
   if (await FS.readInfo(picked)) return picked;
   // an existing Tankobon folder inside the one picked?
   try { const inner = await picked.getDirectoryHandle('Tankobon'); if (await FS.readInfo(inner)) return inner; } catch (e) { }
@@ -2286,7 +2288,7 @@ async function folderAccess(handle, ask) {
   try {
     if (!handle.queryPermission) return true;
     let st = await handle.queryPermission({ mode: 'readwrite' });
-    if (st !== 'granted' && ask) st = await handle.requestPermission({ mode: 'readwrite' });
+    if (st !== 'granted' && ask) { busy++; try { st = await handle.requestPermission({ mode: 'readwrite' }); } finally { setTimeout(() => { busy = Math.max(0, busy - 1); }, 1500); } }
     return st === 'granted';
   } catch (e) { return false; }
 }
@@ -2331,6 +2333,10 @@ function storagePanel() {
 }
 async function moveStorage(to, redraw) {
   if (to === 'folder' && !canPickFolder()) return toast('This browser cannot open phone folders. Chrome 132 or newer is needed.', 4500);
+  busy++;
+  try { await moveStorageInner(to, redraw); } finally { busy = Math.max(0, busy - 1); }
+}
+async function moveStorageInner(to, redraw) {
   let target = null;
   if (to === 'folder') {
     try {
@@ -2341,8 +2347,8 @@ async function moveStorage(to, redraw) {
     } catch (e) { if (e.name !== 'AbortError') toast('Could not open that folder: ' + e.message, 4000); return; }
   }
   const lbl = h('div', { class: 'num' }, 'Preparing…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
-  openSheet(to === 'folder' ? 'Moving your library to the folder' : 'Moving your library into the app', h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar), h('p', { class: 'hint' }, 'Keep the app open until this finishes. Nothing is deleted until everything has been copied.')));
-  busy++;
+  let wake = null; try { wake = await navigator.wakeLock.request('screen'); } catch (e) { }
+  openSheet(to === 'folder' ? 'Moving your library to the folder' : 'Moving your library into the app', h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar), h('p', { class: 'hint' }, 'Keep the app open until this finishes; the screen stays on. Nothing is deleted until everything has been copied, and if it gets interrupted you can simply start the move again.')));
   try {
     const stores = ['galleries', 'thumbs', 'images'];
     const from = to === 'folder' ? DB : FS, dest = to === 'folder' ? FS : DB;
@@ -2374,7 +2380,7 @@ async function moveStorage(to, redraw) {
   } catch (e) {
     console.error(e); if (to === 'folder' && STORE.mode !== 'folder') FS.root = null;
     closeSheet(); toast('Moving stopped: ' + (e.message || e) + '. Nothing was deleted.', 5000);
-  } finally { busy = Math.max(0, busy - 1); }
+  } finally { try { wake && wake.release(); } catch (e) { } }
 }
 /* Restore a library from its folder (after reinstalling or clearing Chrome). */
 async function openLibraryFolder() {
