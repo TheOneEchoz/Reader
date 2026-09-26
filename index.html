@@ -133,6 +133,10 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .pcell .cv{position:absolute;right:4px;top:4px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;letter-spacing:.04em}
 .pcell.sel{border-color:var(--accent)}
 .pcell.folder{border-radius:4px 10px 10px 10px}
+.pcell.carried{opacity:.3}
+.pcell.folder.sel::after{background:linear-gradient(180deg,var(--accent-soft),rgba(10,11,13,.7))}
+.pcell.droptarget{outline:3px dashed var(--accent);outline-offset:2px;transform:scale(1.06);transition:transform .12s}
+.pcell[data-count]::before{content:attr(data-count);position:absolute;right:4px;top:4px;z-index:3;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700;display:grid;place-items:center}
 .pcell.folder::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(10,11,13,.7))}
 .pcell .bfold{left:4px;top:4px;bottom:auto;width:26px;height:26px}
 .pcell .ftitle{position:absolute;left:6px;right:6px;bottom:5px;z-index:1;color:#fff;font-size:12px;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1182,67 +1186,119 @@ async function renderPages(id, chId) {
   const v = $('#v-pages'); const g = await S.gal(id);
   const ch = g && g.chapters.find(c => c.id === chId);
   if (!ch) return back('editor', { id });
-  const sel = new Set();
+  /* selection holds 'p:<page id>' and 'c:<folder id>' keys */
+  const sel = new Set(); let selMode = false;
   const grid = h('div', { class: 'pgrid' });
   const selbar = h('div', { class: 'selbar', hidden: true });
+  const keyOf = el => el.dataset.cid ? 'c:' + el.dataset.cid : 'p:' + el.dataset.id;
+  const tok = k => ({ t: k[0], id: k.slice(2) });
+  const selecting = () => selMode || sel.size > 0;
+  const chOf = cid => g.chapters.find(c => c.id === cid);
+  const toggle = (k, el) => {
+    sel.has(k) ? sel.delete(k) : sel.add(k);
+    el.classList.toggle('sel', sel.has(k)); el.setAttribute('aria-pressed', String(sel.has(k))); drawSel();
+  };
   const draw = () => {
     const ci = g.chapters.indexOf(ch), its = Tree.items(g.chapters, ci); let n = 0;
     head.textContent = `${chTitle(ch)} · ${plural(ch.pages.length, 'page')}`;
-    if (!its.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Add images to pick pictures from anywhere on your phone, or New folder to organize.'))); return; }
+    [...sel].forEach(k => { if (k[0] === 'p' ? !ch.pages.includes(k.slice(2)) : !chOf(k.slice(2))) sel.delete(k); });
+    selBtn.textContent = selMode ? 'Done selecting' : 'Select';
+    if (!its.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Add images to pick pictures from anywhere on your phone, or New folder to organize.'))); drawSel(); return; }
     grid.replaceChildren(...its.map(it => {
       if (it.t === 'c') {
-        const c = g.chapters[it.ci];
-        return h('div', { class: 'pcell folder', 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-label': `Folder ${c.title}. Tap to open`, onclick: () => go('pages', { id, ch: c.id }) },
+        const c = g.chapters[it.ci], k = 'c:' + c.id;
+        return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
+          onclick: e => selecting() ? toggle(k, e.currentTarget) : go('pages', { id, ch: c.id }) },
           lazyThumb(folderThumb(g, it.ci)), h('span', { class: 'bfold' }, icon('folder')), h('span', { class: 'ftitle' }, c.title));
       }
-      const pid = it.id, k = ++n;
-      return h('div', { class: 'pcell' + (sel.has(pid) ? ' sel' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${k}, ${(g.meta[pid] || [])[2] || ''}`, 'aria-pressed': String(sel.has(pid)),
-        onclick: e => { sel.has(pid) ? sel.delete(pid) : sel.add(pid); e.currentTarget.classList.toggle('sel'); e.currentTarget.setAttribute('aria-pressed', String(sel.has(pid))); drawSel(); } },
-        lazyThumb(pid), h('span', { class: 'no' }, k), g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+      const pid = it.id, num = ++n, k = 'p:' + pid;
+      return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}`, 'aria-pressed': String(sel.has(k)),
+        onclick: e => toggle(k, e.currentTarget) },
+        lazyThumb(pid), h('span', { class: 'no' }, num), g.cover === pid ? h('span', { class: 'cv' }, 'COVER') : null);
     }));
+    drawSel();
   };
+  const selPages = () => ch.pages.filter(p => sel.has('p:' + p));
+  const selFolders = () => [...sel].filter(k => k[0] === 'c').map(k => k.slice(2));
+  const allKeys = () => Tree.items(g.chapters, g.chapters.indexOf(ch)).map(it => it.t === 'p' ? 'p:' + it.id : 'c:' + g.chapters[it.ci].id);
   const drawSel = () => {
-    selbar.hidden = !sel.size;
-    if (!sel.size) return;
+    selbar.hidden = !selecting();
+    if (selbar.hidden) return;
+    if (!sel.size) {
+      selbar.replaceChildren(h('b', {}, 'Tap images or folders to select them'),
+        h('button', { class: 'btn', onclick: () => { allKeys().forEach(k => sel.add(k)); draw(); } }, 'Select all'),
+        h('button', { class: 'btn', 'aria-label': 'Stop selecting', onclick: () => { selMode = false; draw(); } }, icon('x')));
+      return;
+    }
+    const pages = selPages(), folders = selFolders();
+    const pagesInFolders = folders.reduce((n, fid) => { const i = g.chapters.findIndex(c => c.id === fid); return n + (i < 0 ? 0 : Tree.subtreePages(g.chapters, i)); }, 0);
     let armed = false;
     const del = h('button', { class: 'btn danger', onclick: async () => {
-      if (!armed) { armed = true; del.textContent = `Delete ${sel.size}?`; return; }
-      await removePages(g, [...sel]); await saveGallery(g); sel.clear(); draw(); drawSel(); toast('Pages deleted');
+      if (!armed) { armed = true; del.textContent = folders.length ? `Delete ${plural(sel.size, 'item')} (${plural(pages.length + pagesInFolders, 'page')})?` : `Delete ${plural(pages.length, 'page')}?`; return; }
+      for (const fid of folders) {
+        const i = g.chapters.findIndex(c => c.id === fid); if (i < 0) continue;
+        const block = g.chapters.slice(i, Tree.end(g.chapters, i));
+        await removePages(g, block.flatMap(x => x.pages)); g.chapters = g.chapters.filter(x => !block.includes(x));
+      }
+      if (pages.length) await removePages(g, pages);
+      g.chapters = Tree.norm(g.chapters); await saveGallery(g); sel.clear(); draw(); toast('Deleted');
     } }, icon('trash'), 'Delete');
-    const one = sel.size === 1 ? g.meta[[...sel][0]] : null;
-    selbar.replaceChildren(one ? h('div', { class: 'selname' }, h('b', { title: one[2] || '' }, one[2] || 'Unnamed image'), h('span', { class: 'num' }, `${one[0]} × ${one[1]} px`)) : h('b', { class: 'num' }, `${sel.size} selected`),
+    let label;
+    if (sel.size === 1 && pages.length === 1) { const m = g.meta[pages[0]] || []; label = h('div', { class: 'selname' }, h('b', { title: m[2] || '' }, m[2] || 'Unnamed image'), h('span', { class: 'num' }, `${m[0]} × ${m[1]} px`)); }
+    else if (sel.size === 1) { const c = chOf(folders[0]); label = h('div', { class: 'selname' }, h('b', {}, c.title), h('span', { class: 'num' }, `Folder · ${plural(pagesInFolders, 'page')}`)); }
+    else label = h('b', { class: 'num' }, `${sel.size} selected`);
+    selbar.replaceChildren(...[label,
       h('button', { class: 'btn', onclick: moveSheet }, icon('move'), 'Move'),
       h('button', { class: 'btn', onclick: () => shift(-1) }, icon('up'), 'To start'),
       h('button', { class: 'btn', onclick: () => shift(1) }, icon('down'), 'To end'),
-      sel.size === 1 ? h('button', { class: 'btn', onclick: async () => { await dropCustomCover(g); g.cover = [...sel][0]; await saveGallery(g); sel.clear(); draw(); drawSel(); toast('Cover updated'); } }, icon('star'), 'Cover') : null,
-      del, h('button', { class: 'btn', 'aria-label': 'Clear selection', onclick: () => { sel.clear(); draw(); drawSel(); } }, icon('x')));
+      sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => { await dropCustomCover(g); g.cover = pages[0]; await saveGallery(g); sel.clear(); draw(); toast('Cover updated'); } }, icon('star'), 'Cover') : null,
+      del,
+      h('button', { class: 'btn', 'aria-label': 'Clear selection', onclick: () => { sel.clear(); selMode = false; draw(); } }, icon('x'))].filter(Boolean));
   };
+  /* reorder: put the given keys (in their current order) at a position among the rest */
+  const reorder = async tokens => { Tree.setOrder(g.chapters, g.chapters.indexOf(ch), tokens.map(tok)); await saveGallery(g); draw(); };
   const shift = async dir => {
-    const picked = ch.pages.filter(p => sel.has(p)), rest = ch.pages.filter(p => !sel.has(p));
-    ch.pages = dir < 0 ? [...picked, ...rest] : [...rest, ...picked];
-    await saveGallery(g); draw(); toast('Order saved');
+    const keys = allKeys(), group = keys.filter(k => sel.has(k)), rest = keys.filter(k => !sel.has(k));
+    await reorder(dir < 0 ? [...group, ...rest] : [...rest, ...group]); toast('Order saved');
+  };
+  /* move pages and folders (keys) inside another folder */
+  const moveKeys = async (keys, targetId) => {
+    const target = chOf(targetId); if (!target) return;
+    const pageSet = new Set(keys.filter(k => k[0] === 'p').map(k => k.slice(2)));
+    const pages = ch.pages.filter(p => pageSet.has(p));
+    if (pages.length) { Tree.fixAt(g.chapters, pageSet); ch.pages = ch.pages.filter(p => !pageSet.has(p)); target.pages.push(...pages); }
+    for (const k of keys.filter(k => k[0] === 'c')) {
+      const i = g.chapters.findIndex(c => c.id === k.slice(2)), t = g.chapters.indexOf(target);
+      if (i >= 0 && t >= 0) Tree.moveInto(g.chapters, i, t);
+    }
+    g.chapters = Tree.norm(g.chapters);
+    keys.forEach(k => sel.delete(k));
+    await saveGallery(g); draw(); toast(`Moved into ${target.title}`);
   };
   const moveSheet = () => {
-    const others = g.chapters.filter(c => c !== ch), nums = Tree.nums(g.chapters);
+    const nums = Tree.nums(g.chapters), folders = selFolders();
+    const blocked = new Set([ch.id]);
+    folders.forEach(fid => { const i = g.chapters.findIndex(c => c.id === fid); g.chapters.slice(i, Tree.end(g.chapters, i)).forEach(c => blocked.add(c.id)); });
+    const targets = g.chapters.filter(c => !blocked.has(c.id));
     const list = h('div', { class: 'chlist' });
-    const done = async msg => { await saveGallery(g); sel.clear(); closeSheet(); draw(); drawSel(); toast(msg); };
-    const row = c => h('button', { class: 'chrow', style: Tree.dep(c) > 1 ? `padding-left:${14 + Math.min(Tree.dep(c) - 1, 8) * 18}px` : null, onclick: async () => {
-      const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p)); c.pages.push(...picked);
-      await done(`Moved to ${c.title}`);
-    } }, h('span', { class: 'n' }, nums[g.chapters.indexOf(c)] || '•'), h('span', { class: 't' }, chTitle(c)), h('span', { class: 's' }, plural(c.pages.length, 'page')));
+    const row = c => h('button', { class: 'chrow', style: Tree.dep(c) > 1 ? `padding-left:${14 + Math.min(Tree.dep(c) - 1, 8) * 18}px` : null, onclick: async () => { closeSheet(); await moveKeys([...sel], c.id); } },
+      h('span', { class: 'n' }, nums[g.chapters.indexOf(c)] || '•'), h('span', { class: 't' }, chTitle(c)), h('span', { class: 's' }, plural(c.pages.length, 'page')));
     const newRow = h('button', { class: 'chrow', onclick: async () => {
-      const picked = ch.pages.filter(p => sel.has(p)); ch.pages = ch.pages.filter(p => !sel.has(p));
-      g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, { id: uid(), title: ch.root ? 'New folder' : `${ch.title} (part 2)`, pages: picked, d: Math.max(1, Tree.dep(ch)) });
-      await done('Moved to a new chapter');
-    } }, h('span', { class: 'n' }, icon('plus')), h('span', { class: 't' }, 'A new chapter after this one'), h('span'));
+      const keys = allKeys(), first = keys.findIndex(k => sel.has(k));
+      const n = { id: uid(), title: 'New folder', pages: [], keep: true, d: Tree.dep(ch) + 1 };
+      g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, n);
+      const moving = keys.filter(k => sel.has(k));
+      Tree.setOrder(g.chapters, g.chapters.indexOf(ch), [...keys.slice(0, first), 'c:' + n.id, ...keys.slice(first)].map(tok));
+      closeSheet(); await moveKeys(moving, n.id); toast('Moved into a new folder. Tap it, then Edit, to rename it.', 3500);
+    } }, h('span', { class: 'n' }, icon('plus')), h('span', { class: 't' }, 'A new folder here'), h('span'));
     const drawList = q => {
       q = (q || '').trim().toLowerCase();
-      const hits = others.filter(c => !q || c.title.toLowerCase().includes(q) || nums[g.chapters.indexOf(c)] === q);
-      list.replaceChildren(...[...hits.map(row), hits.length ? null : h('div', { class: 'chrow' }, h('span'), h('span', { class: 't hint' }, 'No chapter matches'), h('span')), newRow].filter(Boolean));
+      const hits = targets.filter(c => !q || c.title.toLowerCase().includes(q) || nums[g.chapters.indexOf(c)] === q);
+      list.replaceChildren(...[newRow, ...hits.map(row), hits.length ? null : h('div', { class: 'chrow' }, h('span'), h('span', { class: 't hint' }, 'No folder matches'), h('span'))].filter(Boolean));
     };
-    const find = others.length > 5 ? h('input', { class: 'search', id: 'move-find', type: 'search', placeholder: 'Find a chapter by name or number', autocomplete: 'off', oninput: e => drawList(e.target.value) }) : null;
+    const find = targets.length > 5 ? h('input', { class: 'search', id: 'move-find', type: 'search', placeholder: 'Find a folder by name or number', autocomplete: 'off', oninput: e => drawList(e.target.value) }) : null;
     drawList('');
-    openSheet(`Move ${plural(sel.size, 'page')} to…`, h('div', { class: 'stack' }, find, list));
+    openSheet(`Move ${plural(sel.size, 'item')} into…`, h('div', { class: 'stack' }, find, list));
   };
   const addImagesHere = async () => {
     const files = (await pickFiles({ accept: 'image/*' })).filter(f => IMG_EXT.test(f.name) || (f.type || '').startsWith('image/'));
@@ -1265,7 +1321,7 @@ async function renderPages(id, chId) {
       e.preventDefault();
       const n = { id: uid(), title: inp.value.trim() || 'New folder', pages: [], keep: true, d: Tree.dep(ch) + 1 };
       g.chapters.splice(Tree.end(g.chapters, g.chapters.indexOf(ch)), 0, n);
-      closeSheet(); await saveGallery(g); draw(); toast('Folder created. Drag it where you want it, or tap it to fill it.', 3500);
+      closeSheet(); await saveGallery(g); draw(); toast('Folder created. Drag images onto it to put them inside.', 3500);
     } }, h('p', { class: 'hint' }, 'It appears after the last page here. Drag it between pages to move it.'),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'nf-name' }, 'Name'), inp),
       h('button', { class: 'btn primary', type: 'submit' }, icon('folder'), 'Create folder')));
@@ -1279,6 +1335,7 @@ async function renderPages(id, chId) {
     await saveGallery(g); draw(); toast('Page order saved');
   };
   const head = h('h2', {});
+  const selBtn = h('button', { class: 'btn small', onclick: () => { selMode = !selMode; if (!selMode) sel.clear(); draw(); } }, 'Select');
   v.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'appbar' },
       h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('editor', { id }) }, icon('back')),
@@ -1288,17 +1345,52 @@ async function renderPages(id, chId) {
       h('div', { class: 'row' },
         h('button', { class: 'btn small primary', onclick: addImagesHere }, icon('plus'), 'Add images'),
         h('button', { class: 'btn small', onclick: newFolder }, icon('folder'), 'New folder'),
+        selBtn,
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
-      h('p', { class: 'hint' }, 'Press and hold a page or folder, then drag it to a new spot. Tap a folder to open it. Tap pages to select them for moving, deleting or setting the cover.'),
+      h('p', { class: 'hint' }, 'Press and hold, then drag to reorder. Drop onto a folder to put things inside it. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection.'),
       grid)), selbar);
   draw();
-  if (window.Sortable) Sortable.create(grid, { animation: 160, delay: 220, delayOnTouchOnly: true, filter: '.empty', onEnd: async ev => {
-    if (ev.oldIndex === ev.newIndex) return;
-    const tokens = [...grid.children].map(el => el.dataset.cid ? { t: 'c', id: el.dataset.cid } : { t: 'p', id: el.dataset.id }).filter(t => t.id);
-    Tree.setOrder(g.chapters, g.chapters.indexOf(ch), tokens); await saveGallery(g); draw();
-  } });
+
+  /* ---- drag and drop: whole selection, and dropping onto folders ---- */
+  if (!window.Sortable) return;
+  let drag = null;
+  const pt = { x: 0, y: 0 };
+  const track = e => { const t = e.touches ? e.touches[0] : e; if (t) { pt.x = t.clientX; pt.y = t.clientY; } if (drag) setDrop(folderUnder()); };
+  const folderUnder = () => {
+    for (const el of grid.querySelectorAll('.pcell.folder')) {
+      if (!drag || el === drag.item || drag.carry.includes(el)) continue;
+      const r = el.getBoundingClientRect(), mx = r.width * .2, my = r.height * .2;
+      if (pt.x > r.left + mx && pt.x < r.right - mx && pt.y > r.top + my && pt.y < r.bottom - my) return el;
+    }
+    return null;
+  };
+  const tiles = () => [...grid.children].filter(el => (el.dataset.id || el.dataset.cid) && !el.classList.contains('sortable-fallback') && !el.classList.contains('sortable-drag'));
+  window.__dnd = () => ({ pt, drop: drag && drag.drop && drag.drop.dataset.cid });
+  const setDrop = el => { if (drag.drop === el) return; if (drag.drop) drag.drop.classList.remove('droptarget'); drag.drop = el; if (el) el.classList.add('droptarget'); };
+  Sortable.create(grid, {
+    animation: 160, delay: 220, delayOnTouchOnly: true, filter: '.empty', fallbackOnBody: true, invertSwap: true, invertedSwapThreshold: 0.4,
+    onStart: ev => {
+      const k = keyOf(ev.item), multi = sel.has(k) && sel.size > 1;
+      const order = tiles().map(keyOf);
+      drag = { item: ev.item, key: k, keys: multi ? order.filter(x => sel.has(x)) : [k], carry: multi ? [...grid.children].filter(el => el !== ev.item && sel.has(keyOf(el))) : [], drop: null };
+      drag.carry.forEach(el => el.classList.add('carried'));
+      if (multi) ev.item.setAttribute('data-count', drag.keys.length);
+      ['pointermove', 'touchmove', 'mousemove', 'dragover'].forEach(t => document.addEventListener(t, track, { passive: true, capture: true }));
+    },
+    onMove: () => { const f = folderUnder(); setDrop(f); return f ? false : true; },
+    onEnd: async ev => {
+      ['pointermove', 'touchmove', 'mousemove', 'dragover'].forEach(t => document.removeEventListener(t, track, { capture: true }));
+      const d = drag; drag = null; if (!d) return;
+      d.carry.forEach(el => el.classList.remove('carried')); d.item.removeAttribute('data-count');
+      if (d.drop) { d.drop.classList.remove('droptarget'); return moveKeys(d.keys, d.drop.dataset.cid); }
+      if (d.keys.length === 1 && ev.oldIndex === ev.newIndex) return;
+      let order = tiles().map(keyOf);
+      if (d.keys.length > 1) { const others = new Set(d.keys.filter(k => k !== d.key)); order = order.filter(k => !others.has(k)); const at = order.indexOf(d.key); order.splice(at, 1, ...d.keys); }
+      await reorder(order);
+    },
+  });
 }
 
 /* ================= reader ================= */
