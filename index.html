@@ -139,6 +139,9 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .pcell.sel::after{content:"";position:absolute;inset:0;background:var(--accent-soft)}
 .selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);border-radius:18px;padding:8px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center;width:min(560px,calc(100% - 32px));box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .selbar b{padding:0 8px;font-size:14px}
+.selname{display:grid;min-width:0;max-width:100%;padding:2px 8px;flex:1 1 100%;text-align:center}
+.selname b{padding:0;word-break:break-all;line-height:1.3}
+.selname span{font-size:11px;opacity:.7}
 .selbar .btn{background:transparent;color:inherit;min-height:40px;padding:0 10px}
 .selbar .btn.danger{color:#FF8A78;background:transparent}
 
@@ -1202,7 +1205,8 @@ async function renderPages(id, chId) {
       if (!armed) { armed = true; del.textContent = `Delete ${sel.size}?`; return; }
       await removePages(g, [...sel]); await saveGallery(g); sel.clear(); draw(); drawSel(); toast('Pages deleted');
     } }, icon('trash'), 'Delete');
-    selbar.replaceChildren(h('b', { class: 'num' }, `${sel.size} selected`),
+    const one = sel.size === 1 ? g.meta[[...sel][0]] : null;
+    selbar.replaceChildren(one ? h('div', { class: 'selname' }, h('b', { title: one[2] || '' }, one[2] || 'Unnamed image'), h('span', { class: 'num' }, `${one[0]} × ${one[1]} px`)) : h('b', { class: 'num' }, `${sel.size} selected`),
       h('button', { class: 'btn', onclick: moveSheet }, icon('move'), 'Move'),
       h('button', { class: 'btn', onclick: () => shift(-1) }, icon('up'), 'To start'),
       h('button', { class: 'btn', onclick: () => shift(1) }, icon('down'), 'To end'),
@@ -1323,6 +1327,7 @@ async function openReader(id, ch, page, start) {
   wakeOn();
 }
 function leaveReader() {
+  PRE.clear();
   saveProgress(true); teardownStrip(); wakeOff(); clearTimeout(tapTimer);
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { }
   spread.replaceChildren();
@@ -1357,14 +1362,36 @@ function buildSpreads() {
   });
   flush();
 }
+/* Pages near the current one are decrypted and decoded ahead of time, so turning is instant. */
+const PRE = new Map();
+function getPage(id) {
+  if (PRE.has(id)) return PRE.get(id);
+  const p = imgURL(id).then(async u => {
+    if (!u) return null;
+    const img = new Image(); img.decoding = 'async'; img.draggable = false; img.src = u;
+    try { await img.decode(); } catch (e) { }
+    return img;
+  });
+  PRE.set(id, p); return p;
+}
+function preloadAround() {
+  const ahead = R.p.mode === 'double' ? 10 : 6, behind = R.p.mode === 'double' ? 4 : 3;
+  const want = [];
+  for (let d = 1; d <= ahead; d++) want.push(R.pos + d);
+  for (let d = 1; d <= behind; d++) want.push(R.pos - d);
+  const ids = new Set(currentIdx().map(i => R.pages[i].id));
+  want.forEach(j => { if (j >= 0 && j < R.pages.length) ids.add(R.pages[j].id); });
+  for (const id of [...PRE.keys()]) if (!ids.has(id)) PRE.delete(id);
+  // load the next pages first, one after another, so the page you turn to next is ready soonest
+  (async () => { for (const id of ids) { if (!R.g) return; await getPage(id); } })();
+}
 const currentIdx = () => R.p.mode === 'double' ? R.spreads[R.spreadOf[R.pos]] : [R.pos];
 async function renderPaged() {
   const tok = ++R.tok, idxs = currentIdx();
   const nodes = await Promise.all(idxs.map(async idx => {
-    const u = await imgURL(R.pages[idx].id);
-    if (!u) return h('div', { class: 'missing' }, 'Page missing');
-    const img = new Image(); img.alt = `Page ${R.pages[idx].i + 1}`; img.draggable = false; img.src = u;
-    try { await Promise.race([img.decode(), sleep(350)]); } catch (e) { }
+    const img = await getPage(R.pages[idx].id);
+    if (!img) return h('div', { class: 'missing' }, 'Page missing');
+    img.alt = `Page ${R.pages[idx].i + 1}`;
     return img;
   }));
   if (tok !== R.tok) return;
@@ -1373,8 +1400,7 @@ async function renderPaged() {
   spread.replaceChildren(...nodes);
   stage.scrollTop = 0; stage.scrollLeft = isRTL() ? stage.scrollWidth : 0;
   applyStartZoom();
-  // preload neighbours
-  for (const d of [1, 2, 3, 4, -1, -2]) { const j = R.pos + d; if (j >= 0 && j < R.pages.length) imgURL(R.pages[j].id).then(u => { if (u) { const i = new Image(); i.src = u; } }); }
+  preloadAround();
 }
 function step(d) {
   if (!R.pages.length) return;
@@ -1491,7 +1517,7 @@ function buildStrip() {
     frag.append(h('div', { class: 'pg', 'data-i': idx, style: `aspect-ratio:${w}/${hh}` + (v ? '' : `;height:calc(min(100%,calc(100vw * ${(hh / w).toFixed(4)})) * var(--z,1))`) }));
   });
   strip.append(frag);
-  R.io = new IntersectionObserver(ents => ents.forEach(e => e.isIntersecting ? loadPg(e.target) : unloadPg(e.target)), { root: strip, rootMargin: v ? '200% 0px' : '0px 200%' });
+  R.io = new IntersectionObserver(ents => ents.forEach(e => e.isIntersecting ? loadPg(e.target) : unloadPg(e.target)), { root: strip, rootMargin: v ? '300% 0px' : '0px 300%' });
   $$('.pg', strip).forEach(e => R.io.observe(e));
   const a = R.anchor && R.pages[R.anchor.idx] && R.pages[R.anchor.idx].ch === R.pages[R.pos].ch ? R.anchor : { idx: R.pos, frac: 0 };
   requestAnimationFrame(() => scrollToIdx(a.idx, a.frac));
@@ -1707,6 +1733,9 @@ stage.addEventListener('pointercancel', e => endPtr(e, true));
 stage.addEventListener('contextmenu', e => e.preventDefault());
 function onTap(x, y) {
   if (!R.p.dblTapScale) return singleTap(x, y);
+  // taps on the page-turn edges act right away; double-tap zoom lives in the middle of the screen
+  { const r = stage.getBoundingClientRect(), fx = (x - r.left) / r.width;
+    if (R.p.tapZones && (fx <= .3 || fx >= .7) && R.zoom.s <= 1.01 && !reader.classList.contains('ui')) { clearTimeout(tapTimer); lastTap = null; return singleTap(x, y); } }
   if (lastTap && performance.now() - lastTap.t < 280 && Math.hypot(x - lastTap.x, y - lastTap.y) < 40) {
     clearTimeout(tapTimer); lastTap = null; return doubleTap(x, y);
   }
