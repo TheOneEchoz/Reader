@@ -1180,15 +1180,7 @@ async function renderEditor(id) {
     await purgeGallery(g); if (g.sample) { await DB.put('meta', { id: 'sampleGone', v: true }); } else await Sync.deleted(g.id);
     toast('Gallery deleted'); go('library', {}, true);
   } }, 'Delete this gallery');
-  v.replaceChildren(h('div', { class: 'wrap' },
-    h('header', { class: 'appbar' },
-      h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('detail', { id }) }, icon('back')),
-      h('div', { class: 'grow' }, h('h2', {}, 'Edit gallery')),
-      h('button', { class: 'btn primary small', onclick: () => back('detail', { id }) }, icon('check'), 'Done')),
-    h('div', { class: 'stack' },
-      h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
-        h('input', { class: 'text', id: 'g-title', value: g.title, onchange: e => { g.title = e.target.value.trim() || g.title; saveGallery(g); toast('Name saved'); } })),
-      coverBox,
+  const listPart = h('div', { class: 'stack' },
       h('button', { class: 'chrow', style: 'background:var(--surface);border-radius:12px', onclick: () => go('pages', { id, ch: g.chapters[0].id }) },
         h('span', { class: 'n' }, icon('folder')), h('span', { class: 't' }, 'Main level'), h('span', { class: 's num' }, `${plural(g.chapters[0].pages.length, 'page')} · Open`)),
       h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, countLbl,
@@ -1202,9 +1194,32 @@ async function renderEditor(id) {
       list,
       h('div', { class: 'row' },
         h('button', { class: 'btn', onclick: () => openAddSheet(g) }, icon('plus'), 'Add more pages'),
-        h('button', { class: 'btn ghost', onclick: async () => { const n = { id: uid(), title: `Chapter ${g.chapters.filter(c => Tree.dep(c) === 1).length + 1}`, pages: [], keep: true, d: 1 }; g.chapters.push(n); await commit(); setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60); } }, 'New chapter')),
+        h('button', { class: 'btn ghost', onclick: async () => { const n = { id: uid(), title: `Chapter ${g.chapters.filter(c => Tree.dep(c) === 1).length + 1}`, pages: [], keep: true, d: 1 }; g.chapters.push(n); await commit(); setTimeout(() => { const f = $('#ch-' + n.id); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); f.select(); } }, 60); } }, 'New chapter'))
+);
+  const gridPart = h('div', { class: 'stack' });
+  const viewSeg = h('div', { class: 'row', style: 'justify-content:space-between;margin-top:6px' }, h('div', { class: 'label' }, 'Show chapters as'),
+    h('div', { class: 'seg', role: 'group', 'aria-label': 'Show chapters as' }, [['list', 'List'], ['folders', 'Folders']].map(([k, l]) =>
+      h('button', { 'data-v': k, 'aria-pressed': 'false', onclick: () => showView(k) }, icon(k === 'list' ? 'list' : 'folder'), l))));
+  const showView = k => {
+    UI.edView = k; saveMeta();
+    $$('button', viewSeg).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === k)));
+    listPart.hidden = k !== 'list'; gridPart.hidden = k === 'list';
+    if (k === 'list') { gridPart.replaceChildren(); g.chapters = Tree.norm(g.chapters); draw(); }
+    else renderPages(id, g.chapters[0].id, gridPart, g);
+  };
+  v.replaceChildren(h('div', { class: 'wrap' },
+    h('header', { class: 'appbar' },
+      h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('detail', { id }) }, icon('back')),
+      h('div', { class: 'grow' }, h('h2', {}, 'Edit gallery')),
+      h('button', { class: 'btn primary small', onclick: () => back('detail', { id }) }, icon('check'), 'Done')),
+    h('div', { class: 'stack' },
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
+        h('input', { class: 'text', id: 'g-title', value: g.title, onchange: e => { g.title = e.target.value.trim() || g.title; saveGallery(g); toast('Name saved'); } })),
+      coverBox,
+      viewSeg, gridPart, listPart,
       h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'), h('p', { class: 'hint' }, 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.'), h('div', {}, delBtn))
     )));
+  showView(UI.edView || 'list');
 }
 async function dropCustomCover(g) {
   const c = g.customCover; g.customCover = null;
@@ -1220,10 +1235,10 @@ async function removePages(g, ids) {
   await DB.delMany('images', ids); await DB.delMany('thumbs', ids);
 }
 
-async function renderPages(id, chId) {
-  const v = $('#v-pages'); const g = await S.gal(id);
+async function renderPages(id, chId, host, gIn) {
+  const v = host || $('#v-pages'); const g = gIn || await S.gal(id);
   const ch = g && g.chapters.find(c => c.id === chId);
-  if (!ch) return back('editor', { id });
+  if (!ch) return host ? null : back('editor', { id });
   /* selection holds 'p:<page id>' and 'c:<folder id>' keys */
   const sel = new Set(); let selMode = false;
   const grid = h('div', { class: 'pgrid' });
@@ -1386,12 +1401,7 @@ async function renderPages(id, chId) {
   };
   const head = h('h2', {});
   const selBtn = h('button', { class: 'btn small', onclick: () => { selMode = !selMode; if (!selMode) sel.clear(); draw(); } }, 'Select');
-  v.replaceChildren(h('div', { class: 'wrap' },
-    h('header', { class: 'appbar' },
-      h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('editor', { id }) }, icon('back')),
-      h('div', { class: 'grow' }, head),
-      h('button', { class: 'btn primary small', onclick: () => back('editor', { id }) }, icon('check'), 'Done')),
-    h('div', { class: 'stack' },
+  const body = h('div', { class: 'stack' },
       h('div', { class: 'row' },
         h('button', { class: 'btn small primary picks', onclick: addImagesHere }, icon('plus'), 'Add images'),
         h('button', { class: 'btn small', onclick: newFolder }, icon('folder'), 'New folder'),
@@ -1399,8 +1409,15 @@ async function renderPages(id, chId) {
         h('button', { class: 'btn small', onclick: () => sortPages('asc') }, icon('sort'), 'By file name'),
         h('button', { class: 'btn small', onclick: () => sortPages('desc') }, 'Name Z–A'),
         h('button', { class: 'btn small', onclick: () => sortPages('rev') }, 'Reverse')),
-      h('p', { class: 'hint' }, 'Press and hold, then drag. A red line shows where it will go; a folder lights up when you are over it, and letting go puts things inside. Nothing moves until you let go. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
-      grid)), selbar);
+      h('p', { class: 'hint' }, 'Press and hold a folder (without dragging) to select it. Press and hold, then drag, to move. A red line shows where it will go; a folder lights up when you are over it, and letting go puts things inside. Nothing moves until you let go. Tap images to select them; while selecting, tapping a folder selects it too. Dragging a selected item carries the whole selection. Selected items can be hidden from reading: they stay in the gallery as extras.'),
+      grid);
+  if (host) v.replaceChildren(body, selbar);
+  else v.replaceChildren(h('div', { class: 'wrap' },
+    h('header', { class: 'appbar' },
+      h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('editor', { id }) }, icon('back')),
+      h('div', { class: 'grow' }, head),
+      h('button', { class: 'btn primary small', onclick: () => back('editor', { id }) }, icon('check'), 'Done')),
+    body), selbar);
   draw();
 
   /* ---- drag and drop (custom): nothing moves while dragging; a marker or a lit-up folder shows where things will go ---- */
@@ -1425,7 +1442,7 @@ async function renderPages(id, chId) {
     document.body.append(ghost);
     const carried = tiles().filter(t => keys.includes(keyOf(t)));
     carried.forEach(t => t.classList.add('carried'));
-    drag = { keys, pagesOnly: keys.every(x => x[0] === 'p'), ghost, carried, w: r.width, h: r.height, x, y, target: null };
+    drag = { keys, pagesOnly: keys.every(x => x[0] === 'p'), ghost, carried, w: r.width, h: r.height, x, y, sx: x, sy: y, target: null };
     try { navigator.vibrate && navigator.vibrate(12); } catch (e) { }
     moveDrag(x, y);
     const loop = () => {
@@ -1476,6 +1493,10 @@ async function renderPages(id, chId) {
     d.carried.forEach(t => t.classList.remove('carried'));
     noClick = performance.now() + 400;
     const t = d.target; if (t && t.into) t.el.classList.remove('droptarget');
+    // picked up and put back without really moving: select it (the way to select a folder without opening it)
+    const stayed = Math.hypot(d.x - d.sx, d.y - d.sy) < 24;
+    const sameOrder = () => { if (!t || t.into) return false; const tk = keyOf(t.el); if (d.keys.includes(tk)) return true; const order = tiles().map(keyOf), rest = order.filter(k => !d.keys.includes(k)); const at = rest.indexOf(tk) + (t.after ? 1 : 0); rest.splice(at, 0, ...d.keys); return rest.join() === order.join(); };
+    if (!cancelled && (stayed || !t || sameOrder())) { d.keys.forEach(k => sel.add(k)); draw(); return; }
     if (cancelled || !t) return;
     if (t.into) return moveKeys(d.keys, t.el.dataset.cid);
     const tk = keyOf(t.el); if (d.keys.includes(tk)) return;
