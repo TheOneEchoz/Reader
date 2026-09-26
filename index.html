@@ -233,6 +233,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .spread.fit-width.n2 img{width:50vw}
 .spread.fit-height img{height:100dvh;width:auto}
 .spread.fit-original img{max-width:none}
+.spread img.ph{object-fit:fill}
 .missing{width:60vw;max-width:360px;aspect-ratio:2/3;display:grid;place-items:center;color:#888;border:1px dashed #555}
 #strip{position:absolute;inset:0;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x pan-y}
 #strip::-webkit-scrollbar{display:none}
@@ -1308,7 +1309,7 @@ const isRTL = () => R.p.dir === 'rtl' && R.p.mode !== 'vertical';
 async function openReader(id, ch, page, start) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
-  R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters); R.pinned = []; R.groupKey = null; PIN.clear();
+  R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters); PIN.clear();
   R.pages = Tree.order(g.chapters).map(o => ({ id: o.id, ch: o.ch, i: o.i }));
   R.idx = new Map(R.pages.map((pg, k) => [pg.ch + ':' + pg.i, k]));
   R.chStart = g.chapters.map((c, ci) => R.idx.has(ci + ':0') ? R.idx.get(ci + ':0') : -1);
@@ -1331,7 +1332,8 @@ async function openReader(id, ch, page, start) {
 }
 function leaveReader() {
   $('#warmN').replaceChildren(); $('#warmP').replaceChildren();
-  PRE.clear(); PIN.clear(); R.pinned = []; R.groupKey = null; R.groupTok = (R.groupTok || 0) + 1;
+  PRE.clear(); READY.clear(); PIN.clear();
+  for (const [k, u] of [...URLS]) if (k[0] === 'i') { URLS.delete(k); URL.revokeObjectURL(u); }
   saveProgress(true); teardownStrip(); wakeOff(); clearTimeout(tapTimer);
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { }
   spread.replaceChildren();
@@ -1367,64 +1369,32 @@ function buildSpreads() {
   flush();
 }
 /* Pages near the current one are decrypted and decoded ahead of time, so turning is instant. */
-const PRE = new Map();
+const PRE = new Map(), READY = new Set();
 function getPage(id) {
   if (PRE.has(id)) return PRE.get(id);
   const p = imgURL(id).then(async u => {
     if (!u) return null;
     const img = new Image(); img.decoding = 'async'; img.draggable = false; img.src = u;
     try { await img.decode(); } catch (e) { }
+    READY.add(id);
     return img;
   });
   PRE.set(id, p); return p;
 }
-/* Decrypt every page of the chapter you are in (with all its sub-chapters) as soon as you enter it. */
-function groupRange(pos) {
-  const chs = R.g.chapters, ci = R.pages[pos].ch;
-  if (!ci) return [0, 1];
-  let a = ci; while (Tree.dep(chs[a]) > 1) a = Tree.parent(chs, a);
-  return [a, Tree.end(chs, a)];
-}
-/* Pages stay decrypted while the reader is open: the chapter you are in, every chapter you have
-   passed through, and the chapter before the current one. Only if this grows past PIN_MAX pages
-   are the chapters visited longest ago released. */
-const PIN_MAX = 1500;
-function pinGroup(a, b) {
-  const key = a + ':' + b, idxs = [];
-  R.pages.forEach((pg, k) => { if (pg.ch >= a && pg.ch < b) idxs.push(k); });
-  R.pinned = (R.pinned || []).filter(gp => gp.key !== key);
-  R.pinned.push({ key, ids: idxs.map(k => R.pages[k].id) });
-  let total = R.pinned.reduce((n, gp) => n + gp.ids.length, 0);
-  while (total > PIN_MAX && R.pinned.length > 1) total -= R.pinned.shift().ids.length;
-  PIN.clear(); R.pinned.forEach(gp => gp.ids.forEach(id => PIN.add(id)));
-  return idxs;
-}
-function preloadGroup() {
-  if (!R.g || !R.pages.length) return;
-  const [a, b] = groupRange(R.pos), key = R.g.id + ':' + a + ':' + b;
-  if (R.groupKey === key) return;
-  R.groupKey = key; const tok = R.groupTok = (R.groupTok || 0) + 1;
-  const idxs = pinGroup(a, b);
-  idxs.sort((x, y) => { const f = k => k >= R.pos ? k - R.pos : (R.pos - k) * 3; return f(x) - f(y); });
-  // the chapter before this one, so going back is instant too
-  const first = idxs.length ? Math.min(...idxs) : 0;
-  let prevIdxs = [];
-  if (first > 0) { const [pa, pb] = groupRange(first - 1); if (pa !== a) prevIdxs = pinGroup(pa, pb).sort((x, y) => y - x); pinGroup(a, b); }
-  const queue = [...idxs, ...prevIdxs]; let i = 0;
-  const worker = async () => { while (i < queue.length) { if (tok !== R.groupTok) return; await imgURL(R.pages[queue[i++]].id); } };
-  worker(); worker();
-}
 function preloadAround() {
-  preloadGroup();
   const ahead = R.p.mode === 'double' ? 10 : 6, behind = ahead;
   const want = [];
   for (let d = 1; d <= ahead; d++) want.push(R.pos + d);
   for (let d = 1; d <= behind; d++) want.push(R.pos - d);
   const ids = new Set(currentIdx().map(i => R.pages[i].id));
   want.forEach(j => { if (j >= 0 && j < R.pages.length) ids.add(R.pages[j].id); });
-  for (const id of [...PRE.keys()]) if (!ids.has(id)) PRE.delete(id);
+  for (const id of [...PRE.keys()]) if (!ids.has(id)) { PRE.delete(id); READY.delete(id); }
+  // only the pages being prepared stay decrypted; everything else is released
+  PIN.clear(); ids.forEach(id => PIN.add(id));
+  for (const [k, u] of [...URLS]) if (k[0] === 'i' && !ids.has(k.slice(1))) { URLS.delete(k); URL.revokeObjectURL(u); }
   // load the next pages first, one after another, so the page you turn to next is ready soonest
   const pos = R.pos;
+  for (let d = -20; d <= 30; d++) { const j = pos + d; if (j >= 0 && j < R.pages.length) imgURL(R.pages[j].id, 'thumbs'); }
   (async () => {
     let n = 0;
     for (const id of ids) { if (!R.g || R.pos !== pos) return; await getPage(id); if (++n === 3) warmUp(); }
@@ -1450,21 +1420,45 @@ async function warmUp() {
 }
 const currentIdx = () => R.p.mode === 'double' ? R.spreads[R.spreadOf[R.pos]] : [R.pos];
 async function renderPaged() {
-  const tok = ++R.tok, idxs = currentIdx();
+  const tok = ++R.tok, idxs = currentIdx(), n = idxs.length;
+  let shown = false;
+  // Full page not ready yet (turning very fast)? Show the small preview right away, then sharpen.
+  if (!idxs.every(i => READY.has(R.pages[i].id))) {
+    const quick = await Promise.all(idxs.map(i => READY.has(R.pages[i].id) ? getPage(R.pages[i].id) : preview(R.pages[i].id, n)));
+    if (tok !== R.tok) return;
+    if (quick.every(Boolean)) { showSpread(quick.map((im, k) => label(im, idxs[k])), true); shown = true; }
+  }
   const nodes = await Promise.all(idxs.map(async idx => {
     const img = await getPage(R.pages[idx].id);
-    if (!img) return h('div', { class: 'missing' }, 'Page missing');
-    img.alt = `Page ${R.pages[idx].i + 1}`;
-    return img;
+    return img ? label(img, idx) : h('div', { class: 'missing' }, 'Page missing');
   }));
   if (tok !== R.tok) return;
-  if (isRTL()) nodes.reverse();
-  const prev = { ...R.zoom }, keep = R.p.keepZoomPos && Math.abs(prev.s - 1) > .01 && spread.childElementCount > 0;
+  showSpread(nodes, !shown);
+  requestAnimationFrame(() => setTimeout(preloadAround, 0));
+}
+function label(img, idx) { img.alt = `Page ${R.pages[idx].i + 1}`; return img; }
+function showSpread(nodes, newPage) {
+  if (isRTL()) nodes = [...nodes].reverse();
+  const prev = { ...R.zoom }, keep = !newPage || (R.p.keepZoomPos && Math.abs(prev.s - 1) > .01 && spread.childElementCount > 0);
   spread.className = `spread fit-${R.p.fit} n${nodes.length}`;
   spread.replaceChildren(...nodes);
   if (!keep) { stage.scrollTop = 0; stage.scrollLeft = isRTL() ? stage.scrollWidth : 0; }
-  applyStartZoom(keep ? prev : null);
-  requestAnimationFrame(() => setTimeout(preloadAround, 0));
+  if (newPage) applyStartZoom(keep ? prev : null);
+}
+/* The small copy made at import (240 px wide), stretched to exactly the size the full page will have. */
+async function preview(id, n) {
+  const m = R.g.meta[id]; if (!m) return null;
+  const [w, hh] = m; if (hh > w * 2) return null; // very tall pages have a cropped small copy
+  const u = await imgURL(id, 'thumbs'); if (!u) return null;
+  const img = new Image(); img.src = u; img.draggable = false; img.className = 'ph';
+  const r = (w / hh).toFixed(5), fit = R.p.fit;
+  img.style.cssText = `aspect-ratio:${w}/${hh};` + (
+    fit === 'width' ? `width:${100 / n}vw;height:auto` :
+    fit === 'height' ? `height:100dvh;width:auto` :
+    fit === 'original' ? `width:${w}px;height:auto` :
+    `width:min(${100 / n}vw, calc(100dvh * ${r}));height:auto;max-width:none;max-height:none`);
+  try { await Promise.race([img.decode(), sleep(80)]); } catch (e) { }
+  return img;
 }
 function step(d) {
   if (!R.pages.length) return;
@@ -1502,7 +1496,6 @@ function posChanged() {
     R.g.read = R.g.read || []; if (!R.g.read.includes(chp.id)) R.g.read.push(chp.id);
   }
   updateUI(); saveProgress();
-  if (!paged(R.p.mode)) preloadGroup();
 }
 let saveT;
 function saveProgress(now) {
@@ -1586,7 +1579,6 @@ function buildStrip() {
   $$('.pg', strip).forEach(e => R.io.observe(e));
   const a = R.anchor && R.pages[R.anchor.idx] && R.pages[R.anchor.idx].ch === R.pages[R.pos].ch ? R.anchor : { idx: R.pos, frac: 0 };
   requestAnimationFrame(() => scrollToIdx(a.idx, a.frac));
-  preloadGroup();
 }
 function loadPg(el) {
   el._want = true; if (el.firstChild) return;
