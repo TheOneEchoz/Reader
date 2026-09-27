@@ -1,6 +1,6 @@
 {
- "version": 47,
- "name": "1.10.2",
+ "version": 48,
+ "name": "1.11.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,8 +16,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Direct Wi\u2011Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.",
-  "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.",
-  "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi\u2011Fi at full speed during a transfer instead of letting power saving slow it down."
+  "Tags belong to your account: Settings \u2192 Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.",
+  "Tag a whole gallery from Edit gallery \u2192 Gallery tags.",
+  "New tag search: every chosen tag can be \u201cmust have\u201d, \u201cany of\u201d or \u201cmust not have\u201d, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."
  ]
 }

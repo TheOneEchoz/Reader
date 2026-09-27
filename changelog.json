@@ -1,5 +1,15 @@
 [
  {
+  "v": 48,
+  "name": "1.11.0",
+  "date": "2026-09-27",
+  "items": [
+   "Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.",
+   "Tag a whole gallery from Edit gallery → Gallery tags.",
+   "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."
+  ]
+ },
+ {
   "v": 47,
   "name": "1.10.2",
   "date": "2026-09-27",

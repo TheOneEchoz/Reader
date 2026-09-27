@@ -251,6 +251,13 @@ body.reading .bgprog{display:none}
 .cl-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .cl-item ul{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px;line-height:1.4}
 .updbanner{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tagchip.tq{padding-left:10px}
+.tagchip.tq-must{background:var(--accent);color:var(--accent-ink)}
+.tagchip.tq-any{background:var(--surface);border:1.5px dashed var(--accent)}
+.tagchip.tq-not{background:var(--surface2);text-decoration:line-through;text-decoration-thickness:2px;color:var(--muted)}
+.tagchip.tq-not .tq-w,.tagchip.tq-not .tc-x{text-decoration:none}
+.tagchip.tq-off{background:var(--surface2);opacity:.8}
+.tagchip .tq-w{display:inline-block;margin-right:6px;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;opacity:.9;text-decoration:none;color:inherit}
 .tagsel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex-basis:100%}
 .tagchip{display:inline-flex;align-items:center;border-radius:999px;background:var(--accent-soft);color:var(--ink);font-size:14px;font-weight:600;min-height:34px;padding-left:12px}
 .tagchip.some{background:var(--surface2);border:1.5px dashed var(--line)}
@@ -491,8 +498,8 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 47; // replaced by the build with the release number
-const CHANGELOG = [{"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 48; // replaced by the build with the release number
+const CHANGELOG = [{"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -760,6 +767,7 @@ async function allTags() {
   if (TAGS) return TAGS;
   const m = new Map();
   for (const g of await S.gals()) for (const list of Object.values(g.tags || {})) for (const t of list) { const k = t.toLowerCase(), e = m.get(k); if (e) e.n++; else m.set(k, { name: t, n: 1 }); }
+  try { const r = await TagReg.get(); for (const t of (r && r.list) || []) if (!m.has(t.toLowerCase())) m.set(t.toLowerCase(), { name: t, n: 0 }); } catch (e) { }
   return TAGS = m;
 }
 function addTag(g, key, t) { INH.delete(g); g.tags = g.tags || {}; const l = g.tags[key] || (g.tags[key] = []); if (!l.some(x => tagEq(x, t))) l.push(t); TAGS = null; }
@@ -774,17 +782,110 @@ function pruneTags(g) {
 function galTags(g) { const m = new Map(); for (const l of Object.values(g.tags || {})) for (const t of l) if (!m.has(t.toLowerCase())) m.set(t.toLowerCase(), t); return m; }
 /* Pages carrying the tag themselves or inside a tagged folder, in reading order (hidden ones included). */
 /* A tag search: several tags, matched all together (default) or any of them. */
+/* A tag search: tags that must be there, tags of which any one will do, and tags that must not be there. All three at once. */
+const TQ_MODES = ['must', 'any', 'not'];
+const tqNew = () => ({ must: [], any: [], not: [] });
+const tqEmpty = q => !q || !(q.must.length || q.any.length || q.not.length);
 function tagQuery(params) {
-  const tags = (params.tags || (params.tag ? [params.tag] : [])).filter(Boolean);
-  return tags.length ? { tags, any: !!params.any && tags.length > 1 } : null;
+  const q = tqNew();
+  for (const m of TQ_MODES) if (Array.isArray(params[m])) q[m] = params[m].filter(Boolean);
+  const old = (params.tags || (params.tag ? [params.tag] : [])).filter(Boolean); // older addresses
+  if (old.length) q[params.any ? 'any' : 'must'].push(...old);
+  return tqEmpty(q) ? null : q;
 }
-const tqParams = q => q ? (q.any ? { tags: q.tags, any: 1 } : { tags: q.tags }) : {};
-const tagLabel = q => q.tags.map(t => '#' + t).join(q.any ? ' or ' : ' + ');
-function tagsMatch(have, q) { const hs = have.map(t => t.toLowerCase()); const f = t => hs.includes(t.toLowerCase()); return q.any ? q.tags.some(f) : q.tags.every(f); }
+const tqParams = q => { const o = {}; if (q) for (const m of TQ_MODES) if (q[m].length) o[m] = q[m]; return o; };
+const tqModeOf = (q, t) => TQ_MODES.find(m => q[m].some(x => tagEq(x, t))) || null;
+function tqSet(q, t, mode) { const n = tqNew(); for (const m of TQ_MODES) n[m] = q[m].filter(x => !tagEq(x, t)); if (mode) n[mode].push(t); return n; }
+const tqNext = m => m === null ? 'must' : m === 'must' ? 'any' : m === 'any' ? 'not' : null;
+function tagLabel(q) {
+  const parts = [];
+  if (q.must.length) parts.push(q.must.map(t => '#' + t).join(' + '));
+  if (q.any.length) parts.push((q.must.length ? 'and any of ' : q.any.length > 1 ? 'any of ' : '') + q.any.map(t => '#' + t).join(' or '));
+  if (q.not.length) parts.push('without ' + q.not.map(t => '#' + t).join(', '));
+  return parts.join(', ');
+}
+function tagsMatch(have, q) {
+  const hs = have.map(t => t.toLowerCase()), f = t => hs.includes(t.toLowerCase());
+  return q.must.every(f) && !q.not.some(f) && (!q.any.length || q.any.some(f));
+}
+/* Chips for a tag search. Tapping a chip switches: must have → any of → must not have. */
+function tqChips(q, onChange, extraTags) {
+  const names = []; const seen = new Set();
+  for (const t of [...q.must, ...q.any, ...q.not, ...(extraTags || [])]) if (!seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); names.push(t); }
+  const word = { must: 'must have', any: 'any of', not: 'must not have' };
+  return h('div', { class: 'stack', style: 'gap:8px' },
+    h('div', { class: 'tagchips' }, names.map(t => {
+      const m = tqModeOf(q, t);
+      return h('span', { class: 'tagchip tq ' + (m ? 'tq-' + m : 'tq-off') },
+        h('button', { class: 'tc-add', type: 'button', 'aria-label': `#${t}: ${m ? word[m] : 'not used'}. Tap to change`, onclick: () => onChange(tqSet(q, t, tqNext(m))) },
+          m ? h('small', { class: 'tq-w' }, word[m]) : null, '#' + t),
+        m ? h('button', { class: 'tc-x', type: 'button', 'aria-label': `Stop using #${t}`, onclick: () => onChange(tqSet(q, t, null)) }, icon('x')) : null);
+    })),
+    tqEmpty(q) && !(extraTags || []).length ? null : h('p', { class: 'hint', style: 'margin:0' }, 'Tap a tag to switch between must have, any of, and must not have. Pages must have every “must have” tag, at least one “any of” tag (if there are any), and none of the “must not have” tags.'));
+}
 /* Pages matching a tag search (their own tags plus those of every folder around them), in reading order, hidden ones included. */
 function taggedPages(g, q) {
-  if (typeof q === 'string') q = { tags: [q] };
+  if (typeof q === 'string') q = { must: [q], any: [], not: [] };
   return Tree.order(g.chapters, null).filter(o => tagsMatch(allTagsOf(g, 'p:' + o.id), q));
+}
+/* The account's tag list: every tag you made, even ones no page uses yet. It is one small encrypted record that syncs. */
+const TagReg = {
+  id: null, cache: null,
+  async init() { this.id = 'tags-' + (await Crypt.hash('tag-registry')).slice(0, 20); this.cache = null; },
+  async get() { if (!this.id) return null; if (!this.cache) this.cache = (await S.gal(this.id)) || { id: this.id, kind: 'tags', list: [], updatedAt: 0 }; return this.cache; },
+  async save(r) { r.updatedAt = Date.now(); this.cache = r; await S.putGal(r); Sync.touched(r.id); },
+  async add(names) {
+    const r = await this.get(); if (!r) return; let ch = false;
+    for (const n of names.map(normTag).filter(Boolean)) if (!r.list.some(x => tagEq(x, n))) { r.list.push(n); ch = true; }
+    if (ch) { r.list.sort(natural); await this.save(r); }
+  },
+  /* rename or delete a tag everywhere in this account */
+  async rename(from, to) {
+    to = normTag(to); if (!to) return;
+    for (const g of await S.gals()) {
+      let ch = false;
+      for (const k of Object.keys(g.tags || {})) { const l = g.tags[k]; const i = l.findIndex(x => tagEq(x, from)); if (i >= 0) { l.splice(i, 1); if (!l.some(x => tagEq(x, to))) l.push(to); ch = true; } }
+      if (ch) { INH.delete(g); await saveGallery(g); }
+    }
+    const r = await this.get(); r.list = r.list.filter(x => !tagEq(x, from) && !tagEq(x, to)); r.list.push(to); r.list.sort(natural); await this.save(r); TAGS = null;
+    for (const m of TQ_MODES) if (LIBTAGS[m].some(x => tagEq(x, from))) LIBTAGS = tqSet(LIBTAGS, to, m);
+  },
+  async remove(name) {
+    for (const g of await S.gals()) {
+      let ch = false;
+      for (const k of Object.keys(g.tags || {})) { const l = g.tags[k].filter(x => !tagEq(x, name)); if (l.length !== g.tags[k].length) { ch = true; if (l.length) g.tags[k] = l; else delete g.tags[k]; } }
+      if (ch) { INH.delete(g); await saveGallery(g); }
+    }
+    const r = await this.get(); r.list = r.list.filter(x => !tagEq(x, name)); await this.save(r); TAGS = null;
+    LIBTAGS = tqSet(LIBTAGS, name, null);
+  },
+};
+/* Settings → Tags: the account's tags, with how often each is used */
+async function openTagManager() {
+  const box = h('div', { class: 'stack' });
+  const draw = async () => {
+    TAGS = null; const used = await allTags(), reg = await TagReg.get();
+    const names = [...new Set([...(reg ? reg.list : []), ...[...used.values()].map(t => t.name)].map(t => t))].sort(natural)
+      .filter((t, i, a) => a.findIndex(x => tagEq(x, t)) === i);
+    const nu = t => (used.get(t.toLowerCase()) || { n: 0 }).n;
+    const newIn = h('input', { class: 'text', id: 'tm-new', placeholder: 'New tag name', autocomplete: 'off' });
+    box.replaceChildren(
+      h('p', { class: 'hint' }, 'These tags belong to this account. Renaming or deleting a tag changes it on every page and folder of every gallery. Other accounts have their own tags.'),
+      h('form', { class: 'row', onsubmit: async e => { e.preventDefault(); const t = normTag(newIn.value); if (!t) return; await TagReg.add([t]); toast(`#${t} added`); draw(); } },
+        h('div', { style: 'flex:1;min-width:0' }, newIn), h('button', { class: 'btn primary small', type: 'submit' }, icon('plus'), 'Add')),
+      names.length ? h('div', { class: 'setlist' }, names.map(t => {
+        let armed = false;
+        const del = h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
+          if (!armed) { armed = true; del.textContent = nu(t) ? `Remove from ${plural(nu(t), 'place')}?` : 'Delete?'; return; }
+          await withBusy(() => TagReg.remove(t)); toast(`#${t} deleted`); draw();
+        } }, icon('trash'));
+        return h('div', { class: 'setitem' }, icon('tag'),
+          h('input', { class: 'text', value: t, 'aria-label': `Rename #${t}`, style: 'height:40px', onchange: async e => { const to = normTag(e.target.value); if (!to || tagEq(to, t) && to === t) return; await withBusy(() => TagReg.rename(t, to)); toast(`Renamed to #${to}`); draw(); } }),
+          h('span', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, h('span', { class: 'hint num' }, nu(t) ? plural(nu(t), 'use') : 'unused'), del));
+      })) : h('p', { class: 'hint' }, 'No tags yet.'));
+  };
+  await draw();
+  subSheet('Tags', box);
 }
 /* Tags a page or folder gets from the folders around it. Cached per gallery until its tags or folders change. */
 const INH = new WeakMap();
@@ -864,7 +965,7 @@ function openTagSheet(g, keys, title, after) {
       : [h('p', { class: 'hint', style: 'margin:0' }, inh.size ? 'No tags of their own yet.' : 'No tags yet.')]));
   };
   drawChips();
-  const picker = tagPicker({ id: 'tag-add', placeholder: 'Type a tag, or pick one below', onPick: t => apply(k => addTag(g, k, t)),
+  const picker = tagPicker({ id: 'tag-add', placeholder: 'Type a tag, or pick one below', onPick: t => { TagReg.add([t]); apply(k => addTag(g, k, t)); },
     exclude: name => keys.every(k => allTagsOf(g, k).some(x => tagEq(x, name))) });
   openSheet(title, h('div', { class: 'stack', style: 'min-height:320px;align-content:start' }, chips, inhBox,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'tag-add' }, 'Add a tag'), picker),
@@ -1325,7 +1426,7 @@ function lazyThumb(id, alt = '') { const img = h('img', { alt, decoding: 'async'
 function folderThumb(g, ci) { const c = g.chapters[ci]; if (c && c.cover && g.meta[c.cover]) return c.cover; const ord = Tree.order(g.chapters), e = Tree.end(g.chapters, ci); const hit = ord.find(o => o.ch >= ci && o.ch < e); return hit ? hit.id : null; }
 
 /* ================= library ================= */
-let LIBTAGS = { tags: [], any: false }; // tag filter in the library, kept while the app is open
+let LIBTAGS = tqNew(); // tag search in the library, kept while the app is open
 async function renderLibrary() {
   const v = $('#v-library');
   let gals = await S.gals();
@@ -1335,32 +1436,28 @@ async function renderLibrary() {
   const grid = h('div', { class: 'grid' });
   const search = h('input', { class: 'search', type: 'search', placeholder: 'Search titles or pick #tags', 'aria-label': 'Search galleries by title or tag' });
   /* chosen tags (any number) stay as chips under the search box */
-  const ts = LIBTAGS; const chipRow = h('div', { class: 'tagsel' });
-  const addSel = t => { if (!ts.tags.some(x => tagEq(x, t))) ts.tags.push(t); search.value = ''; drawGrid(); };
+  const chipRow = h('div', { class: 'tagsel' });
+  const addSel = t => { if (!tqModeOf(LIBTAGS, t)) LIBTAGS = tqSet(LIBTAGS, t, 'must'); search.value = ''; drawGrid(); };
   const drawChips = () => {
-    chipRow.hidden = !ts.tags.length; if (!ts.tags.length) return chipRow.replaceChildren();
-    chipRow.replaceChildren(...ts.tags.map(t => h('span', { class: 'tagchip' }, h('span', {}, '#' + t),
-      h('button', { class: 'tc-x', type: 'button', 'aria-label': `Stop filtering by #${t}`, onclick: () => { ts.tags = ts.tags.filter(x => x !== t); drawGrid(); } }, icon('x')))),
-      ts.tags.length > 1 ? h('div', { class: 'seg', role: 'group', 'aria-label': 'How tags combine' }, [[false, 'All of them'], [true, 'Any of them']].map(([v, l]) =>
-        h('button', { 'aria-pressed': String(ts.any === v), onclick: () => { ts.any = v; drawGrid(); } }, l))) : null,
-      h('button', { class: 'btn ghost small', onclick: () => { ts.tags = []; drawGrid(); } }, 'Clear'));
+    chipRow.hidden = tqEmpty(LIBTAGS); if (chipRow.hidden) return chipRow.replaceChildren();
+    chipRow.replaceChildren(tqChips(LIBTAGS, q => { LIBTAGS = q; drawGrid(); }), h('button', { class: 'btn ghost small', onclick: () => { LIBTAGS = tqNew(); drawGrid(); } }, 'Clear the tag search'));
   };
   const drawGrid = () => {
     drawChips();
     const raw = search.value.trim(), isTag = raw.startsWith('#'), q = normTag(raw).toLowerCase();
-    const tq = ts.tags.length ? { tags: ts.tags, any: ts.any && ts.tags.length > 1 } : null;
+    const tq = tqEmpty(LIBTAGS) ? null : LIBTAGS;
     const hit = g => {
       const tg = [...galTags(g).keys()];
-      if (tq && !(tq.any ? tq.tags.some(t => tg.includes(t.toLowerCase())) : taggedPages(g, tq).length)) return false;
+      if (tq && !taggedPages(g, tq).length) return false;
       if (!q) return true;
       return isTag ? tg.some(t => t.includes(q)) : g.title.toLowerCase().includes(q) || tg.some(t => t.includes(q));
     };
     const list = gals.filter(hit);
     grid.replaceChildren(...list.map(g => card(g, tq)));
-    if ((q || tq) && !list.length) grid.replaceChildren(h('p', { class: 'hint', style: 'grid-column:1/-1' }, tq ? `No gallery has ${tq.any ? 'any of' : 'all of'} ${tagLabel(tq)}.` : 'No gallery matches.'));
+    if ((q || tq) && !list.length) grid.replaceChildren(h('p', { class: 'hint', style: 'grid-column:1/-1' }, tq ? `No gallery has pages that fit: ${tagLabel(tq)}.` : 'No gallery matches.'));
   };
   search.addEventListener('input', drawGrid);
-  const searchBox = tagPicker({ id: 'lib-search', input: search, allowNew: false, refocus: true, showEmpty: true, onPick: addSel, exclude: n => ts.tags.some(x => tagEq(x, n)) });
+  const searchBox = tagPicker({ id: 'lib-search', input: search, allowNew: false, refocus: true, showEmpty: true, onPick: addSel, exclude: n => !!tqModeOf(LIBTAGS, n) });
   v.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'appbar' },
       h('div', { class: 'grow' }, h('div', { class: 'wordmark' }, h('span', { class: 'hanko' }, '本'), 'TANKŌBON'),
@@ -1442,6 +1539,7 @@ function openGlobalSettings() {
       })),
     setGroup('Library',
       setItem('archive', 'Storage', h('span', {}, NATIVE ? (DESK ? 'Documents › Tankobon' : 'The app\'s own storage') : ST.folder ? 'A phone folder' : 'This browser', ' · ', usage), () => { closeSheet(); openStorage(); }),
+      setItem('tag', 'Tags', 'Rename, delete or add this account\'s tags', () => { closeSheet(); openTagManager(); }),
       setItem('plus', 'Add the sample gallery', 'A short example comic to try the reader with', () => { closeSheet(); addSample(); })),
     setGroup('App',
       NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VNAME} · version ${VNAME(upd.version, upd)} is available` : AppFile.latest ? `Version ${APP_VNAME} · a new app file is available` : `Version ${APP_VNAME}`, go2(openUpdates), upd || AppFile.latest ? h('span', { class: 'chip' }, 'NEW') : null) : null,
@@ -1522,7 +1620,7 @@ async function renderDetail(id, folderId, tq) {
           !ord && Tree.subtreePages(chs, fi) ? h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', { id, scope: F.id }) }, icon('play'), 'View these extras') : null),
         hiddenHere ? h('div', { class: 'banner' }, 'This folder is hidden from reading. It is skipped when you read the gallery, but you can open its pages here.') : null),
       atRoot && galTags(g).size ? h('div', { class: 'panel' }, h('div', { class: 'label' }, 'Tags · tap one to see and read only those pages'),
-        h('div', { class: 'tagchips' }, [...galTags(g).values()].sort(natural).map(t => h('button', { class: 'tagchip link', onclick: () => go('detail', { id, tags: [t] }) }, '#' + t)))) : null,
+        h('div', { class: 'tagchips' }, [...galTags(g).values()].sort(natural).map(t => h('button', { class: 'tagchip link', onclick: () => go('detail', { id, must: [t] }) }, '#' + t)))) : null,
       atRoot ? h('div', { class: 'panel' }, h('div', { class: 'label' }, 'How pages appear'), modes, dirRow) : null,
       tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Edit to add images or folders.'))
     )));
@@ -1531,11 +1629,10 @@ async function renderDetail(id, folderId, tq) {
 function renderTagged(v, g, tq) {
   const id = g.id, ord = taggedPages(g, tq), tags = [...galTags(g).values()].sort(natural), chs = g.chapters, label = tagLabel(tq);
   const P = extra => ({ id, ...tqParams(tq), ...extra });
-  const redo = q => go('detail', { id, ...tqParams(q) }, true);
-  const toggle = t => { const on = tq.tags.some(x => tagEq(x, t)); const next = on ? tq.tags.filter(x => !tagEq(x, t)) : [...tq.tags, t]; next.length ? redo({ tags: next, any: tq.any }) : back('detail', { id }); };
+  const redo = q => tqEmpty(q) ? back('detail', { id }) : go('detail', { id, ...tqParams(q) }, true);
   // folders matching (their own tags or from a folder above); only the outermost ones are shown
   const hasTag = i => tagsMatch(allTagsOf(g, 'c:' + chs[i].id), tq);
-  const folders = chs.map((c, i) => i).filter(i => !chs[i].root && hasTag(i) && !(Tree.parent(chs, i) > 0 && hasTag(Tree.parent(chs, i))));
+  const folders = tq.must.length || tq.any.length ? chs.map((c, i) => i).filter(i => !chs[i].root && hasTag(i) && !(Tree.parent(chs, i) > 0 && hasTag(Tree.parent(chs, i)))) : [];
   const ftiles = folders.map(i => h('button', { class: 'btile folder', 'aria-label': `Folder ${chs[i].title}`, onclick: () => go('detail', { id, folder: chs[i].id }) },
     h('span', { class: 'bthumb' }, lazyThumb(folderThumb(g, i)), h('span', { class: 'bfold' }, icon('folder'))),
     h('span', { class: 'bcap' }, h('b', {}, chs[i].title), h('span', { class: 'num' }, plural(Tree.subtreePages(chs, i), 'page')))));
@@ -1546,15 +1643,12 @@ function renderTagged(v, g, tq) {
       h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => back('detail', { id }) }, icon('back')),
       h('div', { class: 'grow' }, h('h2', {}, label), h('div', { class: 'sub' }, g.title))),
     h('div', { class: 'stack' },
-      h('div', { class: 'sub num' }, `${plural(ord.length, 'page')} ${tq.tags.length < 2 ? 'with this tag' : tq.any ? 'with any of these tags' : 'with all of these tags'}, including pages inside tagged folders.`),
+      h('div', { class: 'sub num' }, `${plural(ord.length, 'page')} fit this search. Tags on a folder count for everything inside it.`),
       ord.length ? h('div', { class: 'row' }, h('button', { class: 'btn primary', style: 'flex:1', onclick: () => go('reader', P()) }, icon('play'), `Read only ${label}`)) : null,
-      tags.length > 1 ? h('div', { class: 'stack', style: 'gap:8px' }, h('div', { class: 'label' }, 'Tap tags to add or remove them'),
-        h('div', { class: 'tagchips' }, tags.map(t => h('button', { class: 'tagchip link', 'aria-pressed': String(tq.tags.some(x => tagEq(x, t))), onclick: () => toggle(t) }, '#' + t))),
-        tq.tags.length > 1 ? h('div', { class: 'seg', role: 'group', 'aria-label': 'How tags combine' }, [[false, 'All of them'], [true, 'Any of them']].map(([v, l]) =>
-          h('button', { 'aria-pressed': String(!!tq.any === v), onclick: () => redo({ tags: tq.tags, any: v }) }, l))) : null) : null,
+      h('div', { class: 'label' }, 'Tags in this gallery'), tqChips(tq, redo, tags),
       ftiles.length ? h('div', { class: 'label' }, 'Folders') : null, ftiles.length ? h('div', { class: 'bgrid' }, ftiles) : null,
       ftiles.length && tiles.length ? h('div', { class: 'label' }, 'Pages') : null,
-      tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, tq.tags.length > 1 && !tq.any ? 'No page has all of these tags. Try “Any of them”.' : 'No pages have this tag any more.')))));
+      tiles.length ? h('div', { class: 'bgrid' }, tiles) : h('div', { class: 'empty' }, h('p', { class: 'hint' }, 'No page fits this search. Tap the tags above to change it.')))));
 }
 
 /* ================= editor ================= */
@@ -1692,7 +1786,12 @@ async function renderEditor(id, folderId, view) {
   } }, atRoot ? 'Delete this gallery' : 'Delete this folder');
   const folderTags = h('div', { class: 'row' });
   const drawFolderTags = () => {
-    if (atRoot) return;
+    if (atRoot) { // tags on the whole gallery count for every page in it
+      const own = tagsOf(g, 'c:' + F.id);
+      folderTags.replaceChildren(h('button', { class: 'btn small', onclick: () => openTagSheet(g, ['c:' + F.id], `Tags for ${g.title}`, drawFolderTags) }, icon('tag'), own.length ? own.map(t => '#' + t).join(' ') : 'Gallery tags'),
+        h('span', { class: 'hint' }, 'Tags here count for every page in the gallery.'));
+      return;
+    }
     const own = tagsOf(g, 'c:' + F.id), inh = inheritedTags(g, 'c:' + F.id);
     folderTags.replaceChildren(...[
       h('button', { class: 'btn small', onclick: () => openTagSheet(g, ['c:' + F.id], `Tags for ${F.title}`, drawFolderTags) }, icon('tag'), own.length ? own.map(t => '#' + t).join(' ') : 'Tags'),
@@ -1747,7 +1846,7 @@ async function renderEditor(id, folderId, view) {
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'g-title' }, 'Name'),
         h('input', { class: 'text', id: 'g-title', value: atRoot ? g.title : F.title, onchange: e => { const t = e.target.value.trim(); if (!t) return; if (atRoot) g.title = t; else F.title = t; saveGallery(g); toast('Name saved'); } })),
       coverBox,
-      atRoot ? null : folderTags,
+      folderTags,
       viewSeg, gridPart, listPart,
       h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Remove'),
         h('p', { class: 'hint' }, atRoot ? 'Deletes the gallery and its copied pages from this app. Your original folder is not touched.' : 'Deletes this folder, the folders inside it and their pages from this gallery. Your original files are not touched.'),
@@ -3118,9 +3217,9 @@ const Crypt = (() => {
 
 /* Encrypted records on top of IndexedDB. Galleries: {id, e}. Images/thumbs: {id, t: mime, e}. */
 const S = {
-  async open(r) { if (!r) return null; let g = r; if (r.e) { try { g = await Crypt.decJSON(r.e); } catch (e) { return null; } } if (g && g.chapters) Tree.ensureRoot(g); return g; },
+  async open(r) { if (!r) return null; let g = r; if (r.e) { try { g = await Crypt.decJSON(r.e); } catch (e) { return null; } } if (g && g.chapters && !g.kind) Tree.ensureRoot(g); return g; },
   async gal(id) { return S.open(await ST.get('galleries', id)); },
-  async gals() { const ids = await ST.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(Boolean); },
+  async gals() { const ids = await ST.keys('galleries'); return (await Promise.all(ids.map(S.gal))).filter(g => g && !g.kind); },
   async putGal(g) { TAGS = null; await ST.put('galleries', { id: g.id, e: await Crypt.encJSON(g) }); },
   async putBlob(store, id, blob) { await ST.put(store, { id, t: blob.type || 'image/jpeg', e: await Crypt.enc(await blob.arrayBuffer()) }); },
   async blob(store, id) {
@@ -3283,6 +3382,7 @@ async function afterUnlock(fresh) {
   let needSample = false;
   if (fresh || SLOT !== '') { try { needSample = !(await S.gals()).length && !(await DB.get('meta', mk('sampleGone'))); } catch (e) { } }
   await Sync.load();
+  await TagReg.init().catch(() => { });
   if (!(await keyOpensLibrary())) toast('Your galleries could not be decrypted with this key. Nothing was deleted.', 8000);
   const st = history.state;
   if (st && st.view) render(st.view, st.params || {});
@@ -3541,6 +3641,7 @@ const Sync = (() => {
   const saveTombs = () => DB.put('meta', { id: mk('tombs'), v: tombs }).catch(() => { });
   async function listing(ids) {
     const gs = ids ? (await Promise.all(ids.map(S.gal))).filter(Boolean) : await S.gals();
+    if (!ids) { const r = await TagReg.get().catch(() => null); if (r && r.updatedAt) gs.push(r); }
     return gs.filter(g => !g.sample).map(g => ({ id: g.id, u: g.updatedAt || 0, p: g.progressAt || 0 }));
   }
   async function send(m, target) { if (!act) return; const b = new Uint8Array(await Crypt.encJSON(m)); return act.send(b, target ? { target } : {}); }
@@ -3581,7 +3682,7 @@ const Sync = (() => {
   async function handle(m, pid) {
     if (m.t === 'hello') {
       const p = peers.get(pid) || {}; p.name = m.dev.name; p.dev = m.dev.id; p.lan = m.lan || null; peers.set(pid, p);
-      st.devices[m.dev.id] = { name: m.dev.name, seen: Date.now() }; saveSt(); log(`${m.dev.name} has ${plural((m.list || []).length, 'gallery').replace('gallerys', 'galleries')}`);
+      st.devices[m.dev.id] = { name: m.dev.name, seen: Date.now() }; saveSt(); log(`${m.dev.name} has ${plural((m.list || []).filter(r => !String(r.id).startsWith('tags-')).length, 'gallery').replace('gallerys', 'galleries')}`);
     }
     if (m.t === 'hello' || m.t === 'changed') {
       await applyTombs(m.tomb || {});
@@ -3603,7 +3704,7 @@ const Sync = (() => {
       log(`Sending ${plural(m.ids.length, 'gallery').replace('gallerys', 'galleries')}`);
     } else if (m.t === 'gal') {
       wanting.delete(m.g.id); emit();
-      try { await merge(m.g, pid); log(`Received “${m.g.title}”`); }
+      try { await merge(m.g, pid); log(m.g.kind === 'tags' ? 'Received your tag list' : `Received “${m.g.title}”`); }
       catch (e) { console.error(e); failed(pid, `“${m.g.title}”`); if (!pend.get(pid)) askAgain(pid); }
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
@@ -3689,6 +3790,10 @@ const Sync = (() => {
   async function merge(R, pid) {
     if (!R || !R.id || (tombs[R.id] && tombs[R.id] >= (R.updatedAt || 0))) return;
     const L = await S.gal(R.id); let M;
+    if (R.kind === 'tags') { // the account's tag list: keep every tag either device has
+      const list = [...(L ? L.list || [] : []), ...(R.list || [])].filter((t, i, a) => a.findIndex(x => tagEq(x, t)) === i).sort(natural);
+      await S.putGal({ ...(L && (L.updatedAt || 0) > (R.updatedAt || 0) ? L : R), list }); TagReg.cache = null; TAGS = null; return;
+    }
     if (!L) M = R;
     else {
       M = (R.updatedAt || 0) > (L.updatedAt || 0) ? { ...R } : { ...L };
