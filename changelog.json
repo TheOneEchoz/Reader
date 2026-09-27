@@ -1,5 +1,14 @@
 [
   {
+    "v": 55,
+    "name": "1.15.2",
+    "date": "2026-09-27",
+    "items": [
+      "Layers: the name box and Save button now sit above the saved combinations.",
+      "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."
+    ]
+  },
+  {
     "v": 54,
     "name": "1.15.1",
     "date": "2026-09-27",

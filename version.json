@@ -1,6 +1,6 @@
 {
- "version": 54,
- "name": "1.15.1",
+ "version": 55,
+ "name": "1.15.2",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,6 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."
+  "Layers: the name box and Save button now sit above the saved combinations.",
+  "Layers: new \u201cShow all layers\u201d / \u201cHide all layers\u201d button. In pick-one groups, showing all keeps the one you chose (or the first one)."
  ]
 }
