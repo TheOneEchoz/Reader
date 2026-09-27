@@ -1,5 +1,13 @@
 [
   {
+    "v": 66,
+    "name": "1.20.2",
+    "date": "2026-09-27",
+    "items": [
+      "Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."
+    ]
+  },
+  {
     "v": 65,
     "name": "1.20.1",
     "date": "2026-09-27",
