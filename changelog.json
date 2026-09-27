@@ -1,5 +1,14 @@
 [
   {
+    "v": 60,
+    "name": "1.18.2",
+    "date": "2026-09-27",
+    "items": [
+      "Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.",
+      "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."
+    ]
+  },
+  {
     "v": 59,
     "name": "1.18.1",
     "date": "2026-09-27",
