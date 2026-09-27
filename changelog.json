@@ -1,5 +1,14 @@
 [
   {
+    "v": 63,
+    "name": "1.19.2",
+    "date": "2026-09-27",
+    "items": [
+      "Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.",
+      "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."
+    ]
+  },
+  {
     "v": 62,
     "name": "1.19.1",
     "date": "2026-09-27",

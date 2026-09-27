@@ -1,6 +1,6 @@
 {
- "version": 62,
- "name": "1.19.1",
+ "version": 63,
+ "name": "1.19.2",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,7 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Layers editor: tap a layer's small picture to see it full size. Choose \u201cWhat changes\u201d (the layer over a faded base, so the change stands out), \u201cOn the base\u201d, or \u201cLayer alone\u201d (on a checkerboard). Tap the picture to see it at full size and scroll around.",
-  "The base picture, the preview at the top, and images in the layer library open full size the same way."
+  "Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a \u201cOne at a time\u201d switch if you want it to work as a pick-one choice.",
+  "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."
  ]
 }
