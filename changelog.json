@@ -1,5 +1,16 @@
 [
   {
+    "v": 61,
+    "name": "1.19.0",
+    "date": "2026-09-27",
+    "items": [
+      "Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.",
+      "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).",
+      "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.",
+      "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."
+    ]
+  },
+  {
     "v": 60,
     "name": "1.18.2",
     "date": "2026-09-27",

@@ -1,6 +1,6 @@
 {
- "version": 60,
- "name": "1.18.2",
+ "version": 61,
+ "name": "1.19.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,7 +16,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.",
-  "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."
+  "Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes\u2026), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.",
+  "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example \u201cblack\u201d or \u201cgreen\u201d, and the base look is named too (\u201cblond\u201d).",
+  "Each original version is still saved as a combination and reads as its own page. \u201cWhole versions\u201d is still there if you prefer one layer per version.",
+  "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."
  ]
 }
