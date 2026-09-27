@@ -482,7 +482,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 39; // replaced by the build with the release number
+const APP_VERSION = 40; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -1036,12 +1036,16 @@ async function receiveFiles(files) {
     seg, nameField, btn, status,
     h('p', { class: 'hint' }, 'Folders inside a ZIP become chapters. The pages are copied into your encrypted library.')), () => { cancel = true; });
 }
+/* Does the installed app file have this native feature? Screens update by themselves; the app file only when reinstalled. */
+const nativeHas = m => { try { return ANDROID ? typeof Nat('Tankobon')[m] === 'function' : DESK ? typeof TkbDesktop[m] === 'function' : false; } catch (e) { return false; } };
 /* Files other apps gave to the Android or Windows app (Share, Open with, double-click). */
 async function takeIncoming() {
   if (!NATIVE) return;
   try {
     if (ANDROID) {
-      const T = Nat('Tankobon'), r = await T.takeIncoming(), files = [];
+      const T = Nat('Tankobon');
+      if (typeof T.takeIncoming !== 'function') return; // an older app file: it cannot receive files yet
+      const r = await T.takeIncoming(), files = [];
       for (const f of r.files || []) {
         const res = await fetch(Capacitor.convertFileSrc('file://' + f.path), { cache: 'no-store' });
         files.push(new File([await res.blob()], f.name, { type: f.type || '' }));
@@ -1049,6 +1053,7 @@ async function takeIncoming() {
       }
       if (files.length) receiveFiles(files);
     } else if (DESK) {
+      if (!nativeHas('takeIncoming')) return;
       const list = await TkbDesktop.takeIncoming(), files = [];
       for (const f of list) files.push(new File([await TkbDesktop.readPicked(f.path)], f.name));
       if (files.length) receiveFiles(files);
@@ -1057,7 +1062,7 @@ async function takeIncoming() {
 }
 function listenIncoming() {
   if (ANDROID) { try { Nat('Tankobon').addListener('incoming', () => { if (Crypt.ready) takeIncoming(); }); } catch (e) { } }
-  if (DESK) TkbDesktop.onIncoming(() => { if (Crypt.ready) takeIncoming(); else { try { TkbDesktop.focus(); } catch (e) { } } });
+  if (DESK && nativeHas('onIncoming')) TkbDesktop.onIncoming(() => { if (Crypt.ready) takeIncoming(); else { try { TkbDesktop.focus(); } catch (e) { } } });
   // any version: drop ZIP, CBZ or image files onto the window
   document.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
   document.addEventListener('drop', e => {
@@ -4030,6 +4035,9 @@ function openUpdates() {
     const prog = h('p', { class: 'hint num' });
     box.replaceChildren(
       h('p', { class: 'hint' }, `This app is on version ${APP_VERSION}.${v ? ` Version ${v.version} is available.` : ''}`),
+      !nativeHas('takeIncoming') ? h('div', { class: 'banner stack', style: 'gap:8px' },
+        h('span', {}, `A newer app file is available. It adds opening ZIP and CBZ files from other apps. Install it over this one; your library and accounts are kept.`),
+        h('div', {}, h('button', { class: 'btn small primary', onclick: () => window.open(ANDROID ? 'https://github.com/TheOneEchoz/Reader/releases/latest' : 'https://github.com/TheOneEchoz/Reader/releases', '_blank') }, icon('download'), 'Get the new app file'))) : null,
       v ? h('button', { class: 'btn primary', onclick: async e => {
         e.currentTarget.disabled = true; prog.textContent = 'Downloading…';
         try { await Upd.install((i, n) => prog.textContent = `Downloading ${i} of ${n}`); }
