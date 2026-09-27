@@ -1,5 +1,14 @@
 [
   {
+    "v": 62,
+    "name": "1.19.1",
+    "date": "2026-09-27",
+    "items": [
+      "Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.",
+      "The base picture, the preview at the top, and images in the layer library open full size the same way."
+    ]
+  },
+  {
     "v": 61,
     "name": "1.19.0",
     "date": "2026-09-27",

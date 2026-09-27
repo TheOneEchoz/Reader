@@ -1,6 +1,6 @@
 {
- "version": 61,
- "name": "1.19.0",
+ "version": 62,
+ "name": "1.19.1",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,9 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes\u2026), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.",
-  "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example \u201cblack\u201d or \u201cgreen\u201d, and the base look is named too (\u201cblond\u201d).",
-  "Each original version is still saved as a combination and reads as its own page. \u201cWhole versions\u201d is still there if you prefer one layer per version.",
-  "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."
+  "Layers editor: tap a layer's small picture to see it full size. Choose \u201cWhat changes\u201d (the layer over a faded base, so the change stands out), \u201cOn the base\u201d, or \u201cLayer alone\u201d (on a checkerboard). Tap the picture to see it at full size and scroll around.",
+  "The base picture, the preview at the top, and images in the layer library open full size the same way."
  ]
 }
