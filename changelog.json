@@ -1,5 +1,13 @@
 [
   {
+    "v": 65,
+    "name": "1.20.1",
+    "date": "2026-09-27",
+    "items": [
+      "Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."
+    ]
+  },
+  {
     "v": 64,
     "name": "1.20.0",
     "date": "2026-09-27",
