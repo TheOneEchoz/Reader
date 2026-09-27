@@ -1,6 +1,6 @@
 {
- "version": 56,
- "name": "1.16.0",
+ "version": 57,
+ "name": "1.17.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,11 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings \u2192 Library \u2192 Layer library.",
-  "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.",
-  "In the layers editor, \u201cAdd from the layer library\u201d puts library images on the image without copying them. Images from the same library folder start as a pick-one group.",
-  "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.",
-  "Small copies of see-through images now show on white instead of black.",
-  "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."
+  "Tap controls on one side: in reading settings, \u201cWhere to tap\u201d can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.",
+  "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (\u201cShow where to tap when opening the reader\u201d)."
  ]
 }

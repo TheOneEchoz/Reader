@@ -1,5 +1,14 @@
 [
   {
+    "v": 57,
+    "name": "1.17.0",
+    "date": "2026-09-27",
+    "items": [
+      "Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.",
+      "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."
+    ]
+  },
+  {
     "v": 56,
     "name": "1.16.0",
     "date": "2026-09-27",
