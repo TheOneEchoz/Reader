@@ -1,6 +1,6 @@
 {
- "version": 66,
- "name": "1.20.2",
+ "version": 67,
+ "name": "1.20.3",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,6 +16,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."
+  "The \u201cOriginal image\u201d view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."
  ]
 }

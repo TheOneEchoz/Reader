@@ -1,5 +1,13 @@
 [
   {
+    "v": 67,
+    "name": "1.20.3",
+    "date": "2026-09-27",
+    "items": [
+      "The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."
+    ]
+  },
+  {
     "v": 66,
     "name": "1.20.2",
     "date": "2026-09-27",
