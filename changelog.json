@@ -1,5 +1,15 @@
 [
   {
+    "v": 52,
+    "name": "1.14.0",
+    "date": "2026-09-27",
+    "items": [
+      "Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.",
+      "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.",
+      "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."
+    ]
+  },
+  {
     "v": 51,
     "name": "1.13.0",
     "date": "2026-09-27",

@@ -1,6 +1,6 @@
 {
- "version": 51,
- "name": "1.13.0",
+ "version": 52,
+ "name": "1.14.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,10 +16,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.",
-  "To make one, in Edit select the base image first and then its layers, and tap \u201cCombine as layers\u201d. Or select one image and tap \u201cAdd layers\u201d to add layer files to it.",
-  "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.",
-  "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.",
-  "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."
+  "Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.",
+  "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.",
+  "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."
  ]
 }
