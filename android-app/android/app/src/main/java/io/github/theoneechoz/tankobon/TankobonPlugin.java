@@ -302,4 +302,65 @@ public class TankobonPlugin extends Plugin {
         }
         call.resolve(ret);
     }
+
+    /* ---------- direct Wi-Fi transfer ---------- */
+
+    private LanTransfer lan;
+    private LanTransfer lan() { if (lan == null) lan = new LanTransfer(getContext().getFilesDir()); return lan; }
+
+    /** Serve this app's library files on the local network for a paired device holding the token. */
+    @PluginMethod
+    public void lanServe(PluginCall call) {
+        String tok = call.getString("token");
+        if (tok == null || tok.length() < 16) { call.reject("bad token"); return; }
+        try {
+            int port = lan().start(tok);
+            JSArray ips = new JSArray();
+            for (String a : LanTransfer.addresses()) ips.put(a);
+            JSObject ret = new JSObject();
+            ret.put("port", port);
+            ret.put("ips", ips);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Could not start the transfer: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void lanStop(PluginCall call) {
+        if (lan != null) lan.stop();
+        call.resolve();
+    }
+
+    /** Download library files from the other device, straight into this app's library. */
+    @PluginMethod
+    public void lanFetch(PluginCall call) {
+        final String tok = call.getString("token");
+        final JSArray bases = call.getArray("bases"), rels = call.getArray("rels");
+        final int parallel = call.getInt("parallel", 6);
+        if (tok == null || bases == null || rels == null) { call.reject("missing arguments"); return; }
+        new Thread(() -> {
+            try {
+                List<String> bl = new ArrayList<>(), rl = new ArrayList<>();
+                for (int i = 0; i < bases.length(); i++) bl.add(bases.getString(i));
+                for (int i = 0; i < rels.length(); i++) rl.add(rels.getString(i));
+                String base = LanTransfer.pick(bl, tok);
+                if (base == null) { call.reject("unreachable"); return; }
+                List<String> failed = lan().fetch(base, tok, rl, parallel, (d, t) -> {
+                    JSObject ev = new JSObject();
+                    ev.put("done", d);
+                    ev.put("total", t);
+                    notifyListeners("lanProgress", ev);
+                });
+                JSArray f = new JSArray();
+                for (String x : failed) f.put(x);
+                JSObject ret = new JSObject();
+                ret.put("base", base);
+                ret.put("failed", f);
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("Transfer failed: " + e.getMessage());
+            }
+        }).start();
+    }
 }

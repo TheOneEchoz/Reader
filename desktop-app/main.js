@@ -1,7 +1,7 @@
 // Tankōbon for Windows: an Electron window around the same web app.
 // The library lives in Documents\Tankobon as encrypted files; screen updates are downloaded only when asked.
 const { app, BrowserWindow, protocol, ipcMain, dialog, Notification, net, shell, session, Menu } = require('electron');
-const path = require('path'), fs = require('fs'), fsp = fs.promises;
+const path = require('path'), fs = require('fs'), fsp = fs.promises, http = require('http'), os = require('os');
 
 app.setAppUserModelId('io.github.theoneechoz.tankobon');
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }]);
@@ -184,3 +184,71 @@ ipcMain.handle('notify', async (e, title, body) => {
   n.on('click', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); win.webContents.send('open-updates'); } });
   n.show();
 });
+
+/* ---------- direct Wi-Fi transfer: serve or fetch encrypted library files on the local network ---------- */
+const REL = /^lib\/(pages|thumbs|galleries)\/([A-Za-z0-9_]{1,4}\/)?[A-Za-z0-9_-]{1,64}\.tkb$/;
+let lanServer = null, lanToken = '';
+function lanAddresses() {
+  const out = [];
+  for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) if (a.family === 'IPv4' && !a.internal) out.push(a.address);
+  return out;
+}
+ipcMain.handle('lan:serve', async (e, token) => {
+  if (!token || token.length < 16) throw new Error('bad token');
+  lanToken = token;
+  if (!lanServer) {
+    lanServer = http.createServer((req, res) => {
+      if (req.method !== 'GET' || req.headers['x-tankobon'] !== lanToken || !lanToken) { res.writeHead(403); return res.end(); }
+      const u = new URL(req.url, 'http://x');
+      if (u.pathname === '/ping') { res.writeHead(200); return res.end('ok'); }
+      const rel = decodeURIComponent(u.pathname.slice(3));
+      if (!u.pathname.startsWith('/f/') || !REL.test(rel)) { res.writeHead(404); return res.end(); }
+      const f = inside(LIB, rel);
+      fs.stat(f, (err, st) => {
+        if (err || !st.isFile()) { res.writeHead(404); return res.end(); }
+        res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': st.size });
+        fs.createReadStream(f).pipe(res);
+      });
+    });
+    await new Promise((ok, bad) => { lanServer.once('error', bad); lanServer.listen(0, '0.0.0.0', ok); });
+  }
+  return { port: lanServer.address().port, ips: lanAddresses() };
+});
+ipcMain.handle('lan:stop', async () => { lanToken = ''; if (lanServer) { lanServer.close(); lanServer = null; } });
+function getFile(base, rel, token, target) {
+  return new Promise((ok, bad) => {
+    const req = http.get(base + (rel === null ? '/ping' : '/f/' + rel), { headers: { 'x-tankobon': token }, timeout: rel === null ? 2500 : 20000 }, res => {
+      if (res.statusCode !== 200) { res.resume(); return bad(new Error('HTTP ' + res.statusCode)); }
+      if (!target) { res.resume(); return ok(); }
+      const tmp = target + '.part' + Math.random().toString(36).slice(2);
+      const ws = fs.createWriteStream(tmp); let n = 0;
+      res.on('data', c => { n += c.length; });
+      res.pipe(ws);
+      ws.on('finish', async () => { try { if (n < 28) throw new Error('short'); await fsp.rename(tmp, target); ok(); } catch (x) { fsp.unlink(tmp).catch(() => { }); bad(x); } });
+      ws.on('error', x => { fsp.unlink(tmp).catch(() => { }); bad(x); });
+    });
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', bad);
+  });
+}
+ipcMain.handle('lan:fetch', async (e, bases, token, rels, parallel) => {
+  let base = null;
+  for (const b of bases) { try { await getFile(b, null, token); base = b; break; } catch (x) { } }
+  if (!base) throw new Error('unreachable');
+  const failed = []; let i = 0, done = 0;
+  const worker = async () => {
+    while (i < rels.length) {
+      const rel = rels[i++]; let ok = false;
+      if (REL.test(rel)) {
+        const target = inside(LIB, rel);
+        await fsp.mkdir(path.dirname(target), { recursive: true }).catch(() => { });
+        for (let a = 0; a < 2 && !ok; a++) { try { await getFile(base, rel, token, target); ok = true; } catch (x) { } }
+      }
+      if (!ok) failed.push(rel);
+      done++; if (done % 5 === 0 || done === rels.length) e.sender.send('lan:progress', done, rels.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(parallel || 6, 12)) }, worker));
+  return { base, failed };
+});
+app.on('before-quit', () => { if (lanServer) lanServer.close(); });

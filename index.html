@@ -482,7 +482,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 40; // replaced by the build with the release number
+const APP_VERSION = 42; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -541,6 +541,9 @@ const NFS = (() => {
     },
     async del(store, id) { if (mem[store]) mem[store].delete(id); try { await PL.del(rel(store, id)); } catch (e) { } if (keyCache[store]) keyCache[store].delete(id); },
     async delMany(store, ids) { for (const id of ids) await this.del(store, id); },
+    rel,
+    /* a record written straight to disk by the direct Wi-Fi transfer */
+    added(store, id) { if (mem[store]) mem[store].delete(id); if (keyCache[store]) keyCache[store].add(id); },
     async keys(store) {
       if (keyCache[store]) return [...keyCache[store]];
       const set = new Set();
@@ -3474,6 +3477,23 @@ async function exportZip(g) {
   } finally { busy--; }
 }
 
+/* ================= direct Wi-Fi transfer (apps only) =================
+   One app serves its encrypted page files on the home network; the other downloads many at once and writes them
+   straight into its library. The files stay encrypted the whole way, and a one-time code is needed to get any. */
+const LAN = {
+  canServe: () => NATIVE && nativeHas('lanServe'),
+  canFetch: () => NATIVE && nativeHas('lanFetch'),
+  serve: token => ANDROID ? Nat('Tankobon').lanServe({ token }) : TkbDesktop.lanServe(token),
+  stop: () => { try { return ANDROID ? Nat('Tankobon').lanStop() : DESK ? TkbDesktop.lanStop() : null; } catch (e) { } },
+  async fetch(bases, token, rels, onProg) {
+    if (DESK) return TkbDesktop.lanFetch(bases, token, rels, 6, onProg);
+    const T = Nat('Tankobon'); let sub = null;
+    try { sub = await T.addListener('lanProgress', e => onProg && onProg(e.done, e.total)); } catch (e) { }
+    try { return await T.lanFetch({ bases, token, rels, parallel: 6 }); }
+    finally { try { sub && sub.remove(); } catch (e) { } }
+  },
+};
+
 /* ================= device sync ================= */
 const Sync = (() => {
   let room = null, act = null, fact = null, device = null, tombs = {}, status = 'off', lastSync = 0;
@@ -3481,13 +3501,13 @@ const Sync = (() => {
   const logs = []; let libId = '';
   const log = msg => { logs.push([Date.now(), msg]); if (logs.length > 40) logs.shift(); emit(); };
   const peers = new Map(), pend = new Map(), queued = new Set(), wanting = new Set(), subs = new Set();
-  const recv = { got: 0, want: 0 };
+  const recv = { got: 0, want: 0 }; let lanActive = false;
   let changed = new Set(), changedT = 0, refreshT = 0, refreshIds = new Set();
   const sent = { n: 0, to: '', t: 0 };
   const peerName = pid => { const p = peers.get(pid); return (p && p.name) || 'your other device'; };
   const progress = () => {
     const from = [...pend.keys()].map(peerName)[0] || [...peers.values()].map(p => p.name).filter(Boolean)[0] || 'your other device';
-    if (recv.want) BG.set('sync-in', `Receiving pages from ${from}: ${recv.got.toLocaleString()} of ${recv.want.toLocaleString()}`, recv.got, recv.want);
+    if (recv.want) BG.set('sync-in', `Receiving pages from ${from}${lanActive ? ' over Wi‑Fi' : ''}: ${recv.got.toLocaleString()} of ${recv.want.toLocaleString()}`, recv.got, recv.want);
     else if (wanting.size) BG.set('sync-in', `Receiving ${plural(wanting.size, 'gallery').replace('gallerys', 'galleries')} from ${from}…`, 0, 0);
     else BG.clear('sync-in');
     if (sent.n && Date.now() - sent.t < 4000) BG.set('sync-out', `Sending pages to ${sent.to}: ${sent.n.toLocaleString()} sent`, 0, 0); else { BG.clear('sync-out'); sent.n = 0; }
@@ -3542,12 +3562,12 @@ const Sync = (() => {
     r.due = false; r.n++;
     setTimeout(() => { if (peers.has(pid)) send({ t: 'ask' }, pid).catch(console.error); }, 1500);
   }
-  function stop() { try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); wanting.clear(); recv.got = recv.want = 0; sent.n = 0; status = 'off'; emit(); }
-  function dropPeer(pid) { retries.delete(pid); chains.delete(pid); const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
-  async function hello(pid) { await send({ t: 'hello', dev: device, list: await listing(), tomb: tombs }, pid); }
+  function stop() { if (serving.on) { serving.on = false; serving.token = ''; LAN.stop(); } try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); wanting.clear(); recv.got = recv.want = 0; sent.n = 0; status = 'off'; emit(); }
+  function dropPeer(pid) { retries.delete(pid); chains.delete(pid); if (serving.on && peers.size === 0) { serving.on = false; serving.token = ''; LAN.stop(); } const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
+  async function hello(pid) { await send({ t: 'hello', dev: device, list: await listing(), tomb: tombs, lan: { serve: LAN.canServe() && !st.noLan, fetch: LAN.canFetch() && !st.noLan } }, pid); }
   async function handle(m, pid) {
     if (m.t === 'hello') {
-      const p = peers.get(pid) || {}; p.name = m.dev.name; p.dev = m.dev.id; peers.set(pid, p);
+      const p = peers.get(pid) || {}; p.name = m.dev.name; p.dev = m.dev.id; p.lan = m.lan || null; peers.set(pid, p);
       st.devices[m.dev.id] = { name: m.dev.name, seen: Date.now() }; saveSt(); log(`${m.dev.name} has ${plural((m.list || []).length, 'gallery').replace('gallerys', 'galleries')}`);
     }
     if (m.t === 'hello' || m.t === 'changed') {
@@ -3580,6 +3600,17 @@ const Sync = (() => {
       }
       setTimeout(emit, 4200);
       await send({ t: 'done' }, pid);
+    } else if (m.t === 'lanreq') {
+      // the other app wants to download pages directly: serve them on the home network with a fresh code
+      try {
+        if (!serving.token) serving.token = [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, '0')).join('');
+        const info = await LAN.serve(serving.token); serving.on = true;
+        await send({ t: 'lan', token: serving.token, bases: (info.ips || []).map(ip => `http://${ip}:${info.port}`) }, pid);
+        log('Sharing pages directly over Wi‑Fi');
+      } catch (e) { await send({ t: 'lan', token: '', bases: [] }, pid); }
+    } else if (m.t === 'lan') {
+      const p = peers.get(pid); if (p) { p.lanInfo = m.bases && m.bases.length ? { token: m.token, bases: m.bases } : null; if (!p.lanInfo) p.lanOff = true; }
+      const q = pend.get(pid); if (q) { q.lanWait = false; pump(pid); }
     } else if (m.t === 'ask') {
       await hello(pid);
     } else if (m.t === 'done') {
@@ -3592,8 +3623,40 @@ const Sync = (() => {
     let q = pend.get(pid); if (!q) { q = { queue: [], batch: null }; pend.set(pid, q); }
     ids.forEach(id => { queued.add(id); q.queue.push(id); }); recv.want += ids.length; emit(); pump(pid);
   }
+  const serving = { on: false, token: '' };
+  const useLan = pid => { const p = peers.get(pid); return !!(p && p.lan && p.lan.serve && LAN.canFetch() && !st.noLan && !p.lanOff); };
+  /* Download pages over Wi-Fi in big groups; anything that fails goes back to the normal connection. */
+  async function lanPump(pid) {
+    const q = pend.get(pid), p = peers.get(pid); if (!q || !p || q.batch || q.lanWait) return;
+    if (!p.lanInfo) {
+      q.lanWait = true; send({ t: 'lanreq' }, pid).catch(() => { });
+      setTimeout(() => { if (q.lanWait) { q.lanWait = false; p.lanOff = true; log('Direct Wi‑Fi transfer did not answer; using the normal connection'); pump(pid); } }, 10000);
+      return;
+    }
+    const ids = q.queue.splice(0, 150); q.batch = ids;
+    const rels = ids.flatMap(id => [NFS.rel('thumbs', id), NFS.rel('images', id)]);
+    const base = recv.got; lanActive = true;
+    try {
+      const r = await LAN.fetch(p.lanInfo.bases, p.lanInfo.token, rels, (d) => { if (recv.want) recv.got = Math.min(recv.want, base + Math.floor(d / 2)); emit(); });
+      const bad = new Set((r.failed || []).map(x => x.split('/').pop().replace(/\.tkb$/, '')));
+      for (const id of ids) if (!bad.has(id)) { NFS.added('images', id); NFS.added('thumbs', id); }
+      recv.got = Math.min(recv.want, base + ids.length - bad.size);
+      if (bad.size) { q.retry = (q.retry || []).concat(ids.filter(id => bad.has(id))); }
+      if (!p.lanLogged) { p.lanLogged = true; log(`Receiving pages directly over Wi‑Fi from ${p.name || 'your other device'}`); }
+    } catch (e) {
+      console.warn('lan', e); p.lanOff = true;
+      const why = /unreachable/.test(String(e && e.message || e)) ? 'the other device could not be reached on this network' : String(e && e.message || e).replace(/^.*Error: /, '');
+      log(`Direct Wi‑Fi transfer is not possible here (${why}); using the normal connection`);
+      q.queue.unshift(...ids);
+    } finally {
+      q.batch = null; lanActive = false; emit(); softRefresh();
+    }
+    pump(pid);
+  }
   function pump(pid) {
     const q = pend.get(pid); if (!q || q.batch) return;
+    if (q.queue.length && useLan(pid)) return lanPump(pid);
+    if (!q.queue.length && q.retry && q.retry.length) { q.queue.push(...q.retry); q.retry = []; const p = peers.get(pid); if (p) p.lanOff = true; }
     if (!q.queue.length) { pend.delete(pid); if (!pend.size) { if (recv.want) log(`All ${recv.want} pages received`); recv.got = recv.want = 0; softRefresh(); } askAgain(pid); emit(); return; }
     q.batch = q.queue.splice(0, 8);
     send({ t: 'need', ids: q.batch }, pid).catch(console.error);
@@ -3804,6 +3867,9 @@ function openDevices() {
         h('button', { class: 'switch', id: 'sw-sync', role: 'switch', 'aria-checked': String(Sync.st.enabled), onclick: async () => { await Sync.setEnabled(!Sync.st.enabled); draw(); } })),
       h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-lan' }, 'Only connect over the local network (stricter; some routers block it)'),
         h('button', { class: 'switch', id: 'sw-lan', role: 'switch', 'aria-checked': String(Sync.st.lanOnly), onclick: async () => { await Sync.setLan(!Sync.st.lanOnly); draw(); } })),
+      NATIVE ? h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-wifi' }, 'Fast direct Wi‑Fi transfer between the apps (Android and Windows apps on the same network; pages stay encrypted)'),
+        h('button', { class: 'switch', id: 'sw-wifi', role: 'switch', 'aria-checked': String(!Sync.st.noLan && LAN.canFetch()), disabled: !LAN.canFetch(), onclick: async () => { Sync.st.noLan = !Sync.st.noLan; await Sync.saveSt(); draw(); } })) : null,
+      NATIVE && !LAN.canFetch() ? h('p', { class: 'hint' }, 'Direct Wi‑Fi transfer needs the newest app file. Settings → App updates → Get the new app file.') : null,
       known.length ? h('div', { class: 'stack' }, h('div', { class: 'label' }, 'Your devices'),
         h('div', { class: 'chlist' }, known.map(([id, d]) => h('div', { class: 'chrow' }, h('span', { class: 'sdot ' + (online.has(id) ? 'connected' : 'off') }), h('span', { class: 't' }, d.name), h('span', { class: 's' }, online.has(id) ? 'Connected' : ago(d.seen).replace('Read ', 'Seen ')))))) : null,
       h('p', { class: 'hint' }, 'Galleries, chapter order, settings and reading progress sync automatically while the app is open on both devices. Pages travel directly between your devices and are encrypted with your library key. The internet is only used for a moment so the devices can find each other.'));
@@ -4035,8 +4101,8 @@ function openUpdates() {
     const prog = h('p', { class: 'hint num' });
     box.replaceChildren(
       h('p', { class: 'hint' }, `This app is on version ${APP_VERSION}.${v ? ` Version ${v.version} is available.` : ''}`),
-      !nativeHas('takeIncoming') ? h('div', { class: 'banner stack', style: 'gap:8px' },
-        h('span', {}, `A newer app file is available. It adds opening ZIP and CBZ files from other apps. Install it over this one; your library and accounts are kept.`),
+      !nativeHas('lanFetch') ? h('div', { class: 'banner stack', style: 'gap:8px' },
+        h('span', {}, `A newer app file is available. It adds opening ZIP and CBZ files from other apps and fast direct Wi‑Fi transfer between the apps. Install it over this one; your library and accounts are kept.`),
         h('div', {}, h('button', { class: 'btn small primary', onclick: () => window.open(ANDROID ? 'https://github.com/TheOneEchoz/Reader/releases/latest' : 'https://github.com/TheOneEchoz/Reader/releases', '_blank') }, icon('download'), 'Get the new app file'))) : null,
       v ? h('button', { class: 'btn primary', onclick: async e => {
         e.currentTarget.disabled = true; prog.textContent = 'Downloading…';
