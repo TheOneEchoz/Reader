@@ -1,6 +1,6 @@
 {
- "version": 46,
- "name": "1.10.1",
+ "version": 47,
+ "name": "1.10.2",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,7 +16,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.",
-  "The sync progress card now says whether pages come directly over Wi\u2011Fi or over the normal connection, and how many pages per second arrive."
+  "Direct Wi\u2011Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.",
+  "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.",
+  "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi\u2011Fi at full speed during a transfer instead of letting power saving slow it down."
  ]
 }

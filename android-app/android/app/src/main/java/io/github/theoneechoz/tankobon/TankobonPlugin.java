@@ -312,6 +312,21 @@ public class TankobonPlugin extends Plugin {
     /* ---------- direct Wi-Fi transfer ---------- */
 
     private LanTransfer lan;
+    private android.net.wifi.WifiManager.WifiLock wifiLock;
+    /** Keep Wi-Fi at full speed while pages are shared or fetched (Android slows it down to save power). */
+    private synchronized void wifiFast(boolean on) {
+        try {
+            if (on) {
+                if (wifiLock == null) {
+                    android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) getContext().getApplicationContext().getSystemService(android.content.Context.WIFI_SERVICE);
+                    int mode = Build.VERSION.SDK_INT >= 29 ? android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY : android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF;
+                    wifiLock = wm.createWifiLock(mode, "tankobon:transfer");
+                    wifiLock.setReferenceCounted(false);
+                }
+                if (!wifiLock.isHeld()) wifiLock.acquire();
+            } else if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
+        } catch (Exception ignored) {}
+    }
     private LanTransfer lan() { if (lan == null) lan = new LanTransfer(getContext().getFilesDir()); return lan; }
 
     /** Serve this app's library files on the local network for a paired device holding the token. */
@@ -321,6 +336,7 @@ public class TankobonPlugin extends Plugin {
         if (tok == null || tok.length() < 16) { call.reject("bad token"); return; }
         try {
             int port = lan().start(tok);
+            wifiFast(true);
             JSArray ips = new JSArray();
             for (String a : LanTransfer.addresses()) ips.put(a);
             JSObject ret = new JSObject();
@@ -335,6 +351,7 @@ public class TankobonPlugin extends Plugin {
     @PluginMethod
     public void lanStop(PluginCall call) {
         if (lan != null) lan.stop();
+        wifiFast(false);
         call.resolve();
     }
 
@@ -350,14 +367,16 @@ public class TankobonPlugin extends Plugin {
                 List<String> bl = new ArrayList<>(), rl = new ArrayList<>();
                 for (int i = 0; i < bases.length(); i++) bl.add(bases.getString(i));
                 for (int i = 0; i < rels.length(); i++) rl.add(rels.getString(i));
+                wifiFast(true);
                 String base = LanTransfer.pick(bl, tok);
-                if (base == null) { call.reject("unreachable"); return; }
+                if (base == null) { if (lan == null || !lan.running()) wifiFast(false); call.reject("unreachable"); return; }
                 List<String> failed = lan().fetch(base, tok, rl, parallel, (d, t) -> {
                     JSObject ev = new JSObject();
                     ev.put("done", d);
                     ev.put("total", t);
                     notifyListeners("lanProgress", ev);
                 });
+                if (lan == null || !lan.running()) wifiFast(false);
                 JSArray f = new JSArray();
                 for (String x : failed) f.put(x);
                 JSObject ret = new JSObject();

@@ -141,20 +141,28 @@ public class LanTransfer {
 
     interface Progress { void update(int done, int total); }
 
-    /** Find the first address that answers. Returns the base URL or null. */
+    /** Try every address at once and return the first that answers (the phone may have several networks). */
     static String pick(List<String> bases, String tok) {
-        for (String b : bases) {
-            try {
-                HttpURLConnection c = (HttpURLConnection) new URL(b + "/ping").openConnection();
-                c.setConnectTimeout(2500);
-                c.setReadTimeout(2500);
-                c.setRequestProperty("x-tankobon", tok);
-                int code = c.getResponseCode();
-                c.disconnect();
-                if (code == 200) return b;
-            } catch (Exception ignored) {}
-        }
-        return null;
+        if (bases.isEmpty()) return null;
+        ExecutorService ex = Executors.newFixedThreadPool(Math.min(bases.size(), 8));
+        java.util.concurrent.ExecutorCompletionService<String> cs = new java.util.concurrent.ExecutorCompletionService<>(ex);
+        for (final String b : bases) cs.submit(() -> {
+            HttpURLConnection c = (HttpURLConnection) new URL(b + "/ping").openConnection();
+            c.setConnectTimeout(2500);
+            c.setReadTimeout(2500);
+            c.setRequestProperty("x-tankobon", tok);
+            int code = c.getResponseCode();
+            c.disconnect();
+            return code == 200 ? b : null;
+        });
+        String found = null;
+        try {
+            for (int i = 0; i < bases.size() && found == null; i++) {
+                try { found = cs.take().get(); } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
+        ex.shutdownNow();
+        return found;
     }
 
     /** Download files in parallel, straight into this app's library. Returns the relative paths that failed. */

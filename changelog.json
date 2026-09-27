@@ -1,5 +1,15 @@
 [
  {
+  "v": 47,
+  "name": "1.10.2",
+  "date": "2026-09-27",
+  "items": [
+   "Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.",
+   "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.",
+   "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."
+  ]
+ },
+ {
   "v": 46,
   "name": "1.10.1",
   "date": "2026-09-27",

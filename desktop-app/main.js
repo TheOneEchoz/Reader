@@ -233,8 +233,9 @@ function getFile(base, rel, token, target) {
   });
 }
 ipcMain.handle('lan:fetch', async (e, bases, token, rels, parallel) => {
+  // try every address at once; a computer often has extra network adapters that cannot be reached
   let base = null;
-  for (const b of bases) { try { await getFile(b, null, token); base = b; break; } catch (x) { } }
+  try { base = await Promise.any(bases.map(b => getFile(b, null, token).then(() => b))); } catch (x) { }
   if (!base) throw new Error('unreachable');
   const failed = []; let i = 0, done = 0;
   const worker = async () => {
