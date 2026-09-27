@@ -462,7 +462,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 35; // replaced by the build with the release number
+const APP_VERSION = 36; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -606,7 +606,7 @@ const FIELDS = [
   { k: 'showHidden', label: 'Include hidden pages and folders when reading', type: 'bool' },
 ];
 const effPrefs = g => { const p = { ...DEFAULTS, ...GLOBAL, ...(g && g.prefs || {}) }; if (p.dblTapZoom === false && !(g && g.prefs && 'dblTapScale' in g.prefs)) p.dblTapScale = 0; delete p.dblTapZoom; return p; };
-async function saveMeta() { try { await DB.put('meta', { id: 'defaults', v: GLOBAL }); await DB.put('meta', { id: 'ui', v: UI }); } catch (e) { } }
+async function saveMeta() { try { await DB.put('meta', { id: Crypt.ready ? mk('defaults') : 'defaults', v: GLOBAL }); await DB.put('meta', { id: 'ui', v: UI }); } catch (e) { } }
 
 function settingsForm(values, onChange, filter) {
   const box = h('div', { class: 'stack' });
@@ -1364,7 +1364,7 @@ async function openGlobalSettings() {
       h('div', { class: 'row' },
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
         h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password or clue'),
-        MODE === 'main' ? h('button', { class: 'btn small', onclick: () => { closeSheet(); openDecoy(); } }, icon('lock'), 'Decoy password') : null,
+        h('button', { class: 'btn small', onclick: () => { closeSheet(); openAccounts(); } }, icon('lock'), 'Accounts'),
         h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'),
         NATIVE ? h('button', { class: 'btn small', onclick: () => { closeSheet(); openUpdates(); } }, icon('download'), `App updates · v${APP_VERSION}`) : null)),
     settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
@@ -2791,7 +2791,7 @@ const FS = (() => {
       const { old, ...clean } = lock; const lock2 = await DB.get('meta', 'lock2');
       const prev = await this.readInfo();
       const me = await Crypt.hash('fingerprint');
-      const fp = MODE === 'main' ? me : (prev && prev.fp), fp2 = MODE === 'decoy' ? me : (prev && prev.fp2);
+      const fp = SLOT === '' ? me : (prev && prev.fp), fp2 = SLOT !== '' ? me : (prev && prev.fp2);
       const info = { app: 'Tankōbon Reader', v: 1, note: 'Encrypted library. Open it from the app with your password.', fp, lock: clean };
       if (lock2) { const { old: o2, ...c2 } = lock2; info.lock2 = c2; if (fp2) info.fp2 = fp2; }
       const w = await (await root.getFileHandle('tankobon.json', { create: true })).createWritable(); await w.write(JSON.stringify(info, null, 1)); await w.close();
@@ -2838,7 +2838,7 @@ async function folderAccess(handle, ask) {
    A library that has not written one yet is recognised by its lock record. */
 async function folderIsOurs(info) {
   if (!info) return false;
-  const mine = MODE === 'decoy' ? info.fp2 : info.fp;
+  const mine = SLOT !== '' ? info.fp2 : info.fp;
   if (mine) return mine === await Crypt.hash('fingerprint');
   const lk = await DB.get('meta', lockKey()), theirs = info[lockKey()];
   return !!(lk && theirs && theirs.salt === lk.salt && theirs.data === lk.data);
@@ -2854,7 +2854,7 @@ async function prepareStorage() {
     if (!h || !(await folderAccess(h, ask))) return false;
     const info = await FS.readInfo(h);
     if (!(await folderIsOurs(info))) return 'missing';
-    FS.root = h; if (!(MODE === 'decoy' ? info.fp2 : info.fp)) FS.writeInfo().catch(() => { });
+    FS.root = h; if (!(SLOT !== '' ? info.fp2 : info.fp)) FS.writeInfo().catch(() => { });
     return true;
   };
   let ok = await tryUse(h0, true);
@@ -3059,11 +3059,18 @@ async function purgeGallery(g) {
 
 /* ================= lock screen ================= */
 let busy = 0, hiddenAt = 0;
-/* Two libraries can share this device: the real one ('main') and a decoy opened with the decoy password.
+/* Several local accounts can share this device. Each password opens its own library, encrypted with its own key;
    Each is encrypted with its own key, so neither can see the other's galleries or pages. */
-let MODE = 'main';
-const lockKey = () => MODE === 'decoy' ? 'lock2' : 'lock';
-const mk = name => MODE === 'decoy' ? name + '2' : name;
+let SLOT = ''; // which local account is open: '' is the first one made on this device
+const lockIdOf = slot => slot === '' ? 'lock' : slot === '2' ? 'lock2' : 'lock:' + slot;
+const slotOf = id => id === 'lock' ? '' : id === 'lock2' ? '2' : id.slice(5);
+const lockKey = () => lockIdOf(SLOT);
+/* per-account settings and sync records */
+const mk = name => SLOT === '' ? name : SLOT === '2' ? name + '2' : name + ':' + SLOT;
+async function allLocks() {
+  const ids = (await DB.keys('meta')).filter(k => k === 'lock' || k === 'lock2' || String(k).startsWith('lock:'));
+  return (await Promise.all(ids.map(id => DB.get('meta', id)))).filter(Boolean);
+}
 const withBusy = async fn => { busy++; try { return await fn(); } finally { busy--; } };
 function lockNow() { try { if (CUR.view === 'reader') saveProgress(true); } catch (e) { } setTimeout(() => location.reload(), 150); }
 document.addEventListener('visibilitychange', () => {
@@ -3082,10 +3089,12 @@ function hintField(value) {
     h('p', { class: 'hint' }, 'Shown on the unlock screen to anyone holding your phone, so never write the password itself.'));
 }
 function badHint(hint, pw) { return hint && pw && hint.toLowerCase().includes(pw.toLowerCase()); }
-function clueButton(hint) {
-  if (!hint) return null;
-  const out = h('p', { class: 'clue', hidden: true }, hint);
-  return h('div', { class: 'stack', style: 'gap:6px' }, h('button', { class: 'btn ghost small', type: 'button', onclick: e => { out.hidden = !out.hidden; e.currentTarget.textContent = out.hidden ? 'Show password clue' : 'Hide password clue'; } }, 'Show password clue'), out);
+function clueButton(hints) {
+  hints = (Array.isArray(hints) ? hints : [hints]).filter(Boolean);
+  if (!hints.length) return null;
+  const one = hints.length === 1;
+  const out = h('div', { class: 'stack', style: 'gap:6px', hidden: true }, hints.map(t => h('p', { class: 'clue' }, t)));
+  return h('div', { class: 'stack', style: 'gap:6px' }, h('button', { class: 'btn ghost small', type: 'button', onclick: e => { out.hidden = !out.hidden; e.currentTarget.textContent = (out.hidden ? 'Show ' : 'Hide ') + (one ? 'password clue' : 'password clues'); } }, one ? 'Show password clue' : 'Show password clues'), out);
 }
 function pwField(id, label, auto, optional) {
   return h('div', { class: 'field' }, h('label', { class: 'label', for: id }, label),
@@ -3126,17 +3135,19 @@ async function showSetup(joinRaw) {
   setTimeout(() => { const f = $('#pw1'); if (f) f.focus(); }, 50);
 }
 async function unlockWith(pw) {
-  const lock = await DB.get('meta', 'lock'), lock2 = await DB.get('meta', 'lock2');
-  const [a, b] = await Promise.allSettled([Crypt.unwrapRaw(lock, pw), lock2 ? Crypt.unwrapRaw(lock2, pw) : Promise.reject(new Error('none'))]);
-  if (a.status === 'fulfilled') { MODE = 'main'; await Crypt.setRaw(a.value); return lock; }
-  if (b.status === 'fulfilled') { MODE = 'decoy'; await Crypt.setRaw(b.value); return lock2; }
-  throw new Error('wrong password');
+  const locks = await allLocks();
+  const res = await Promise.allSettled(locks.map(l => Crypt.unwrapRaw(l, pw)));
+  const k = res.findIndex(r => r.status === 'fulfilled');
+  if (k < 0) throw new Error('wrong password');
+  SLOT = slotOf(locks[k].id); await Crypt.setRaw(res[k].value);
+  await loadAccountSettings();
+  return locks[k];
 }
-function showUnlock(lock) {
+function showUnlock(locks) {
   const err = h('p', { class: 'err', role: 'alert' });
   const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Unlock');
   const forgot = h('div', { class: 'danger-zone', hidden: true },
-    h('p', { class: 'hint' }, 'Without the password the pages on this device cannot be decrypted. You can erase this device and start again. If another paired device still has your library, pair with it again and your galleries will sync back.'),
+    h('p', { class: 'hint' }, 'Without the password an account\'s pages cannot be decrypted. You can make a new account with the button above, or erase this device (every account on it) and start again. If another paired device still has your library, pair with it again and your galleries will sync back.'),
     eraseButton());
   lockShell(
     h('h1', {}, 'Unlock your library'),
@@ -3145,24 +3156,25 @@ function showUnlock(lock) {
       let used;
       try { used = await unlockWith($('#pw').value); }
       catch (x) { err.textContent = 'That password is not right. Try again.'; btn.disabled = false; btn.textContent = 'Unlock'; $('#pw').select(); return; }
-      if (MODE === 'main' && used.old) {
+      if (used.old) {
         btn.textContent = 'Finishing an earlier change…';
-        let oldRaw = null; try { oldRaw = await Crypt.unwrapRaw(lock.old, $('#pw').value); } catch (x) { console.warn('earlier change cannot be finished with this password'); }
+        let oldRaw = null; try { oldRaw = await Crypt.unwrapRaw(used.old, $('#pw').value); } catch (x) { console.warn('earlier change cannot be finished with this password'); }
         if (oldRaw) {
           await withBusy(async () => reencrypt(await Crypt.importKey(oldRaw), Crypt.key, true));
-          const { old, ...clean } = lock; await DB.put('meta', clean);
+          const { old, ...clean } = used; await DB.put('meta', clean);
         }
       }
       afterUnlock(false);
     } }, pwField('pw', 'Password', 'current-password'), err, btn),
-    clueButton(lock.hint),
+    clueButton(locks.map(l => l.hint).filter(Boolean)),
+    h('button', { class: 'btn ghost small', type: 'button', onclick: () => openNewAccount(true) }, icon('plus'), 'New account on this device'),
     h('button', { class: 'btn ghost small', type: 'button', onclick: () => { forgot.hidden = !forgot.hidden; } }, 'Forgot your password?'), forgot);
   setTimeout(() => { const f = $('#pw'); if (f) f.focus(); }, 50);
 }
 function eraseButton() {
   let armed = false;
   const b = h('button', { class: 'btn danger', type: 'button', onclick: async () => {
-    if (!armed) { armed = true; b.textContent = 'Tap again to erase everything on this device'; return; }
+    if (!armed) { armed = true; b.textContent = 'Tap again to erase every account on this device'; return; }
     b.disabled = true; b.textContent = 'Erasing…'; await DB.nuke(); location.reload();
   } }, 'Erase this device');
   return b;
@@ -3170,7 +3182,7 @@ function eraseButton() {
 async function afterUnlock(fresh) {
   await prepareStorage();
   $('#v-lock').hidden = true; $('#v-lock').replaceChildren();
-  if (fresh || MODE === 'decoy') { try { const n = (await S.gals()).length; const gone = await DB.get('meta', mk('sampleGone')); if (!n && !gone) { await addSample(); await DB.put('meta', { id: mk('sampleGone'), v: true }); } } catch (e) { console.error(e); } }
+  if (fresh || SLOT !== '') { try { const n = (await S.gals()).length; const gone = await DB.get('meta', mk('sampleGone')); if (!n && !gone) { await addSample(); await DB.put('meta', { id: mk('sampleGone'), v: true }); } } catch (e) { console.error(e); } }
   await Sync.load();
   if (!(await keyOpensLibrary())) toast('Your galleries could not be decrypted with this key. Nothing was deleted.', 8000);
   const st = history.state;
@@ -3197,7 +3209,7 @@ const sameBytes = (a, b) => !!a && !!b && a.length === b.length && a.every((x, i
 async function keyOpensLibrary() {
   const ids = await ST.keys('galleries'); if (!ids.length) return true;
   for (const id of ids) { const r = await ST.get('galleries', id); if (!r || !r.e) return true; try { await Crypt.dec(r.e); return true; } catch (e) { } }
-  return !!(await DB.get('meta', 'lock2')); // with a decoy, the other library's galleries are expected to be unreadable
+  return (await allLocks()).length > 1; // other accounts' galleries are expected to be unreadable
 }
 async function openChangePassword() {
   const cur0 = await DB.get('meta', lockKey());
@@ -3209,7 +3221,7 @@ async function openChangePassword() {
     if (!keep && a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
     if (!keep && a !== b) { err.textContent = 'The new passwords are different.'; return; }
     if (badHint($('#pw-hint').value, keep ? cur : a)) { err.textContent = 'The clue must not contain the password.'; return; }
-    if (!keep) { const other = await DB.get('meta', MODE === 'decoy' ? 'lock' : 'lock2'); if (other) { try { await Crypt.unwrapRaw(other, a); err.textContent = 'Choose a different password.'; return; } catch (x) { } } }
+    if (!keep && await passwordTaken(a, lockKey())) { err.textContent = 'That password already opens another account on this device. Choose a different one.'; return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     try { const lock = await DB.get('meta', lockKey()); await Crypt.unwrapRaw(lock, cur); }
     catch (x) { err.textContent = 'Your current password is not right.'; btn.disabled = false; btn.textContent = 'Save'; return; }
@@ -3232,62 +3244,81 @@ async function openChangePassword() {
     h('p', { class: 'hint' }, 'This changes the password on this device only. Your other devices keep their own passwords.')));
 }
 
-/* ---------- decoy library ---------- */
-async function openDecoy() {
-  const has = await DB.get('meta', 'lock2');
-  const err = h('p', { class: 'err', role: 'alert' });
-  if (!has) {
-    const btn = h('button', { class: 'btn primary', type: 'submit' }, icon('lock'), 'Create decoy password');
-    openSheet('Decoy password', h('form', { class: 'stack', onsubmit: async e => {
-      e.preventDefault(); err.textContent = '';
-      const main = $('#dc-main').value, a = $('#dc-new').value, b = $('#dc-new2').value;
-      if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
-      if (a !== b) { err.textContent = 'The two decoy passwords are different.'; return; }
-      if (a === main) { err.textContent = 'The decoy password must be different from your real password.'; return; }
-      btn.disabled = true; btn.textContent = 'Setting up…';
-      try { await Crypt.unwrapRaw(await DB.get('meta', 'lock'), main); }
-      catch (x) { err.textContent = 'Your real password is not right.'; btn.disabled = false; btn.replaceChildren(icon('lock'), 'Create decoy password'); return; }
-      const lk = await Crypt.wrapRaw(crypto.getRandomValues(new Uint8Array(32)), a); lk.id = 'lock2';
-      await DB.put('meta', lk);
-      for (const k of ['sync2', 'tombs2', 'sampleGone2']) await DB.del('meta', k).catch(() => { });
-      if (ST.folder) await FS.writeInfo().catch(() => { }); await saveLockToFolder();
-      closeSheet(); toast('Decoy password created. Unlock with it to open the decoy library.', 4500);
-    } },
-      h('p', { class: 'hint' }, 'Unlocking with the decoy password opens a separate, harmless library instead of yours. Put a few ordinary galleries in it. The unlock screen looks exactly the same, and nothing in the decoy library shows that your real one exists.'),
-      h('p', { class: 'hint' }, 'The decoy library has its own settings for sync and its own password changes. Open it with the decoy password to fill it.'),
-      pwField('dc-main', 'Your real password', 'current-password'),
-      pwField('dc-new', 'Decoy password', 'new-password'), pwField('dc-new2', 'Decoy password again', 'new-password'), err, btn));
-    setTimeout(() => { const f = $('#dc-main'); if (f) f.focus(); }, 50);
-    return;
-  }
-  const prog = h('p', { class: 'hint num' });
-  let armed = false;
-  const btn = h('button', { class: 'btn danger', type: 'submit' }, icon('trash'), 'Remove the decoy library');
-  openSheet('Decoy password', h('form', { class: 'stack', onsubmit: async e => {
-    e.preventDefault(); err.textContent = '';
-    if (!armed) { armed = true; btn.replaceChildren(icon('trash'), 'Tap again to delete the decoy library'); return; }
-    btn.disabled = true;
-    try { await Crypt.unwrapRaw(await DB.get('meta', 'lock'), $('#dc-main').value); }
-    catch (x) { err.textContent = 'Your real password is not right.'; btn.disabled = false; return; }
-    await withBusy(() => removeDecoy((i, n) => prog.textContent = `Removing the decoy library: ${i} of ${n}`));
-    closeSheet(); toast('The decoy password and its library were removed.', 4000);
-  } },
-    h('p', { class: 'hint' }, 'A decoy password is set. Unlocking with it opens the decoy library. To change the decoy password, unlock with it and use Change password there.'),
-    h('p', { class: 'hint' }, 'Removing it deletes the decoy library and its pages from this device. Your real library is not touched.'),
-    pwField('dc-main', 'Your real password', 'current-password'), err, btn, prog));
+/* ---------- local accounts ---------- */
+/* Does this password already open an account (other than `except`)? */
+async function passwordTaken(pw, except) {
+  const others = (await allLocks()).filter(l => l.id !== except);
+  const r = await Promise.allSettled(others.map(l => Crypt.unwrapRaw(l, pw)));
+  return r.some(x => x.status === 'fulfilled');
 }
-/* Delete every record that the open (real) library's key cannot read: those belong to the decoy. */
-async function removeDecoy(onProg) {
-  const mine = async r => { if (!r || !r.e) return true; try { await Crypt.dec(r.e); return true; } catch (e) { return false; } };
+/* Settings that belong to each account (reading defaults). App-wide ones (lock timer, updates, full screen) stay shared. */
+async function loadAccountSettings() {
+  try { const d = await DB.get('meta', mk('defaults')); GLOBAL = d ? { ...DEFAULTS, ...d.v } : SLOT === '' ? GLOBAL : { ...DEFAULTS }; } catch (e) { }
+}
+/* Make a new, independent account. From the lock screen it opens straight away. */
+function openNewAccount(fromLock) {
+  const err = h('p', { class: 'err', role: 'alert' }), prog = h('p', { class: 'hint num' });
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, icon('plus'), 'Create the account');
+  const form = h('form', { class: 'stack', onsubmit: async e => {
+    e.preventDefault(); err.textContent = '';
+    const a = $('#na-pw1').value, b = $('#na-pw2').value, hint = ($('#pw-hint').value || '').trim();
+    if (a.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+    if (a !== b) { err.textContent = 'The two passwords are different. Type them again.'; return; }
+    if (badHint(hint, a)) { err.textContent = 'The clue must not contain the password.'; return; }
+    btn.disabled = true; prog.textContent = 'Setting up…';
+    if (await passwordTaken(a)) { err.textContent = 'That password already opens an account on this device. Choose a different one.'; btn.disabled = false; prog.textContent = ''; return; }
+    const raw = crypto.getRandomValues(new Uint8Array(32)), slot = uid();
+    const lk = await Crypt.wrapRaw(raw, a); lk.id = lockIdOf(slot); if (hint) lk.hint = hint;
+    await DB.put('meta', lk);
+    if (fromLock) {
+      closeSheet(); SLOT = slot; await Crypt.setRaw(raw); await loadAccountSettings(); await saveLockToFolder();
+      afterUnlock(true);
+    } else {
+      await saveLockToFolder();
+      closeSheet();
+      openSheet('Account created', h('div', { class: 'stack' },
+        h('p', { class: 'hint' }, 'To use it, lock the app and unlock with the new password. Your current account stays exactly as it is.'),
+        h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: lockNow }, icon('lock'), 'Lock and switch now'), h('button', { class: 'btn ghost', onclick: closeSheet }, 'Later'))));
+    }
+  } },
+    h('p', { class: 'hint' }, 'Every account has its own password, galleries, settings and sync. Accounts cannot see or change each other. Unlocking with a password opens the account it belongs to.'),
+    pwField('na-pw1', 'Password for the new account', 'new-password'), pwField('na-pw2', 'Type it again', 'new-password'), hintField(''), err, btn, prog);
+  openSheet('New account', form);
+  setTimeout(() => { const f = $('#na-pw1'); if (f) f.focus(); }, 60);
+}
+function openAccounts() {
+  let armed = false;
+  const prog = h('p', { class: 'hint num' });
+  const del = h('button', { class: 'btn danger', onclick: () => {
+    if (!armed) { armed = true; del.replaceChildren(icon('trash'), 'Tap again to delete this account'); return; }
+    askPassword('Delete this account', 'Enter this account\'s password. Its galleries, pages and settings are deleted from this device. Other accounts are not touched. Paired devices keep their copies.', async () => {
+      const box = h('div', { class: 'stack' }, prog);
+      openSheet('Deleting this account', box);
+      await withBusy(() => deleteAccount((i, n) => prog.textContent = `Deleting: ${i} of ${n}`));
+      location.reload();
+    });
+  } }, icon('trash'), 'Delete this account');
+  openSheet('Accounts on this device', h('div', { class: 'stack' },
+    h('p', { class: 'hint' }, 'Each password opens its own account, with its own galleries, settings and sync. Accounts are independent: none of them can see, change or delete another. To open a different account, lock the app and unlock with that account\'s password.'),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary', onclick: () => { closeSheet(); openNewAccount(false); } }, icon('plus'), 'New account'),
+      h('button', { class: 'btn', onclick: lockNow }, icon('lock'), 'Lock to switch account'),
+      h('button', { class: 'btn', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change this account\'s password or clue')),
+    h('div', { class: 'danger-zone' }, h('div', { class: 'label' }, 'Delete'), h('p', { class: 'hint' }, 'Removes the account that is open now and everything in it from this device.'), h('div', {}, del))));
+}
+/* Delete every record the open account's key can read, then its password lock and settings. */
+async function deleteAccount(onProg) {
+  const mine = async r => { if (!r || !r.e) return false; try { await Crypt.dec(r.e); return true; } catch (e) { return false; } };
   const gal = await ST.keys('galleries'), th = await ST.keys('thumbs'), im = await ST.keys('images');
   const n = gal.length + th.length + im.length; let i = 0;
   const tick = () => { if (onProg && (++i % 10 === 0 || i === n)) onProg(i, n); };
-  for (const id of gal) { if (!(await mine(await ST.get('galleries', id)))) await ST.del('galleries', id); tick(); }
-  const ok = new Set(), bad = new Set();
-  for (const id of th) { if (await mine(await ST.get('thumbs', id))) ok.add(id); else { bad.add(id); await ST.del('thumbs', id); } tick(); }
-  for (const id of im) { if (bad.has(id) || (!ok.has(id) && !(await mine(await ST.get('images', id))))) await ST.del('images', id); tick(); }
-  for (const k of ['lock2', 'sync2', 'tombs2', 'sampleGone2']) await DB.del('meta', k).catch(() => { });
-  if (ST.folder) await FS.writeInfo().catch(() => { }); await saveLockToFolder();
+  for (const id of gal) { if (await mine(await ST.get('galleries', id))) await ST.del('galleries', id); tick(); }
+  const gone = new Set(), kept = new Set();
+  for (const id of th) { if (await mine(await ST.get('thumbs', id))) { gone.add(id); await ST.del('thumbs', id); } else kept.add(id); tick(); }
+  for (const id of im) { if (gone.has(id) || (!kept.has(id) && await mine(await ST.get('images', id)))) await ST.del('images', id); tick(); }
+  for (const k of [lockKey(), mk('sync'), mk('tombs'), mk('sampleGone'), SLOT === '' ? null : mk('defaults')].filter(Boolean)) await DB.del('meta', k).catch(() => { });
+  await saveLockToFolder();
+  if (!(await allLocks()).length) { try { await DB.nuke(); } catch (e) { } }
 }
 
 /* ================= export ================= */
@@ -3902,13 +3933,17 @@ function openUpdates() {
 /* Windows app: the password lock (not the password) is also kept in Documents\Tankobon, so the library can be opened after reinstalling. */
 async function saveLockToFolder() {
   if (!DESK) return;
-  try { const lock = await DB.get('meta', 'lock'), lock2 = await DB.get('meta', 'lock2'); if (lock) await TkbDesktop.writeInfo({ app: 'Tankōbon Reader', v: 1, lock: (({ old, ...c }) => c)(lock), lock2: lock2 ? (({ old, ...c }) => c)(lock2) : undefined }); } catch (e) { console.warn(e); }
+  try {
+    const locks = {}; for (const l of await allLocks()) { const { old, ...c } = l; locks[l.id] = c; }
+    await TkbDesktop.writeInfo({ app: 'Tankōbon Reader', v: 2, locks });
+  } catch (e) { console.warn(e); }
 }
 async function restoreLockFromFolder() {
   try {
-    if (await DB.get('meta', 'lock')) return saveLockToFolder();
-    const info = await TkbDesktop.readInfo(); if (!info || !info.lock) return;
-    await DB.put('meta', { ...info.lock, id: 'lock' }); if (info.lock2) await DB.put('meta', { ...info.lock2, id: 'lock2' });
+    if ((await allLocks()).length) return saveLockToFolder();
+    const info = await TkbDesktop.readInfo(); if (!info) return;
+    const locks = info.locks || { lock: info.lock, lock2: info.lock2 };
+    for (const [id, l] of Object.entries(locks)) if (l) await DB.put('meta', { ...l, id });
   } catch (e) { console.warn(e); }
 }
 
@@ -3933,8 +3968,8 @@ async function restoreLockFromFolder() {
   }
   await Sync.load();
   listenIncoming();
-  let lock = null; try { lock = await DB.get('meta', 'lock'); } catch (e) { }
-  if (lock) showUnlock(lock); else showSetup();
+  let locks = []; try { locks = await allLocks(); } catch (e) { }
+  if (locks.length) showUnlock(locks); else showSetup();
 })();
 </script>
 <script>if ('serviceWorker' in navigator && !NATIVE) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
