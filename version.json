@@ -1,6 +1,6 @@
 {
- "version": 53,
- "name": "1.15.0",
+ "version": 54,
+ "name": "1.15.1",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,8 +16,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.",
-  "You can still choose \u201cMake a new gallery instead\u201d. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).",
-  "While dragging, the window shows where the files will go."
+  "Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."
  ]
 }

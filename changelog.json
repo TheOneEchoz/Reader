@@ -1,5 +1,13 @@
 [
   {
+    "v": 54,
+    "name": "1.15.1",
+    "date": "2026-09-27",
+    "items": [
+      "Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."
+    ]
+  },
+  {
     "v": 53,
     "name": "1.15.0",
     "date": "2026-09-27",
