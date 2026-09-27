@@ -181,6 +181,14 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .bigopt span{font-size:13px;color:var(--muted)}
 .progress{display:grid;gap:8px}
 .progress .bar{height:6px}
+.bgprog{position:fixed;left:12px;right:104px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:110;display:grid;gap:6px;pointer-events:none}
+@media (min-width:640px){.bgprog{left:50%;right:auto;width:420px;transform:translateX(-50%)}}
+.bgprog .task{background:var(--ink);color:var(--bg);border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:grid;gap:6px;font-size:13px;font-weight:600}
+.bgprog .task .bar{height:5px;background:rgba(255,255,255,.18)}
+.bgprog .task .bar i{background:var(--accent)}
+.bgprog .task .bar.ind i{width:35%!important;animation:bgind 1.1s ease-in-out infinite}
+@keyframes bgind{0%{transform:translateX(-100%)}100%{transform:translateX(290%)}}
+body.reading .bgprog{display:none}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
 #shield{position:fixed;inset:0;z-index:500;background:var(--bg);display:grid;place-items:center}
@@ -462,7 +470,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 36; // replaced by the build with the release number
+const APP_VERSION = 37; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -697,6 +705,20 @@ function thumbImg(id, alt = '') {
   if (id) imgURL(id, 'thumbs').then(u => { if (u) img.src = u; });
   return img;
 }
+/* Small progress cards at the top of the screen for work that happens in the background. */
+const BG = (() => {
+  const tasks = new Map(); let el = null;
+  const draw = () => {
+    if (!el) { el = h('div', { class: 'bgprog', role: 'status', 'aria-live': 'polite' }); document.body.append(el); }
+    el.hidden = !tasks.size;
+    el.replaceChildren(...[...tasks.values()].map(t => h('div', { class: 'task' }, h('span', { class: 'num' }, t.label),
+      h('div', { class: 'bar' + (t.total ? '' : ' ind') }, h('i', { style: `width:${t.total ? Math.min(100, 100 * t.done / t.total).toFixed(1) : 35}%` })))));
+  };
+  return {
+    set(key, label, done, total) { tasks.set(key, { label, done: done || 0, total: total || 0 }); draw(); },
+    clear(key) { if (tasks.delete(key)) draw(); },
+  };
+})();
 const saveGallery = async g => { pruneTags(g); g.updatedAt = Date.now(); await S.putGal(g); Sync.touched(g.id); };
 
 /* ---------- tags ----------
@@ -1311,6 +1333,7 @@ async function renderLibrary() {
         h('div', { class: 'sub num', style: 'margin-top:4px' }, gals.length ? `${plural(gals.length, 'gallery').replace('gallerys', 'galleries')} · ${plural(pages, 'page')}` : 'Your reading shelf')),
       Sync.st.enabled ? h('button', { class: 'syncpill', id: 'syncpill', onclick: openDevices, 'aria-label': 'Devices and sync' }, h('span', { class: 'sdot ' + Sync.status }), h('span', {}, pillText())) : null,
       isStandalone() ? null : h('button', { class: 'btn small ' + (installEvt ? 'primary' : 'ghost'), onclick: doInstall }, installEvt ? 'Install app' : 'Install'),
+      h('button', { class: 'iconbtn', 'aria-label': 'Lock (to leave this account)', title: 'Lock', onclick: lockNow }, icon('lock')),
       h('button', { class: 'iconbtn', 'aria-label': 'Settings', onclick: openGlobalSettings }, icon('tune'))),
     NATIVE ? h('div', { class: 'banner updbanner', id: 'updbanner', hidden: true }) : null,
     ST.folder ? h('div', { class: 'banner' }, h('p', { style: 'margin:0 0 8px' }, 'Your library is still in a phone folder, which is slow. Move it back into the app; nothing is lost.'),
@@ -1324,7 +1347,7 @@ async function renderLibrary() {
       h('div', { class: 'row', style: 'justify-content:center' },
         h('button', { class: 'btn primary', onclick: () => openAddSheet() }, icon('plus'), 'Add a gallery'),
         h('button', { class: 'btn ghost', onclick: addSample }, 'Load a sample')))
-  ), gals.length ? h('button', { class: 'btn primary fab', onclick: () => openAddSheet() }, icon('plus'), 'Add') : null);
+  ), gals.length ? h('button', { class: 'btn primary fab', onclick: () => openAddSheet() }, icon('plus'), 'Add') : '');
   drawGrid(); drawUpdateBanner();
 }
 function card(g, tq) {
@@ -2655,8 +2678,14 @@ document.addEventListener('visibilitychange', () => {
 let resizeT; window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (CUR.view === 'reader' && paged(R.p.mode)) applyStartZoom(); }, 150); });
 
 /* ================= sample gallery ================= */
+let sampleBusy = false;
 async function addSample() {
-  toast('Drawing the sample pages…', 4000);
+  if (sampleBusy) return toast('The sample gallery is already being prepared.');
+  sampleBusy = true;
+  try { await drawSample(); } finally { sampleBusy = false; }
+}
+async function drawSample() {
+  BG.set('sample', 'Preparing a sample gallery…', 0, 36);
   const specs = [['The Rooftop', 6, -1], ['Night Market', 7, 3], ['Last Train', 5, -1]];
   const entries = [];
   const tone = (ctx, gap, r) => { const c = document.createElement('canvas'); c.width = c.height = gap; const x = c.getContext('2d'); x.fillStyle = '#000'; x.beginPath(); x.arc(gap / 2, gap / 2, r, 0, 7); x.fill(); return ctx.createPattern(c, 'repeat'); };
@@ -2686,12 +2715,14 @@ async function addSample() {
       if (wide) { x.fillStyle = '#D0382A'; x.font = '900 44px sans-serif'; x.textAlign = 'center'; x.fillText('TWO-PAGE SPREAD', W / 2, H - 14); }
       x.fillStyle = '#111'; x.font = '700 24px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'alphabetic'; if (!wide) x.fillText(String(p + 1), W / 2, H - 14);
       const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .82));
+      BG.set('sample', 'Preparing a sample gallery: drawing pages', entries.length + 1, 36);
       entries.push({ dir: `${String(ci + 1).padStart(2, '0')} ${title}`, name: `${String(p + 1).padStart(3, '0')}.jpg`, get: async () => blob });
     }
   }
   const g = newGallery('Sample: Screentone Nights'); g.sample = true;
   const groups = groupChapters(entries, g.title).map(gr => { const t = gr.title.replace(/^\d+ /, ''); return { ...gr, title: t, path: [t] }; });
-  await importInto(g, groups, () => { }, () => false);
+  try { await importInto(g, groups, (d, t) => BG.set('sample', 'Preparing a sample gallery: saving pages', 18 + d, 18 + t), () => false); }
+  finally { BG.clear('sample'); }
   toast('Sample gallery added. Delete it any time from Edit.');
   if (CUR.view === 'library') renderLibrary();
 }
@@ -3182,13 +3213,16 @@ function eraseButton() {
 async function afterUnlock(fresh) {
   await prepareStorage();
   $('#v-lock').hidden = true; $('#v-lock').replaceChildren();
-  if (fresh || SLOT !== '') { try { const n = (await S.gals()).length; const gone = await DB.get('meta', mk('sampleGone')); if (!n && !gone) { await addSample(); await DB.put('meta', { id: mk('sampleGone'), v: true }); } } catch (e) { console.error(e); } }
+  let needSample = false;
+  if (fresh || SLOT !== '') { try { needSample = !(await S.gals()).length && !(await DB.get('meta', mk('sampleGone'))); } catch (e) { } }
   await Sync.load();
   if (!(await keyOpensLibrary())) toast('Your galleries could not be decrypted with this key. Nothing was deleted.', 8000);
   const st = history.state;
   if (st && st.view) render(st.view, st.params || {});
   else { try { history.replaceState({ view: 'library', params: {}, depth: 0 }, ''); } catch (e) { } render('library', {}); }
   Sync.start(); saveLockToFolder();
+  // the sample is drawn in the background while the app is already usable
+  if (needSample) addSample().then(() => DB.put('meta', { id: mk('sampleGone'), v: true })).catch(e => console.error(e));
   if (RECEIVED.length) { const f = RECEIVED; RECEIVED = []; receiveFiles(f); } else takeIncoming();
   if (NATIVE && UI.openUpdates) { UI.openUpdates = false; openUpdates(); }
 }
@@ -3398,7 +3432,16 @@ const Sync = (() => {
   const peers = new Map(), pend = new Map(), queued = new Set(), wanting = new Set(), subs = new Set();
   const recv = { got: 0, want: 0 };
   let changed = new Set(), changedT = 0, refreshT = 0, refreshIds = new Set();
-  const emit = () => subs.forEach(f => { try { f(); } catch (e) { } });
+  const sent = { n: 0, to: '', t: 0 };
+  const peerName = pid => { const p = peers.get(pid); return (p && p.name) || 'your other device'; };
+  const progress = () => {
+    const from = [...pend.keys()].map(peerName)[0] || [...peers.values()].map(p => p.name).filter(Boolean)[0] || 'your other device';
+    if (recv.want) BG.set('sync-in', `Receiving pages from ${from}: ${recv.got.toLocaleString()} of ${recv.want.toLocaleString()}`, recv.got, recv.want);
+    else if (wanting.size) BG.set('sync-in', `Receiving ${plural(wanting.size, 'gallery').replace('gallerys', 'galleries')} from ${from}…`, 0, 0);
+    else BG.clear('sync-in');
+    if (sent.n && Date.now() - sent.t < 4000) BG.set('sync-out', `Sending pages to ${sent.to}: ${sent.n.toLocaleString()} sent`, 0, 0); else { BG.clear('sync-out'); sent.n = 0; }
+  };
+  const emit = () => { progress(); subs.forEach(f => { try { f(); } catch (e) { } }); };
   const guessName = () => { const ua = navigator.userAgent; return /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet') : /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : 'Computer'; };
   async function load() {
     try {
@@ -3448,7 +3491,7 @@ const Sync = (() => {
     r.due = false; r.n++;
     setTimeout(() => { if (peers.has(pid)) send({ t: 'ask' }, pid).catch(console.error); }, 1500);
   }
-  function stop() { try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); recv.got = recv.want = 0; status = 'off'; emit(); }
+  function stop() { try { room && room.leave(); } catch (e) { } room = act = fact = null; peers.clear(); pend.clear(); queued.clear(); wanting.clear(); recv.got = recv.want = 0; sent.n = 0; status = 'off'; emit(); }
   function dropPeer(pid) { retries.delete(pid); chains.delete(pid); const q = pend.get(pid); if (q) { q.queue.forEach(id => queued.delete(id)); (q.batch || []).forEach(id => queued.delete(id)); } pend.delete(pid); if (!pend.size) recv.got = recv.want = 0; }
   async function hello(pid) { await send({ t: 'hello', dev: device, list: await listing(), tomb: tombs }, pid); }
   async function handle(m, pid) {
@@ -3467,7 +3510,7 @@ const Sync = (() => {
         else if (r.u === (g.updatedAt || 0)) queueMissing(g, pid, have);
       }
       if (want.length) {
-        want.forEach(id => wanting.add(id)); setTimeout(() => want.forEach(id => wanting.delete(id)), 30000);
+        want.forEach(id => wanting.add(id)); setTimeout(() => { want.forEach(id => wanting.delete(id)); emit(); }, 30000); emit();
         await send({ t: 'want', ids: want }, pid); log(`Asking for ${plural(want.length, 'gallery').replace('gallerys', 'galleries')}`);
       }
       lastSync = Date.now(); emit();
@@ -3475,14 +3518,16 @@ const Sync = (() => {
       for (const id of m.ids) { const g = await S.gal(id); if (g && !g.sample) await send({ t: 'gal', g }, pid); }
       log(`Sending ${plural(m.ids.length, 'gallery').replace('gallerys', 'galleries')}`);
     } else if (m.t === 'gal') {
-      wanting.delete(m.g.id);
+      wanting.delete(m.g.id); emit();
       try { await merge(m.g, pid); log(`Received “${m.g.title}”`); }
       catch (e) { console.error(e); failed(pid, `“${m.g.title}”`); if (!pend.get(pid)) askAgain(pid); }
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
         const r = await ST.get(store, id);
         if (r && r.e) await fact.send(new Uint8Array(r.e), { target: pid, metadata: { id, s, t: r.t } });
+        if (s === 'i') { sent.n++; sent.to = peerName(pid); sent.t = Date.now(); emit(); }
       }
+      setTimeout(emit, 4200);
       await send({ t: 'done' }, pid);
     } else if (m.t === 'ask') {
       await hello(pid);
