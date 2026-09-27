@@ -1,6 +1,7 @@
 {
- "version": 69,
- "name": "1.21.1",
+ "version": 70,
+ "name": "1.21.2",
+ "channel": "stable",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,7 +17,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.",
-  "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."
+  "New on the unlock screen: \u201cExperimental version\u201d. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.",
+  "The change log of the experimental version is only shown to people using it."
  ]
 }
