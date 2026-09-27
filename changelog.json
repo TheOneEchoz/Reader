@@ -1,5 +1,14 @@
 [
  {
+  "v": 49,
+  "name": "1.11.1",
+  "date": "2026-09-27",
+  "items": [
+   "Tag search: tags stay in place when you switch them between must have, any of and must not have.",
+   "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."
+  ]
+ },
+ {
   "v": 48,
   "name": "1.11.0",
   "date": "2026-09-27",

@@ -1,6 +1,6 @@
 {
- "version": 48,
- "name": "1.11.0",
+ "version": 49,
+ "name": "1.11.1",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,8 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Tags belong to your account: Settings \u2192 Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.",
-  "Tag a whole gallery from Edit gallery \u2192 Gallery tags.",
-  "New tag search: every chosen tag can be \u201cmust have\u201d, \u201cany of\u201d or \u201cmust not have\u201d, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."
+  "Tag search: tags stay in place when you switch them between must have, any of and must not have.",
+  "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."
  ]
 }
