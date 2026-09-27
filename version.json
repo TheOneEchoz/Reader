@@ -1,6 +1,6 @@
 {
- "version": 68,
- "name": "1.21.0",
+ "version": 69,
+ "name": "1.21.1",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,8 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.",
-  "New switch \u201cUnderstand see-through effects\u201d (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.",
-  "The preview marks options that became see-through."
+  "Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.",
+  "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."
  ]
 }

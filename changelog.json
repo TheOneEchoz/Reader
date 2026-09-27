@@ -1,5 +1,14 @@
 [
   {
+    "v": 69,
+    "name": "1.21.1",
+    "date": "2026-09-27",
+    "items": [
+      "Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.",
+      "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."
+    ]
+  },
+  {
     "v": 68,
     "name": "1.21.0",
     "date": "2026-09-27",
