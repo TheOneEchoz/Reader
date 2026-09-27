@@ -168,6 +168,18 @@ button{cursor:pointer;background:none;border:0;padding:0}
 #sheet header h2{flex:1;margin:0;font-size:17px}
 #sheet .sb{min-height:0;flex:1 1 auto;overflow:auto;padding:4px 18px 20px;display:grid;gap:16px;overscroll-behavior:contain}
 .setrow{display:grid;gap:8px}
+.setpage{gap:18px}
+.setgroup{display:grid;gap:8px}
+.setlist{display:grid;border-radius:14px;overflow:hidden;background:var(--surface2)}
+.setitem{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:center;padding:12px 14px;text-align:left;width:100%;min-height:58px;color:var(--ink);font:inherit}
+.setitem+.setitem{border-top:1px solid var(--line)}
+button.setitem:active{background:var(--line)}
+.setitem>.ic{width:22px;height:22px;color:var(--muted)}
+.setitem b{display:block;font-size:15px;font-weight:600}
+.setitem small{display:block;color:var(--muted);font-size:12.5px;line-height:1.35;margin-top:2px}
+.setitem.tall>span{display:grid;gap:6px}
+.setitem.tall .seg{margin-top:4px;justify-self:start;flex-wrap:nowrap}
+.setitem.tall .seg button{padding-inline:10px}
 .setrow.inline{grid-template-columns:1fr auto;align-items:center}
 .setrow .lab{font-weight:500;font-size:14px}
 .switch{width:50px;height:30px;border-radius:999px;background:var(--surface2);position:relative;border:1.5px solid var(--line);flex:none}
@@ -470,7 +482,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 38; // replaced by the build with the release number
+const APP_VERSION = 39; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -646,6 +658,7 @@ function settingsForm(values, onChange, filter) {
 let sheetOnClose = null;
 function openSheet(title, body, onClose) {
   $('#sheetTitle').textContent = title;
+  if (sheetBack) { sheetBack = null; body = h('div', { class: 'stack' }, h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: () => { closeSheet(); openGlobalSettings(); } }, icon('back'), 'Settings'), body); }
   $('#sheetBody').replaceChildren(body);
   $('#sheet').hidden = false; sheetOnClose = onClose || null;
 }
@@ -1362,39 +1375,72 @@ function card(g, tq) {
       h('div', { class: 'bar' }, h('i', { style: `width:${pi ? (100 * pi.flat / tp).toFixed(1) : 0}%` }))));
 }
 let lockSeg;
-async function openGlobalSettings() {
+/* ---------- settings: one tidy list; each row opens its own page with a way back ---------- */
+let sheetBack = null;
+function subSheet(title, body, onClose) {
+  openSheet(title, h('div', { class: 'stack' }, h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: () => { closeSheet(); openGlobalSettings(); } }, icon('back'), 'Settings'), body), onClose);
+}
+function setItem(ic, title, sub, onclick, right) {
+  return h(onclick ? 'button' : 'div', { class: 'setitem', type: onclick ? 'button' : null, onclick },
+    icon(ic), h('span', {}, h('b', {}, title), sub ? h('small', {}, sub) : null), right || (onclick ? icon('chevr') : h('span')));
+}
+function setSwitch(ic, title, sub, get, set) {
+  const sw = h('button', { class: 'switch', role: 'switch', 'aria-label': title, 'aria-checked': String(get()), onclick: e => { e.stopPropagation(); set(!get()); sw.setAttribute('aria-checked', String(get())); } });
+  return h('div', { class: 'setitem' }, icon(ic), h('span', {}, h('b', {}, title), sub ? h('small', {}, sub) : null), sw);
+}
+const setGroup = (label, ...items) => h('section', { class: 'setgroup' }, h('div', { class: 'label' }, label), h('div', { class: 'setlist' }, ...items.filter(Boolean)));
+function openGlobalSettings() {
+  const go2 = fn => () => { closeSheet(); sheetBack = true; fn(); };
+  const lockLabel = v => ({ 0: 'right away', 60: 'after 1 minute', 300: 'after 5 minutes', 1800: 'after 30 minutes' })[v] || `after ${v} s`;
+  const lockSeg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Lock the app' }, [[0, 'At once'], [60, '1 min'], [300, '5 min'], [1800, '30 min']].map(([v, l]) =>
+    h('button', { 'aria-pressed': String((UI.lockAfter ?? 60) === v), onclick: e => { UI.lockAfter = v; saveMeta(); $$('button', lockSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); lockSub.textContent = 'When the app has been in the background, it locks ' + lockLabel(v); } }, l)));
+  const lockSub = h('small', {}, 'When the app has been in the background, it locks ' + lockLabel(UI.lockAfter ?? 60));
+  const usage = h('span');
+  if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => usage.textContent = `${mb(e.usage || 0)} used`).catch(() => { });
+  const syncSub = Sync.st.enabled ? `${SYNC_TEXT[Sync.status]}${Sync.peers.size ? ` · ${plural(Sync.peers.size, 'device')} connected` : ''}` : 'Off';
+  const upd = Upd.latest;
+  openSheet('Settings', h('div', { class: 'stack setpage' },
+    setGroup('Account',
+      setItem('lock', 'Lock now', 'Leave this account. Unlock with any account\'s password.', lockNow),
+      setItem('edit', 'Password and clue', 'Change this account\'s password or its clue', go2(openChangePassword)),
+      setItem('devices', 'Accounts on this device', 'Make a new account, or delete this one', go2(openAccounts))),
+    setGroup('Sync',
+      setItem('devices', 'Devices and sync', syncSub, go2(openDevices))),
+    setGroup('Reading',
+      setItem('tune', 'Default reading settings', `${MODE_LABEL[GLOBAL.mode] || GLOBAL.mode}${GLOBAL.mode !== 'vertical' ? ' · ' + (GLOBAL.dir === 'rtl' ? 'right to left' : 'left to right') : ''} · for galleries you have not changed`, () => { closeSheet(); openReadingDefaults(); })),
+    setGroup('Privacy and screen',
+      h('div', { class: 'setitem tall' }, icon('lock'), h('span', {}, h('b', {}, 'Lock the app'), lockSub, lockSeg), h('span')),
+      setSwitch('eyeoff', ANDROID ? 'Hide in recent apps' : DESK ? 'Hide from screenshots' : 'Cover the screen when leaving',
+        ANDROID ? 'Blanks the app in the recent apps list. This also blocks screenshots.' : DESK ? 'Hides the app from screenshots, screen sharing and the Alt+Tab preview' : 'Covers what is on screen before the recent apps list takes its picture',
+        () => UI.shield !== false, v => { UI.shield = v; saveMeta(); nativeScreen(); }),
+      DESK ? null : setSwitch('full', 'Full screen', ANDROID ? 'Hide the phone\'s bars. Swipe from an edge to see them.' : 'Hide the browser and phone bars', () => UI.fullscreen !== false, v => {
+        UI.fullscreen = v; saveMeta();
+        if (ANDROID) return nativeScreen();
+        if (!v && document.fullscreenElement) exitFull().catch(() => { });
+        else if (v && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
+      })),
+    setGroup('Library',
+      setItem('archive', 'Storage', h('span', {}, NATIVE ? (DESK ? 'Documents › Tankobon' : 'The app\'s own storage') : ST.folder ? 'A phone folder' : 'This browser', ' · ', usage), () => { closeSheet(); openStorage(); }),
+      setItem('plus', 'Add the sample gallery', 'A short example comic to try the reader with', () => { closeSheet(); addSample(); })),
+    setGroup('App',
+      NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VERSION} · version ${upd.version} is available` : `Version ${APP_VERSION}`, go2(openUpdates), upd ? h('span', { class: 'chip' }, 'NEW') : null) : null,
+      !NATIVE && !isStandalone() ? setItem('plus', 'Install the app', 'Open it from its own icon, full screen', go2(openInstallHelp)) : null,
+      !NATIVE ? setItem('download', 'Version', `${APP_VERSION || 'web'} · updates arrive by themselves`) : null)));
+}
+function openReadingDefaults() {
   const vals = { ...GLOBAL };
+  subSheet('Default reading settings', h('div', { class: 'stack' },
+    h('p', { class: 'hint' }, 'Galleries use these until you change a setting from inside the reader; then that gallery keeps its own.'),
+    settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); })));
+}
+function openStorage() {
   const store = h('p', { class: 'hint num' }, 'Checking storage…');
-  if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => store.textContent = `Using ${mb(e.usage || 0)} of about ${mb(e.quota || 0)} this browser allows the app.`).catch(() => store.textContent = '');
+  if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => store.textContent = `Using ${mb(e.usage || 0)} of about ${mb(e.quota || 0)} ${NATIVE ? 'for app data' : 'this browser allows the app'}.`).catch(() => store.textContent = '');
   else store.textContent = '';
   const persisted = h('p', { class: 'hint' });
-  if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p => persisted.textContent = p ? 'Chrome has marked your library as protected from automatic cleanup.' : 'Chrome may clear stored pages if your phone runs very low on space. Adding the app to your home screen makes this less likely.');
-  openSheet('Default reading settings', h('div', { class: 'stack' },
-    h('p', { class: 'hint' }, 'New galleries use these. Each gallery can override them from the reader.'),
-    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Privacy & devices'),
-      h('div', { class: 'setrow' }, h('div', { class: 'lab', id: 'lock-lbl' }, 'Lock the app after it has been in the background for'),
-        (lockSeg = h('div', { class: 'seg', role: 'group', 'aria-labelledby': 'lock-lbl' }, [[0, 'Right away'], [60, '1 min'], [300, '5 min'], [1800, '30 min']].map(([v, l]) =>
-          h('button', { 'aria-pressed': String((UI.lockAfter ?? 60) === v), onclick: e => { UI.lockAfter = v; saveMeta(); $$('button', lockSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l))))),
-      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-shield' }, ANDROID ? 'Hide the app in the recent apps list (this also blocks screenshots)' : DESK ? 'Hide the app from screenshots, screen sharing and the Alt+Tab preview' : 'Hide what is on screen when you leave the app (recent apps list)'),
-        h('button', { class: 'switch', id: 'sw-shield', role: 'switch', 'aria-checked': String(UI.shield !== false), onclick: e => { UI.shield = UI.shield === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.shield)); nativeScreen(); } })),
-      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-full' }, 'Full screen (hide the browser and phone bars)'),
-        h('button', { class: 'switch', id: 'sw-full', role: 'switch', 'aria-checked': String(UI.fullscreen !== false), onclick: e => {
-          UI.fullscreen = UI.fullscreen === false; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.fullscreen));
-          if (ANDROID) return nativeScreen();
-          if (!UI.fullscreen && document.fullscreenElement) exitFull().catch(() => { });
-          else if (UI.fullscreen && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { });
-        } })),
-      h('div', { class: 'row' },
-        h('button', { class: 'btn small', onclick: () => { closeSheet(); openDevices(); } }, icon('devices'), 'Devices & sync'),
-        h('button', { class: 'btn small', onclick: () => { closeSheet(); openChangePassword(); } }, 'Change password or clue'),
-        h('button', { class: 'btn small', onclick: () => { closeSheet(); openAccounts(); } }, icon('lock'), 'Accounts'),
-        h('button', { class: 'btn small', onclick: lockNow }, icon('lock'), 'Lock now'),
-        NATIVE ? h('button', { class: 'btn small', onclick: () => { closeSheet(); openUpdates(); } }, icon('download'), `App updates · v${APP_VERSION}`) : null)),
-    settingsForm(vals, (k, v) => { GLOBAL[k] = v; saveMeta(); }),
-    h('div', { class: 'panel', style: 'background:var(--surface2)' }, h('div', { class: 'label' }, 'Storage'), storagePanel(), store, ST.folder ? null : persisted,
-      h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { closeSheet(); addSample(); } }, 'Add the sample gallery')))));
+  if (!NATIVE && navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p => persisted.textContent = p ? 'Chrome has marked your library as protected from automatic cleanup.' : 'Chrome may clear stored pages if your phone runs very low on space. Adding the app to your home screen makes this less likely.');
+  subSheet('Storage', h('div', { class: 'stack' }, storagePanel(), store, ST.folder ? null : persisted));
 }
-
 /* ================= detail ================= */
 async function renderDetail(id, folderId, tq) {
   const v = $('#v-detail'); const g = await S.gal(id);
