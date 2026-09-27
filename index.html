@@ -470,7 +470,7 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 37; // replaced by the build with the release number
+const APP_VERSION = 38; // replaced by the build with the release number
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -3162,7 +3162,7 @@ async function showSetup(joinRaw) {
     h('p', { class: 'hint' }, 'Nobody can reset this password, not even the app. If you forget it, the library on this device cannot be opened.'),
     joinRaw ? null : h('div', { class: 'stack', style: 'margin-top:8px' }, h('div', { class: 'label' }, 'Already use Tankōbon on another device?'),
       h('button', { class: 'btn ghost', type: 'button', onclick: () => scanPairCode(raw => showSetup(raw)) }, icon('devices'), 'Join my library from another device'),
-));
+), lockUpdates());
   setTimeout(() => { const f = $('#pw1'); if (f) f.focus(); }, 50);
 }
 async function unlockWith(pw) {
@@ -3199,7 +3199,7 @@ function showUnlock(locks) {
     } }, pwField('pw', 'Password', 'current-password'), err, btn),
     clueButton(locks.map(l => l.hint).filter(Boolean)),
     h('button', { class: 'btn ghost small', type: 'button', onclick: () => openNewAccount(true) }, icon('plus'), 'New account on this device'),
-    h('button', { class: 'btn ghost small', type: 'button', onclick: () => { forgot.hidden = !forgot.hidden; } }, 'Forgot your password?'), forgot);
+    h('button', { class: 'btn ghost small', type: 'button', onclick: () => { forgot.hidden = !forgot.hidden; } }, 'Forgot your password?'), forgot, lockUpdates());
   setTimeout(() => { const f = $('#pw'); if (f) f.focus(); }, 50);
 }
 function eraseButton() {
@@ -3947,7 +3947,30 @@ const Upd = (() => {
   };
   return api;
 })();
+/* App updates on the unlock screen, so nobody has to unlock an account to update the app. */
+function lockUpdates() {
+  if (!NATIVE) return null;
+  const box = h('div', { class: 'panel lockupd', id: 'lockupd', style: 'background:var(--surface2);margin-top:8px' });
+  drawLockUpdates(box); return box;
+}
+function drawLockUpdates(box = $('#lockupd')) {
+  if (!box) return;
+  const v = Upd.latest, prog = h('p', { class: 'hint num', style: 'margin:0' });
+  box.replaceChildren(
+    h('div', { class: 'row', style: 'justify-content:space-between;align-items:center' },
+      h('div', { class: 'label' }, `App version ${APP_VERSION}`),
+      v ? h('button', { class: 'btn small primary', type: 'button', onclick: async e => {
+        e.currentTarget.disabled = true; prog.textContent = 'Downloading…';
+        try { await Upd.install((i, n) => prog.textContent = `Downloading ${i} of ${n}`); }
+        catch (x) { prog.textContent = 'The update could not be downloaded: ' + (x.message || x); e.currentTarget.disabled = false; }
+      } }, icon('download'), `Update to version ${v.version}`)
+        : h('button', { class: 'btn small ghost', type: 'button', onclick: async e => { e.currentTarget.disabled = true; await Upd.check(true); drawLockUpdates(); } }, 'Check for updates')),
+    prog,
+    h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-auto' }, 'Update automatically (downloads in the background and switches the next time the app opens)'),
+      h('button', { class: 'switch', id: 'sw-auto', type: 'button', role: 'switch', 'aria-checked': String(!!UI.autoUpdate), onclick: e => { UI.autoUpdate = !UI.autoUpdate; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.autoUpdate)); if (UI.autoUpdate) Upd.check(false); } })));
+}
 function drawUpdateBanner() {
+  drawLockUpdates();
   const b = $('#updbanner'); const v = Upd.latest;
   if (!b) return;
   b.hidden = !v; if (!v) return;
@@ -3968,8 +3991,7 @@ function openUpdates() {
       } }, icon('download'), `Update to version ${v.version}`) : h('button', { class: 'btn', onclick: async () => { await Upd.check(true); draw(); } }, 'Check for updates'),
       prog,
       v ? h('p', { class: 'hint' }, 'The app restarts after updating, so you will need your password again. Your library is not touched.') : null,
-      h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-auto' }, 'Update automatically (downloads in the background and switches the next time you open the app)'),
-        h('button', { class: 'switch', id: 'sw-auto', role: 'switch', 'aria-checked': String(!!UI.autoUpdate), onclick: e => { UI.autoUpdate = !UI.autoUpdate; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.autoUpdate)); if (UI.autoUpdate) Upd.check(false); } })),
+      h('p', { class: 'hint' }, `Automatic updates are ${UI.autoUpdate ? 'on' : 'off'}. You can switch them on the unlock screen, and update from there too without unlocking.`),
       h('div', {}, h('button', { class: 'btn ghost small', onclick: async () => { await Upd.useBuiltIn(); } }, 'Go back to the version that came with the app')));
   };
   draw(); openSheet('App updates', box);
