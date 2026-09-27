@@ -1,5 +1,18 @@
 [
   {
+    "v": 56,
+    "name": "1.16.0",
+    "date": "2026-09-27",
+    "items": [
+      "New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.",
+      "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.",
+      "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.",
+      "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.",
+      "Small copies of see-through images now show on white instead of black.",
+      "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."
+    ]
+  },
+  {
     "v": 55,
     "name": "1.15.2",
     "date": "2026-09-27",

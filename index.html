@@ -241,6 +241,13 @@ body.reading .bgprog{display:none}
 .layrow.preset .text{height:38px;min-width:0}
 .laythumb{width:52px;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--surface);display:block}
 .laythumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:8px}
+.libtile{position:relative;display:grid;gap:4px;justify-items:center;padding:6px;border-radius:10px;border:2px solid transparent;background:var(--surface)}
+.libtile.sel{border-color:var(--accent)}
+.libtile .laythumb{width:100%}
+.libname{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.libcheck{position:absolute;right:4px;top:4px;background:var(--accent);color:var(--accent-ink);border-radius:999px;width:22px;height:22px;display:grid;place-items:center}
+.libcheck .ic{width:14px;height:14px}
 .layfields{display:grid;gap:6px;min-width:0}
 .layfields .text{height:38px}
 .laybtns{display:flex;gap:2px}
@@ -495,6 +502,7 @@ const ICONS = {
   more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>', chevr: '<path d="M9 6l6 6-6 6"/>',
   eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.5 6.6C4.4 8 2.9 10 2 12c1 2.5 5 7 10 7 1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 004.2 4.2"/>', eye: '<path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z"/><circle cx="12" cy="12" r="3"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>',
   tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>'
 };
@@ -525,8 +533,8 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 55; // replaced by the build with the release number
-const CHANGELOG = [{"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 56; // replaced by the build with the release number
+const CHANGELOG = [{"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -1040,7 +1048,9 @@ function pickFiles({ folder = false, accept = '', multiple = true } = {}) {
   if (folder && NATIVE) return pickFolderNative();
   busy++; let fin = false; const release = () => { if (!fin) { fin = true; busy = Math.max(0, busy - 1); } }; setTimeout(release, 120000);
   return new Promise(res0 => {
-    const res = v => { release(); res0(v); };
+    // a file window can take the page out of full screen; that is not a back press
+    ownExit = performance.now() + 120000;
+    const res = v => { ownExit = performance.now() + 1500; release(); res0(v); };
     const inp = h('input', { type: 'file', style: 'position:fixed;left:-9999px', accept, multiple });
     if (folder) { inp.webkitdirectory = true; inp.setAttribute('webkitdirectory', ''); }
     inp.addEventListener('change', () => { const f = [...inp.files]; inp.remove(); res(f); });
@@ -1106,7 +1116,8 @@ async function makeThumb(blob) {
   if (!w || !hgt) throw new Error('unreadable');
   const tw = 240, sh = Math.min(hgt, w * 2), th = Math.round(sh * tw / w);
   const c = document.createElement('canvas'); c.width = tw; c.height = th;
-  c.getContext('2d').drawImage(src, 0, 0, w, sh, 0, 0, tw, th);
+  const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, tw, th); // see-through images (layers) show on white, not black
+  cx.drawImage(src, 0, 0, w, sh, 0, 0, tw, th);
   if (src.close) src.close();
   const thumb = await new Promise(r => c.toBlob(r, 'image/jpeg', .72));
   return { w, h: hgt, thumb };
@@ -1340,12 +1351,12 @@ const dropHint = h('div', { id: 'drophint', hidden: true }, h('div', {}, icon('p
 let dropHideT = 0, dropSeen = '';
 function showDropHint() {
   clearTimeout(dropHideT); dropHideT = setTimeout(() => { dropHint.hidden = true; dropSeen = ''; }, 250);
-  const t = dropTarget(), key = LAYDROP && LAYDROP.box.isConnected ? 'lay:' + LAYDROP.name : t ? t.id + '/' + t.folder : '-';
+  const t = dropTarget(), key = LAYDROP && LAYDROP.box.isConnected ? 'lay:' + LAYDROP.label : t ? t.id + '/' + t.folder : '-';
   if (!dropHint.isConnected) document.body.append(dropHint);
   dropHint.hidden = false;
   if (dropSeen === key) return; dropSeen = key;
   const [b, s] = [$('b', dropHint), $('.hint', dropHint)];
-  if (key.startsWith('lay:')) { b.textContent = `Drop to add as layers of “${LAYDROP.name}”`; s.textContent = 'Full-size images, transparent where they add nothing'; return; }
+  if (key.startsWith('lay:')) { b.textContent = LAYDROP.label; s.textContent = 'Full-size images, transparent where they add nothing'; return; }
   if (!t) { b.textContent = 'Drop to make a new gallery'; s.textContent = 'Images, ZIP or CBZ files, or folders'; return; }
   b.textContent = 'Drop to add here'; s.textContent = '';
   S.gal(t.id).then(g => { if (!g || dropSeen !== key) return; const F = t.folder && g.chapters.find(c => c.id === t.folder); b.textContent = `Drop to add to “${F ? F.title : g.title}”`; s.textContent = 'You can still choose to make a new gallery instead'; });
@@ -1701,6 +1712,7 @@ function openGlobalSettings() {
     setGroup('Library',
       setItem('archive', 'Storage', h('span', {}, NATIVE ? (DESK ? 'Documents › Tankobon' : 'The app\'s own storage') : ST.folder ? 'A phone folder' : 'This browser', ' · ', usage), () => { closeSheet(); openStorage(); }),
       setItem('tag', 'Tags', 'Rename, delete or add this account\'s tags', () => { closeSheet(); openTagManager(); }),
+      setItem('layers', 'Layer library', 'Layer images to reuse on any layered image', () => { closeSheet(); openLayerLibrary(); }),
       setItem('plus', 'Add the sample gallery', 'A short example comic to try the reader with', () => { closeSheet(); addSample(); })),
     setGroup('App',
       NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VNAME} · version ${VNAME(upd.version, upd)} is available` : AppFile.latest ? `Version ${APP_VNAME} · a new app file is available` : `Version ${APP_VNAME}`, go2(openUpdates), upd || AppFile.latest ? h('span', { class: 'chip' }, 'NEW') : null) : null,
@@ -2062,7 +2074,7 @@ const Lay = {
   ensure(g, id) { g.layers = g.layers || {}; return g.layers[id] || (g.layers[id] = { list: [], on: [], presets: [] }); },
   /* the layers shown: as set now, or those of saved combination v */
   onOf(g, id, v) { const L = this.of(g, id); if (!L) return []; const P = v != null && L.presets[v]; return P ? P.on : L.on; },
-  shown(g, id, v) { const L = this.of(g, id), on = this.onOf(g, id, v); return L ? L.list.filter(l => on.includes(l.id) && g.meta[l.id]) : []; },
+  shown(g, id, v) { const L = this.of(g, id), on = this.onOf(g, id, v); return L ? L.list.filter(l => on.includes(l.id) && (l.lib || g.meta[l.id])) : []; },
   /* when reading, each saved combination is its own page */
   variants(g, id) { const L = this.of(g, id); return L && L.presets.length ? L.presets.map((_, k) => k) : [null]; },
   nameOf: (g, id) => ((g.meta[id] || [])[2] || 'Layer').replace(/\.[a-z0-9]{2,5}$/i, ''),
@@ -2126,11 +2138,13 @@ const Lay = {
     this.tidy(L); return odd;
   },
   /* every layer id under these pages */
-  under(g, ids) { return ids.flatMap(i => (g.layers && g.layers[i] ? g.layers[i].list.map(l => l.id) : [])); },
+  under(g, ids) { return ids.flatMap(i => (g.layers && g.layers[i] ? g.layers[i].list.filter(l => !l.lib).map(l => l.id) : [])); }, // library layers belong to the library
 };
 
 /* The layers sheet. In the reader it only switches layers and saved combinations; in the editor it also edits them. */
-function openLayerSheet(g, id, { edit = false, save, changed, preset = null, onPick, onPresets } = {}) {
+function openLayerSheet(g, id, opts = {}) {
+  let { edit = false, save, changed, preset = null, onPick, onPresets } = opts;
+  const reopen = () => openLayerSheet(g, id, { ...opts, preset });
   const box = h('div', { class: 'stack' });
   const prev = edit ? h('img', { class: 'layprev', alt: 'How it looks now' }) : null;
   const showPrev = () => prev && Lay.url(g, id).then(u => { if (u) prev.src = u; });
@@ -2201,21 +2215,37 @@ function openLayerSheet(g, id, { edit = false, save, changed, preset = null, onP
           rows.push(h('div', { class: 'layrow' }, th,
             h('div', { class: 'layfields' },
               h('input', { class: 'text', value: l.name, 'aria-label': 'Layer name', onchange: e => { l.name = e.target.value.trim().slice(0, 60) || l.name; commit(); } }),
-              h('input', { class: 'text', value: l.group || '', list: 'lay-groups', placeholder: 'Pick-one group (optional)', 'aria-label': `Group for ${l.name}`, onchange: e => { l.group = e.target.value.trim().slice(0, 40); Lay.tidy(L); commit(); } })),
+              h('input', { class: 'text', value: l.group || '', list: 'lay-groups', placeholder: 'Pick-one group (optional)', 'aria-label': `Group for ${l.name}`, onchange: e => { l.group = e.target.value.trim().slice(0, 40); Lay.tidy(L); commit(); } }),
+              l.lib ? h('span', { class: 'hint', style: 'font-size:12px' }, 'From the layer library') : null),
             h('div', { class: 'laybtns' },
+              l.lib ? null : h('button', { class: 'iconbtn', 'aria-label': `Save ${l.name} to the layer library`, title: 'Save to the layer library', onclick: async () => {
+                const b = await S.blob('images', l.id); if (!b) return toast('This layer has not arrived on this device yet.');
+                const r = await LayLib.get(); await withBusy(async () => { await LayLib.put(r, b, (g.meta[l.id] || [])[2] || l.name + '.png', ''); r.items[r.items.length - 1].name = l.name; await LayLib.save(r); });
+                toast(`${l.name} saved to the layer library. Use it on any image with “Add from the layer library”.`, 4000);
+              } }, icon('bookmark')),
               h('button', { class: 'iconbtn', 'aria-label': `Move ${l.name} down`, disabled: !k, onclick: () => { L.list.splice(k - 1, 0, ...L.list.splice(k, 1)); commit(); } }, icon('down')),
               h('button', { class: 'iconbtn', 'aria-label': `Move ${l.name} up`, disabled: k === L.list.length - 1, onclick: () => { L.list.splice(k + 1, 0, ...L.list.splice(k, 1)); commit(); } }, icon('up')),
               h('button', { class: 'iconbtn', 'aria-label': `Delete ${l.name}`, onclick: async e => {
                 const b = e.currentTarget; if (!b.dataset.armed) { b.dataset.armed = '1'; b.classList.add('armed'); b.setAttribute('aria-label', `Tap again to delete ${l.name}`); toast('Tap the bin again to delete this layer'); return; }
-                L.list.splice(k, 1); Lay.tidy(L); delete g.meta[l.id]; forgetURL(l.id);
+                L.list.splice(k, 1); Lay.tidy(L);
                 if (!L.list.length) delete g.layers[id];
-                await ST.del('images', l.id).catch(() => { }); await ST.del('thumbs', l.id).catch(() => { });
+                if (!l.lib) { delete g.meta[l.id]; forgetURL(l.id); await ST.del('images', l.id).catch(() => { }); await ST.del('thumbs', l.id).catch(() => { }); }
                 commit(); toast(`Deleted ${l.name}`);
               } }, icon('trash')))));
         });
       }
       rows.push(h('div', { class: 'row', style: 'flex-wrap:wrap' },
         h('button', { class: 'btn primary', onclick: addLayers }, icon('plus'), 'Add layer images'),
+        h('button', { class: 'btn', onclick: () => openLayLibPicker(async items => {
+          const L2 = Lay.ensure(g, id), r = await LayLib.get(), [bw, bh] = g.meta[id]; let odd = 0;
+          for (const i of items) {
+            if (L2.list.some(l => l.id === i.id)) continue;
+            const m = r.meta[i.id]; if (m && Math.abs(m[0] / m[1] - bw / bh) > .02 * (bw / bh)) odd++;
+            L2.list.push({ id: i.id, name: i.name, group: i.folder || '', lib: true }); L2.on.push(i.id);
+          }
+          Lay.tidy(L2); await withBusy(() => commit(false)); reopen();
+          toast(`${plural(items.length, 'layer')} added from the library${odd ? `. ${odd} had a different shape and ${odd === 1 ? 'is' : 'are'} stretched to fit` : ''}.`, 3500);
+        }, reopen) }, icon('bookmark'), 'Add from the layer library'),
         L ? h('button', { class: 'btn ghost', onclick: split }, 'Turn layers into separate pages') : null));
     }
     box.replaceChildren(...rows.filter(Boolean));
@@ -2243,15 +2273,139 @@ function openLayerSheet(g, id, { edit = false, save, changed, preset = null, onP
   const split = async () => {
     const L = Lay.of(g, id); if (!L) return;
     const c = g.chapters.find(x => x.pages.includes(id)); if (!c) return;
-    c.pages.splice(c.pages.indexOf(id) + 1, 0, ...L.list.map(l => l.id)); delete g.layers[id];
+    // library layers stay in the library; the pages get their own copy
+    const r = await LayLib.get(), ids = [];
+    for (const l of L.list) {
+      if (!l.lib) { ids.push(l.id); continue; }
+      const b = await S.blob('images', l.id), t = await S.blob('thumbs', l.id); if (!b) continue;
+      const nid = uid(); await S.putBlob('images', nid, b); if (t) await S.putBlob('thumbs', nid, t);
+      g.meta[nid] = [...(r.meta[l.id] || [1, 1, l.name])]; ids.push(nid);
+    }
+    c.pages.splice(c.pages.indexOf(id) + 1, 0, ...ids); delete g.layers[id];
     await commit(false); closeSheet(); toast(`${plural(L.list.length, 'layer')} are separate pages again`);
   };
   draw(); showPrev();
   openSheet(edit ? `Layers · ${Lay.nameOf(g, id)}` : 'Layers', box, () => { LAYDROP = null; });
   // while this is open, files dropped on the window become layers
-  if (edit) LAYDROP = { name: Lay.nameOf(g, id), add: addLayers, box };
+  if (edit) LAYDROP = { label: `Drop to add as layers of “${Lay.nameOf(g, id)}”`, add: addLayers, box };
 }
 let LAYDROP = null;
+/* ================= layer library =================
+   Per account: layer images kept to reuse on any layered image (artists often reuse the same pose with other extras).
+   One encrypted record, like a gallery: { id, kind: 'layerlib', meta: { id: [w, h, name] }, items: [{ id, name, folder }], updatedAt }.
+   Its images sync like pages because their ids are in meta. Layered images use them directly (layer.lib = true), without a copy. */
+const LayLib = {
+  id: null, cache: null,
+  async init() { this.id = 'laylib-' + (await Crypt.hash('layer-library')).slice(0, 20); this.cache = null; },
+  async get() {
+    if (!this.id) return null;
+    if (!this.cache) { const r = await S.gal(this.id); this.cache = r && r.kind === 'layerlib' ? r : { id: this.id, kind: 'layerlib', meta: {}, items: [], updatedAt: 0 }; this.cache.items = this.cache.items || []; this.cache.meta = this.cache.meta || {}; }
+    return this.cache;
+  },
+  async save(r) { r.updatedAt = Date.now(); this.cache = r; await S.putGal(r); Sync.touched(r.id); },
+  folders(r) { return [...new Set(r.items.map(i => i.folder || ''))].sort((a, b) => a === '' ? 1 : b === '' ? -1 : natural(a, b)); },
+  /* store one image in the library; returns its id */
+  async put(r, blob, name, folder) {
+    const t = await makeThumb(blob), id = uid();
+    await S.putBlob('images', id, blob); await S.putBlob('thumbs', id, t.thumb);
+    r.meta[id] = [t.w, t.h, name]; r.items.push({ id, name: name.replace(/\.[a-z0-9]{2,5}$/i, ''), folder: folder || '' });
+    return id;
+  },
+  async addFiles(files, folder) {
+    const r = await this.get(); let n = 0, bad = 0;
+    for (const f of files.filter(isImgFile).sort((a, b) => natural(a.name, b.name))) { try { await this.put(r, f, f.name, folder); n++; } catch (e) { bad++; } }
+    if (n) await this.save(r);
+    return { n, bad };
+  },
+  /* layered images (gallery, page) that use this library image */
+  async uses(itemId) {
+    const out = [];
+    for (const g of await S.gals()) for (const [pid, L] of Object.entries(g.layers || {})) if (L.list.some(l => l.lib && l.id === itemId)) out.push([g, pid]);
+    return out;
+  },
+  async remove(itemId) {
+    for (const [g, pid] of await this.uses(itemId)) {
+      const L = g.layers[pid]; L.list = L.list.filter(l => l.id !== itemId); Lay.tidy(L);
+      if (!L.list.length) delete g.layers[pid];
+      await saveGallery(g); await Lay.changed(g, pid);
+    }
+    const r = await this.get(); r.items = r.items.filter(i => i.id !== itemId); delete r.meta[itemId]; await this.save(r);
+    forgetURL(itemId); await ST.del('images', itemId).catch(() => { }); await ST.del('thumbs', itemId).catch(() => { });
+  },
+};
+/* library images as a grid of tiles, grouped by folder. pick: selectable (a Set of ids), otherwise opens the item's edit row */
+function layLibGrid(r, { pick, onToggle, onOpen, filter = '' }) {
+  const q = filter.trim().toLowerCase();
+  const items = r.items.filter(i => !q || i.name.toLowerCase().includes(q) || (i.folder || '').toLowerCase().includes(q));
+  if (!r.items.length) return h('p', { class: 'hint', style: 'margin:0' }, 'The layer library is empty. Add images here, or save a layer to it from the layers editor of any image.');
+  if (!items.length) return h('p', { class: 'hint', style: 'margin:0' }, 'Nothing matches.');
+  return h('div', { class: 'stack', style: 'gap:10px' }, LayLib.folders(r).filter(f => items.some(i => (i.folder || '') === f)).map(f => {
+    const mine = items.filter(i => (i.folder || '') === f).sort((a, b) => natural(a.name, b.name));
+    return h('details', { class: 'tqbox', open: true }, h('summary', {}, h('b', {}, f || 'No folder'), h('span', { class: 'hint' }, ` · ${plural(mine.length, 'image')}`)),
+      h('div', { class: 'libgrid' }, mine.map(i => {
+        const on = pick && pick.has(i.id);
+        return h('button', { class: 'libtile' + (on ? ' sel' : ''), 'aria-pressed': pick ? String(!!on) : null, 'aria-label': i.name, onclick: e => pick ? onToggle(i, e.currentTarget) : onOpen(i) },
+          h('span', { class: 'laythumb' }, lazyThumb(i.id)), h('span', { class: 'libname' }, i.name), on ? h('span', { class: 'libcheck' }, icon('check')) : null);
+      })));
+  }));
+}
+/* choose library images to put on a layered image */
+async function openLayLibPicker(onPick, back) {
+  const r = await LayLib.get(), pick = new Set(), box = h('div', { class: 'stack' });
+  const find = h('input', { class: 'search', type: 'search', placeholder: 'Find by name or folder', 'aria-label': 'Find in the layer library', oninput: () => draw() });
+  const addBtn = h('button', { class: 'btn primary', disabled: true, onclick: () => { const ids = r.items.filter(i => pick.has(i.id)); onPick(ids); } }, 'Add');
+  const draw = () => {
+    addBtn.disabled = !pick.size; addBtn.textContent = pick.size ? `Add ${plural(pick.size, 'layer')}` : 'Add';
+    box.replaceChildren(r.items.length > 8 ? find : '', layLibGrid(r, { pick, filter: find.value, onToggle: i => { pick.has(i.id) ? pick.delete(i.id) : pick.add(i.id); draw(); } }),
+      h('div', { class: 'row', style: 'flex-wrap:wrap' }, addBtn,
+        h('button', { class: 'btn ghost', onclick: () => openLayerLibrary(() => openLayLibPicker(onPick, back)) }, 'Manage the layer library'),
+        back ? h('button', { class: 'btn ghost', onclick: back }, 'Cancel') : null));
+  };
+  draw();
+  openSheet('Add from the layer library', box, null);
+}
+/* Settings → Library → Layer library */
+async function openLayerLibrary(back) {
+  const box = h('div', { class: 'stack' });
+  let editing = null;
+  const folderIn = h('input', { class: 'text', placeholder: 'Folder for new images (optional)', 'aria-label': 'Folder for new images', list: 'lib-folders', style: 'flex:1;min-width:0' });
+  const find = h('input', { class: 'search', type: 'search', placeholder: 'Find by name or folder', 'aria-label': 'Find in the layer library', oninput: () => draw() });
+  const addFiles = async dropped => {
+    const files = Array.isArray(dropped) ? dropped : await pickFiles({ accept: 'image/*' });
+    if (!files.filter(isImgFile).length) return Array.isArray(dropped) && toast('Only images can go in the layer library.', 3000);
+    const res = await withBusy(() => LayLib.addFiles(files, folderIn.value.trim().slice(0, 40)));
+    toast(`${plural(res.n, 'image')} added to the layer library${res.bad ? `, ${res.bad} could not be read` : ''}.`, 3500); draw();
+  };
+  const draw = async () => {
+    const r = await LayLib.get();
+    const dl = h('datalist', { id: 'lib-folders' }, LayLib.folders(r).filter(Boolean).map(f => h('option', { value: f })));
+    const rows = [h('p', { class: 'hint', style: 'margin:0' }, 'Layer images you can put on any layered image in this account, for artists who reuse the same pose. They sync to your other devices. You can also drop images on the window while this is open.'),
+      dl, h('div', { class: 'row' }, folderIn, h('button', { class: 'btn primary', onclick: () => addFiles() }, icon('plus'), 'Add images'))];
+    if (r.items.length > 8) rows.push(find);
+    if (editing && r.items.some(i => i.id === editing)) {
+      const i = r.items.find(x => x.id === editing), m = r.meta[i.id] || [];
+      const uses = await LayLib.uses(i.id);
+      let armed = false;
+      const del = h('button', { class: 'btn danger', onclick: async () => {
+        if (!armed) { armed = true; del.textContent = uses.length ? `Tap again: delete it and take it off ${plural(uses.length, 'image')}` : 'Tap again to delete'; return; }
+        await withBusy(() => LayLib.remove(i.id)); editing = null; toast(`Deleted ${i.name}`); draw();
+      } }, icon('trash'), 'Delete');
+      rows.push(h('div', { class: 'panel stack', style: 'gap:8px' },
+        h('div', { class: 'layrow', style: 'grid-template-columns:52px 1fr' }, h('span', { class: 'laythumb' }, lazyThumb(i.id)),
+          h('div', { class: 'sub num' }, `${m[0] || '?'} × ${m[1] || '?'} px · used on ${plural(uses.length, 'image')}`)),
+        h('input', { class: 'text', value: i.name, 'aria-label': 'Name', onchange: async e => { i.name = e.target.value.trim().slice(0, 60) || i.name; await LayLib.save(r); draw(); } }),
+        h('input', { class: 'text', value: i.folder || '', list: 'lib-folders', placeholder: 'Folder (optional)', 'aria-label': 'Folder', onchange: async e => { i.folder = e.target.value.trim().slice(0, 40); await LayLib.save(r); draw(); } }),
+        h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => { editing = null; draw(); } }, 'Done'), del)));
+    }
+    rows.push(layLibGrid(r, { filter: find.value, onOpen: i => { editing = i.id; draw(); box.scrollIntoView({ block: 'start' }); } }));
+    if (back) rows.push(h('button', { class: 'btn ghost', onclick: back }, icon('back'), 'Back'));
+    box.replaceChildren(...rows);
+  };
+  await draw();
+  openSheet('Layer library', box, () => { LAYDROP = null; });
+  LAYDROP = { label: 'Drop to add to the layer library', add: addFiles, box };
+}
+
 
 async function renderPages(id, chId, host, gIn) {
   const v = host || $('#v-pages'); const g = gIn || await S.gal(id);
@@ -3802,6 +3956,7 @@ async function afterUnlock(fresh) {
   if (fresh || SLOT !== '') { try { needSample = !(await S.gals()).length && !(await DB.get('meta', mk('sampleGone'))); } catch (e) { } }
   await Sync.load();
   await TagReg.init().catch(() => { });
+  await LayLib.init().catch(() => { });
   if (!(await keyOpensLibrary())) toast('Your galleries could not be decrypted with this key. Nothing was deleted.', 8000);
   const st = history.state;
   if (st && st.view) render(st.view, st.params || {});
@@ -4065,7 +4220,7 @@ const Sync = (() => {
   const saveTombs = () => DB.put('meta', { id: mk('tombs'), v: tombs }).catch(() => { });
   async function listing(ids) {
     const gs = ids ? (await Promise.all(ids.map(S.gal))).filter(Boolean) : await S.gals();
-    if (!ids) { const r = await TagReg.get().catch(() => null); if (r && r.updatedAt) gs.push(r); }
+    if (!ids) { for (const reg of [TagReg, LayLib]) { const r = await reg.get().catch(() => null); if (r && r.updatedAt) gs.push(r); } }
     return gs.filter(g => !g.sample).map(g => ({ id: g.id, u: g.updatedAt || 0, p: g.progressAt || 0 }));
   }
   async function send(m, target) { if (!act) return; const b = new Uint8Array(await Crypt.encJSON(m)); return act.send(b, target ? { target } : {}); }
@@ -4128,7 +4283,7 @@ const Sync = (() => {
       log(`Sending ${plural(m.ids.length, 'gallery').replace('gallerys', 'galleries')}`);
     } else if (m.t === 'gal') {
       wanting.delete(m.g.id); emit();
-      try { await merge(m.g, pid); log(m.g.kind === 'tags' ? 'Received your tag list' : `Received “${m.g.title}”`); }
+      try { await merge(m.g, pid); log(m.g.kind === 'tags' ? 'Received your tag list' : m.g.kind === 'layerlib' ? 'Received your layer library' : `Received “${m.g.title}”`); }
       catch (e) { console.error(e); failed(pid, `“${m.g.title}”`); if (!pend.get(pid)) askAgain(pid); }
     } else if (m.t === 'need') {
       for (const id of m.ids) for (const [store, s] of [['thumbs', 't'], ['images', 'i']]) {
@@ -4227,6 +4382,7 @@ const Sync = (() => {
       M.read = [...new Set([...(L.read || []), ...(R.read || [])])];
     }
     await S.putGal(M);
+    if (M.kind === 'layerlib') LayLib.cache = null;
     if (L) {
       const gone = Object.keys(L.meta || {}).filter(id => !(M.meta || {})[id]);
       if (gone.length) { await ST.delMany('images', gone); await ST.delMany('thumbs', gone); gone.forEach(forgetURL); }
