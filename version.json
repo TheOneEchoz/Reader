@@ -1,6 +1,6 @@
 {
- "version": 57,
- "name": "1.17.0",
+ "version": 58,
+ "name": "1.18.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,7 +16,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Tap controls on one side: in reading settings, \u201cWhere to tap\u201d can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.",
-  "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (\u201cShow where to tap when opening the reader\u201d)."
+  "New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap \u201cFind variants\u201d. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.",
+  "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.",
+  "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.",
+  "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."
  ]
 }

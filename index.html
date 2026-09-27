@@ -248,6 +248,12 @@ body.reading .bgprog{display:none}
 .libname{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .libcheck{position:absolute;right:4px;top:4px;background:var(--accent);color:var(--accent-ink);border-radius:999px;width:22px;height:22px;display:grid;place-items:center}
 .libcheck .ic{width:14px;height:14px}
+.vargrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.varitem{display:grid;gap:4px;font-size:13px;min-width:0}
+.varitem b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.varthumb{display:block;border-radius:8px;overflow:hidden;background:var(--surface2);line-height:0}
+.varthumb canvas{width:100%;height:auto;display:block}
+.row>.varthumb{width:90px;flex:none}
 .layfields{display:grid;gap:6px;min-width:0}
 .layfields .text{height:38px}
 .laybtns{display:flex;gap:2px}
@@ -541,8 +547,8 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 57; // replaced by the build with the release number
-const CHANGELOG = [{"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 58; // replaced by the build with the release number
+const CHANGELOG = [{"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -2299,6 +2305,178 @@ function openLayerSheet(g, id, opts = {}) {
   // while this is open, files dropped on the window become layers
   if (edit) LAYDROP = { label: `Drop to add as layers of “${Lay.nameOf(g, id)}”`, add: addLayers, box };
 }
+/* ================= find variants =================
+   Several versions of the same picture (a hat added, another expression…) become one layered image:
+   a base with what they all share, plus one layer per version with only what is different about it.
+   Each version is then a saved combination, so it still reads as its own page. */
+const Variants = {
+  tol: { less: 40, normal: 24, more: 12 },
+  async pixels(blob, W, H) {
+    const im = await decodeImg(blob), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const cx = c.getContext('2d', { willReadFrequently: true }); cx.fillStyle = '#fff'; cx.fillRect(0, 0, W, H); cx.drawImage(im, 0, 0, W, H); if (im.close) im.close();
+    return cx.getImageData(0, 0, W, H).data;
+  },
+  /* what most versions have at each point (the middle value of each colour) */
+  async median(imgs, n, tick) {
+    const out = new Uint8ClampedArray(n * 4), k = imgs.length, v = new Uint8Array(k), mid = k >> 1;
+    for (let p = 0; p < n; p++) {
+      const o = p * 4;
+      for (let ch = 0; ch < 3; ch++) {
+        for (let i = 0; i < k; i++) { const x = imgs[i][o + ch]; let j = i; while (j > 0 && v[j - 1] > x) { v[j] = v[j - 1]; j--; } v[j] = x; }
+        out[o + ch] = v[mid];
+      }
+      out[o + 3] = 255;
+      if ((p & 262143) === 0) await tick(p / n);
+    }
+    return out;
+  },
+  /* points where a version differs from the base, without specks from compression, and a little wider to catch soft edges */
+  mask(img, base, W, H, tol) {
+    const n = W * H, m = new Uint8Array(n);
+    for (let p = 0, o = 0; p < n; p++, o += 4) {
+      const d = Math.max(Math.abs(img[o] - base[o]), Math.abs(img[o + 1] - base[o + 1]), Math.abs(img[o + 2] - base[o + 2]));
+      if (d > tol) m[p] = 1;
+    }
+    // drop tiny islands (compression noise): flood fill each group of changed points, keep groups of 16+ points
+    const seen = new Uint8Array(n), q = new Int32Array(n), keep = new Uint8Array(n);
+    for (let s0 = 0; s0 < n; s0++) {
+      if (!m[s0] || seen[s0]) continue;
+      let head = 0, tail = 0; q[tail++] = s0; seen[s0] = 1;
+      while (head < tail) {
+        const p = q[head++], x = p % W;
+        if (x > 0 && m[p - 1] && !seen[p - 1]) { seen[p - 1] = 1; q[tail++] = p - 1; }
+        if (x < W - 1 && m[p + 1] && !seen[p + 1]) { seen[p + 1] = 1; q[tail++] = p + 1; }
+        if (p >= W && m[p - W] && !seen[p - W]) { seen[p - W] = 1; q[tail++] = p - W; }
+        if (p < n - W && m[p + W] && !seen[p + W]) { seen[p + W] = 1; q[tail++] = p + W; }
+      }
+      if (tail >= 16) for (let i = 0; i < tail; i++) keep[q[i]] = 1;
+    }
+    // widen by 2 points (rows, then columns)
+    const R = 2, a = new Uint8Array(n);
+    for (let y = 0; y < H; y++) { let run = 0; const row = y * W;
+      for (let x = 0; x < W + R; x++) { if (x < W && keep[row + x]) run = 2 * R + 1; if (run > 0) { const t = x - R; if (t >= 0 && t < W) a[row + t] = 1; run--; } } }
+    const b = new Uint8Array(n);
+    for (let x = 0; x < W; x++) { let run = 0;
+      for (let y = 0; y < H + R; y++) { if (y < H && a[y * W + x]) run = 2 * R + 1; if (run > 0) { const t = y - R; if (t >= 0 && t < H) b[t * W + x] = 1; run--; } } }
+    return b;
+  },
+  /* the whole job. items: [{ id, name, blob }]. baseMode: 'common' or an index. */
+  async find(items, baseMode, sens, prog) {
+    const [W, H] = await (async () => { const im = await decodeImg(items[0].blob); const r = [im.width, im.height]; if (im.close) im.close(); return r; })();
+    const n = W * H, tol = this.tol[sens] || 24, tick = async f => { prog(f); await sleep(0); };
+    const imgs = [];
+    for (const [i, it] of items.entries()) { prog(.1 * i / items.length, 'Reading the images'); imgs.push(await this.pixels(it.blob, W, H)); await sleep(0); }
+    let base, baseIdx = -1;
+    if (baseMode === 'common' && items.length >= 3) { base = await this.median(imgs, n, f => tick(.1 + .3 * f)); }
+    else { baseIdx = baseMode === 'common' ? 0 : +baseMode; base = imgs[baseIdx]; }
+    const out = [];
+    for (const [i, it] of items.entries()) {
+      prog(.4 + .5 * i / items.length, 'Finding what is different'); await sleep(0);
+      const m = i === baseIdx ? new Uint8Array(n) : this.mask(imgs[i], base, W, H, tol);
+      const layer = new ImageData(W, H); let cover = 0, miss = 0;
+      for (let p = 0, o = 0; p < n; p++, o += 4) {
+        if (m[p]) { layer.data[o] = imgs[i][o]; layer.data[o + 1] = imgs[i][o + 1]; layer.data[o + 2] = imgs[i][o + 2]; layer.data[o + 3] = 255; cover++; }
+        else if (Math.max(Math.abs(imgs[i][o] - base[o]), Math.abs(imgs[i][o + 1] - base[o + 1]), Math.abs(imgs[i][o + 2] - base[o + 2])) > tol) miss++;
+      }
+      out.push({ ...it, layer: cover ? layer : null, cover: cover / n, match: 1 - miss / n });
+    }
+    const baseData = new ImageData(new Uint8ClampedArray(base), W, H);
+    prog(1, 'Done');
+    return { W, H, base: baseData, baseIdx, variants: out };
+  },
+  canvasOf(data) { const c = document.createElement('canvas'); c.width = data.width; c.height = data.height; c.getContext('2d').putImageData(data, 0, 0); return c; },
+  blobOf(data, type = 'image/png', q) { return new Promise(r => this.canvasOf(data).toBlob(r, type, q)); },
+  /* a small picture of base + layer */
+  preview(res, layer) {
+    const tw = 120, th = Math.round(res.H * tw / res.W), c = document.createElement('canvas'); c.width = tw; c.height = th;
+    const cx = c.getContext('2d'); cx.drawImage(res.baseC || (res.baseC = this.canvasOf(res.base)), 0, 0, tw, th);
+    if (layer) cx.drawImage(this.canvasOf(layer), 0, 0, tw, th);
+    return c;
+  },
+};
+/* The "Find variants" sheet for pages selected in a folder. */
+async function openVariantSheet(g, ch, pages, done) {
+  const items = pages.map(id => ({ id, name: Lay.nameOf(g, id) }));
+  let baseMode = pages.length >= 3 ? 'common' : '0', sens = 'normal', keep = false, res = null;
+  const box = h('div', { class: 'stack' });
+  const stage1 = () => {
+    const seg = (opts, cur, set) => h('div', { class: 'seg', role: 'group' }, opts.map(([v, l]) => h('button', { 'aria-pressed': String(cur === v), onclick: () => { set(v); stage1(); } }, l)));
+    box.replaceChildren(
+      h('p', { class: 'hint', style: 'margin:0' }, `Use this for ${plural(pages.length, 'version')} of the same picture where only some parts change. The app keeps one base picture and makes a layer with just what is different in each version. Each version becomes a saved combination, so it still reads as its own page.`),
+      h('div', { class: 'setrow' }, h('div', { class: 'lab' }, 'Base picture'),
+        seg([...(pages.length >= 3 ? [['common', 'What they all share']] : []), ...items.map((it, i) => [String(i), it.name])], baseMode, v => baseMode = v)),
+      h('div', { class: 'setrow' }, h('div', { class: 'lab' }, 'How small a change to catch'),
+        seg([['less', 'Only clear changes'], ['normal', 'Normal'], ['more', 'Small changes too']], sens, v => sens = v),
+        h('p', { class: 'hint', style: 'margin:0' }, 'Use “Only clear changes” for blurry or compressed images.')),
+      h('button', { class: 'btn primary', id: 'var-go', onclick: run }, 'Find the differences'));
+  };
+  const run = async () => {
+    const lbl = h('div', { class: 'num' }, 'Reading the images'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+    box.replaceChildren(h('div', { class: 'progress' }, lbl, bar));
+    busy++;
+    try {
+      const withBlobs = [];
+      for (const it of items) { const blob = await S.blob('images', it.id); if (!blob) throw new Error(`“${it.name}” has not arrived on this device yet`); withBlobs.push({ ...it, blob }); }
+      res = await Variants.find(withBlobs, baseMode, sens, (f, t) => { bar.firstChild.style.width = (100 * f).toFixed(0) + '%'; if (t) lbl.textContent = t; });
+      stage2();
+    } catch (e) { console.error(e); toast('Could not compare them: ' + (e.message || e), 4500); stage1(); }
+    finally { busy = Math.max(0, busy - 1); }
+  };
+  const stage2 = () => {
+    const big = res.variants.filter(v => v.cover > .5);
+    box.replaceChildren(
+      h('div', { class: 'row', style: 'align-items:center' }, h('span', { class: 'varthumb' }, Variants.preview(res, null)),
+        h('div', {}, h('b', {}, 'Base picture'), h('div', { class: 'sub' }, res.baseIdx >= 0 ? items[res.baseIdx].name : 'What all versions share'))),
+      h('div', { class: 'label' }, 'Versions, rebuilt from the base and their layer'),
+      h('div', { class: 'vargrid' }, res.variants.map(v => h('div', { class: 'varitem' }, h('span', { class: 'varthumb' }, Variants.preview(res, v.layer)),
+        h('b', {}, v.name), h('span', { class: 'sub num' }, v.layer ? `Changes ${(100 * v.cover).toFixed(1)}% · matches ${(100 * v.match).toFixed(1)}%` : 'Same as the base')))),
+      big.length ? h('div', { class: 'banner', style: 'margin:0' }, `${big.map(v => v.name).join(', ')} ${big.length === 1 ? 'is' : 'are'} very different from the base. These may not be versions of the same picture.`) : null,
+      h('div', { class: 'setrow inline' }, h('span', { class: 'lab' }, 'Keep the original images too (hidden from reading)'),
+        h('button', { class: 'switch', role: 'switch', 'aria-checked': String(keep), onclick: e => { keep = !keep; e.currentTarget.setAttribute('aria-checked', String(keep)); } })),
+      h('div', { class: 'row', style: 'flex-wrap:wrap' },
+        h('button', { class: 'btn primary', id: 'var-make', onclick: make }, icon('layers'), 'Make the layered image'),
+        h('button', { class: 'btn ghost', onclick: stage1 }, 'Change the settings')));
+  };
+  const make = async () => {
+    box.replaceChildren(h('div', { class: 'progress' }, h('div', { class: 'num' }, 'Saving the layers…'), h('div', { class: 'bar ind' }, h('i', { style: 'width:35%' }))));
+    busy++;
+    try {
+      // the base: one of the versions itself, or a new picture of what they share
+      let baseId;
+      if (res.baseIdx >= 0) baseId = items[res.baseIdx].id;
+      else {
+        const b = await Variants.blobOf(res.base, 'image/webp', .97) || await Variants.blobOf(res.base);
+        const t = await makeThumb(b); baseId = uid();
+        await S.putBlob('images', baseId, b); await S.putBlob('thumbs', baseId, t.thumb);
+        g.meta[baseId] = [res.W, res.H, items[0].name + ' (base).webp'];
+        ch.pages.splice(ch.pages.indexOf(items[0].id), 0, baseId);
+      }
+      const L = Lay.ensure(g, baseId); L.list = []; L.on = []; L.presets = [];
+      for (const v of res.variants) {
+        let on = [];
+        if (v.layer) {
+          const b = await Variants.blobOf(v.layer), t = await makeThumb(b), lid = uid();
+          await S.putBlob('images', lid, b); await S.putBlob('thumbs', lid, t.thumb);
+          g.meta[lid] = [res.W, res.H, v.name + '.png'];
+          L.list.push({ id: lid, name: v.name, group: 'Version' }); on = [lid];
+        }
+        L.presets.push({ name: v.name, on });
+      }
+      L.on = [...L.presets[0].on];
+      if (!L.list.length) delete g.layers[baseId];
+      const others = items.map(it => it.id).filter(x => x !== baseId);
+      if (keep) { g.hid = g.hid || {}; others.forEach(x => g.hid[x] = 1); }
+      else { await removePages(g, others); }
+      g.chapters = Tree.norm(g.chapters);
+      await saveGallery(g); await Lay.changed(g, baseId);
+      closeSheet(); done && done(baseId);
+      toast(`Made one layered image with ${plural(res.variants.length, 'version')}${keep ? '. The originals are kept, hidden from reading' : ''}.`, 4500);
+    } catch (e) { console.error(e); toast('Could not save: ' + (e.message || e), 4500); stage2(); }
+    finally { busy = Math.max(0, busy - 1); }
+  };
+  stage1();
+  openSheet('Find variants', box);
+}
 let LAYDROP = null;
 /* ================= layer library =================
    Per account: layer images kept to reuse on any layered image (artists often reuse the same pose with other extras).
@@ -2508,6 +2686,7 @@ async function renderPages(id, chId, host, gIn) {
         await saveGallery(g); await withBusy(() => Lay.changed(g, base)); sel.clear(); sel.add('p:' + base); draw();
         toast(`Made one layered image: the first one is the base, the other ${plural(rest.length, 'image')} are layers on top.${odd ? ` ${odd} had a different shape and ${odd === 1 ? 'is' : 'are'} stretched to fit.` : ''}`, 5000);
       } }, icon('layers'), 'Combine as layers') : null,
+      pages.length > 1 && pages.length <= 12 && !folders.length ? h('button', { class: 'btn', onclick: () => openVariantSheet(g, ch, ch.pages.filter(p => sel.has('p:' + p)), id => { sel.clear(); sel.add('p:' + id); draw(); }) }, icon('layers'), 'Find variants') : null,
       sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => {
         if (ch.root) { await dropCustomCover(g); g.cover = pages[0]; } else { await dropFolderCover(g, ch); ch.cover = pages[0]; }
         await saveGallery(g); sel.clear(); draw(); toast(ch.root ? 'Gallery cover updated' : 'Folder cover updated');
