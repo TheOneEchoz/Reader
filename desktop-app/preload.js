@@ -1,6 +1,7 @@
 // The small set of computer features the web app may use.
 const { contextBridge, ipcRenderer } = require('electron');
-let progress = null, lanProg = null;
+let progress = null, lanProg = null, appProg = null;
+ipcRenderer.on('app:progress', (e, d, t) => { if (appProg) appProg(d, t); });
 ipcRenderer.on('lan:progress', (e, d, t) => { if (lanProg) lanProg(d, t); });
 ipcRenderer.on('upd:progress', (e, i, n) => { if (progress) progress(i, n); });
 contextBridge.exposeInMainWorld('TkbDesktop', {
@@ -28,6 +29,9 @@ contextBridge.exposeInMainWorld('TkbDesktop', {
   takeIncoming: () => ipcRenderer.invoke('incoming:take'),
   onIncoming: cb => ipcRenderer.on('incoming', () => cb()),
   focus: () => ipcRenderer.invoke('win:focus'),
+  appInfo: () => ipcRenderer.invoke('app:info'),
+  async downloadAppUpdate(url, onProgress) { appProg = onProgress || null; try { return await ipcRenderer.invoke('app:download', url); } finally { appProg = null; } },
+  installAppUpdate: now => ipcRenderer.invoke('app:install', now),
   lanServe: token => ipcRenderer.invoke('lan:serve', token),
   lanStop: () => ipcRenderer.invoke('lan:stop'),
   async lanFetch(bases, token, rels, parallel, onProgress) {

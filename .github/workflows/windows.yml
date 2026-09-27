@@ -37,6 +37,7 @@ jobs:
           set -o pipefail
           cd desktop-app
           npm pkg set version="$(node -p "require('../version.json').name")"
+          npm pkg set buildNumber=${{ github.run_number }} --json
           npx electron-builder --win nsis --publish never 2>&1 | tee ../build.log
           cp dist/Tankobon-Setup.exe ../Tankobon-Setup.exe
 

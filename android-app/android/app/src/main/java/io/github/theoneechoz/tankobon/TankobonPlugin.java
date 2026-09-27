@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.view.View;
@@ -13,6 +15,8 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import androidx.activity.result.ActivityResult;
+import androidx.core.content.FileProvider;
+import androidx.core.content.pm.PackageInfoCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -29,6 +33,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -362,5 +368,111 @@ public class TankobonPlugin extends Plugin {
                 call.reject("Transfer failed: " + e.getMessage());
             }
         }).start();
+    }
+
+    /* ---------- updating the app file itself ---------- */
+
+    /** Which app file is installed: its build number (the GitHub build it came from) and version name. */
+    @PluginMethod
+    public void appInfo(PluginCall call) {
+        JSObject ret = new JSObject();
+        try {
+            android.content.pm.PackageInfo pi = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
+            ret.put("build", PackageInfoCompat.getLongVersionCode(pi));
+            ret.put("name", pi.versionName);
+        } catch (Exception e) {
+            ret.put("build", 0);
+        }
+        call.resolve(ret);
+    }
+
+    /** Has the person allowed Tankobon to install app files? */
+    @PluginMethod
+    public void canInstall(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("allowed", Build.VERSION.SDK_INT < 26 || getContext().getPackageManager().canRequestPackageInstalls());
+        call.resolve(ret);
+    }
+
+    /** Open Android's "Install unknown apps" switch for Tankobon. */
+    @PluginMethod
+    public void openInstallSettings(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Could not open the setting: " + e.getMessage());
+        }
+    }
+
+    /** Download a new app file from GitHub into the app's cache. */
+    @PluginMethod
+    public void downloadApk(PluginCall call) {
+        final String url = call.getString("url");
+        if (url == null || !url.startsWith("https://")) { call.reject("bad address"); return; }
+        new Thread(() -> {
+            File out = new File(getContext().getCacheDir(), "update.apk");
+            HttpURLConnection c = null;
+            try {
+                String u = url;
+                for (int hop = 0; hop < 6; hop++) {
+                    c = (HttpURLConnection) new URL(u).openConnection();
+                    c.setInstanceFollowRedirects(false);
+                    c.setConnectTimeout(15000);
+                    c.setReadTimeout(30000);
+                    int code = c.getResponseCode();
+                    if (code >= 300 && code < 400 && c.getHeaderField("Location") != null) {
+                        u = new URL(new URL(u), c.getHeaderField("Location")).toString();
+                        c.disconnect();
+                        continue;
+                    }
+                    if (code != 200) throw new Exception("HTTP " + code);
+                    break;
+                }
+                long total = c.getContentLengthLong(), got = 0, last = 0;
+                try (InputStream in = c.getInputStream(); OutputStream os = new FileOutputStream(out)) {
+                    byte[] buf = new byte[1 << 16];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        os.write(buf, 0, n);
+                        got += n;
+                        if (got - last > 256 * 1024) {
+                            last = got;
+                            JSObject ev = new JSObject();
+                            ev.put("done", got);
+                            ev.put("total", total);
+                            notifyListeners("apkProgress", ev);
+                        }
+                    }
+                }
+                if (out.length() < 100000) throw new Exception("the download was incomplete");
+                JSObject ret = new JSObject();
+                ret.put("path", out.getAbsolutePath());
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("Download failed: " + e.getMessage());
+            } finally {
+                if (c != null) c.disconnect();
+            }
+        }).start();
+    }
+
+    /** Hand the downloaded app file to Android's installer. The person confirms with Install. */
+    @PluginMethod
+    public void installApk(PluginCall call) {
+        try {
+            File f = new File(getContext().getCacheDir(), "update.apk");
+            if (!f.isFile()) { call.reject("No downloaded app file"); return; }
+            Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setDataAndType(uri, "application/vnd.android.package-archive");
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Could not start the installer: " + e.getMessage());
+        }
     }
 }

@@ -1,6 +1,6 @@
 {
- "version": 44,
- "name": "1.9.2",
+ "version": 45,
+ "name": "1.10.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,6 +16,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."
+  "The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.",
+  "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tank\u014dbon to install apps.",
+  "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.",
+  "This needs one last manual install of the new app file."
  ]
 }

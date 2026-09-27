@@ -1,6 +1,7 @@
 // Tankōbon for Windows: an Electron window around the same web app.
 // The library lives in Documents\Tankobon as encrypted files; screen updates are downloaded only when asked.
 const { app, BrowserWindow, protocol, ipcMain, dialog, Notification, net, shell, session, Menu } = require('electron');
+const { spawn } = require('child_process');
 const path = require('path'), fs = require('fs'), fsp = fs.promises, http = require('http'), os = require('os');
 
 app.setAppUserModelId('io.github.theoneechoz.tankobon');
@@ -252,3 +253,39 @@ ipcMain.handle('lan:fetch', async (e, bases, token, rels, parallel) => {
   return { base, failed };
 });
 app.on('before-quit', () => { if (lanServer) lanServer.close(); });
+
+/* ---------- updating the app file itself (the installer from GitHub) ---------- */
+let PKG = {}; try { PKG = require('./package.json'); } catch (e) { }
+const UPDATE_EXE = path.join(app.getPath('temp'), 'Tankobon-Update.exe');
+let installOnQuit = false;
+ipcMain.handle('app:info', async () => ({ build: Number(PKG.buildNumber || 0), name: app.getVersion(), platform: process.platform }));
+ipcMain.handle('app:download', async (e, url) => {
+  if (!/^https:\/\//.test(url)) throw new Error('bad address');
+  const r = await net.fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const total = Number(r.headers.get('content-length') || 0);
+  const tmp = UPDATE_EXE + '.part', ws = fs.createWriteStream(tmp);
+  let got = 0, last = 0;
+  const reader = r.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read(); if (done) break;
+    got += value.length;
+    if (!ws.write(Buffer.from(value))) await new Promise(ok => ws.once('drain', ok));
+    if (got - last > 512 * 1024) { last = got; e.sender.send('app:progress', got, total); }
+  }
+  await new Promise((ok, bad) => ws.end(err => err ? bad(err) : ok()));
+  if (got < 1000000) throw new Error('the download was incomplete');
+  await fsp.rename(tmp, UPDATE_EXE);
+  return { ready: true };
+});
+/* now: close and install silently, then start again. Otherwise it installs quietly when the app is closed. */
+ipcMain.handle('app:install', async (e, now) => {
+  if (!fs.existsSync(UPDATE_EXE)) throw new Error('No downloaded update');
+  if (!now) { installOnQuit = true; return { later: true }; }
+  spawn(UPDATE_EXE, ['/S', '--force-run'], { detached: true, stdio: 'ignore' }).unref();
+  setTimeout(() => app.quit(), 300);
+  return { now: true };
+});
+app.on('will-quit', () => {
+  if (installOnQuit && fs.existsSync(UPDATE_EXE)) { try { spawn(UPDATE_EXE, ['/S'], { detached: true, stdio: 'ignore' }).unref(); } catch (e) { } }
+});
