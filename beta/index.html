@@ -252,7 +252,7 @@ body:has(#sheet:not([hidden])) #toast{top:calc(16px + env(safe-area-inset-top,0p
 .layprevbox{position:sticky;top:-4px;z-index:4;background:var(--surface);padding:4px 0 10px;margin-top:-4px;box-shadow:0 10px 10px -12px rgba(0,0,0,.45)}
 .layprev{display:block;max-width:100%;max-height:34dvh;margin:0 auto;border-radius:10px;background:var(--surface2);object-fit:contain}
 .layrow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:12px;background:var(--surface2)}
-.layrow.base{grid-template-columns:52px 1fr}
+.layrow.base{grid-template-columns:52px 1fr auto}
 .layrow.preset{grid-template-columns:auto 1fr auto}
 .layrow.preset .text{height:38px;min-width:0}
 .laythumb{width:52px;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--surface);display:block}
@@ -444,6 +444,42 @@ body.reading #sheet .sp{--surface:#1B1C20;--surface2:#26282E;--ink:#ECEDEF;--mut
 #reader.ui #pnum{opacity:0}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @media (min-width:720px){.hero{grid-template-columns:170px 1fr}.hero h1{font-size:32px}}
+#imged{position:fixed;inset:0;z-index:150;background:#15161a;color:#fff;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+#imged header{display:flex;align-items:center;gap:4px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px 6px}
+#imged .narrow{display:none}
+@media (max-width:560px){#imged .wide,#imged .ie-fit{display:none}#imged .narrow{display:inline}#imged header .btn.small{padding:0 10px}}
+#imged header .iconbtn{color:#fff}
+#imged header .iconbtn:disabled{opacity:.3}
+#imged header .btn.ghost{color:#fff;border-color:#3a3d45}
+#imged header .btn:disabled{opacity:.4}
+.ie-title{flex:1 1 60px;min-width:0;display:flex;align-items:center}
+.ie-target{min-width:0;width:100%}
+.ie-title b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ie-target{height:38px;background:#23252b;color:#fff;border-color:#363941;padding:0 10px}
+.ie-stage{position:relative;overflow:hidden;touch-action:none;background:#0c0d0f;cursor:crosshair}
+.ie-wrap{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff conic-gradient(#d9dce1 25%,#fff 0 50%,#d9dce1 0 75%,#fff 0) 0 0/28px 28px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+.ie-wrap canvas{position:absolute;inset:0;width:100%;height:100%}
+.ie-prev{opacity:.5}.ie-marks{opacity:.6}
+.ie-bottom{background:var(--surface);color:var(--ink);padding:10px 12px calc(8px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;border-radius:16px 16px 0 0}
+.ie-opts{display:grid;gap:8px;width:100%;max-width:640px;justify-self:center;max-height:34vh;overflow:auto;padding:2px}
+.ie-tools{display:flex;gap:2px;overflow-x:auto;justify-content:center}
+.ie-tool{display:grid;justify-items:center;gap:2px;min-width:56px;padding:6px 4px;border-radius:10px;font-size:11.5px;color:var(--muted)}
+.ie-tool .ic{width:22px;height:22px}
+.ie-tool[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.ie-slider{display:grid;grid-template-columns:82px 1fr 62px;align-items:center;gap:8px;font-size:13px}
+.ie-slider .num{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.ie-colours{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ie-colours input[type=color]{width:42px;height:36px;border:none;background:none;padding:0;cursor:pointer}
+.ie-swatch{width:28px;height:28px;border-radius:50%;border:2px solid var(--line)}
+.ie-swatch.on{outline:2px solid var(--accent);outline-offset:2px}
+.ie-names{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+body:has(#imged) #toast{z-index:170;top:calc(64px + env(safe-area-inset-top,0px));bottom:auto}
+body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0px));bottom:auto}
+.pickrow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left}
+.pickrow.on{outline:2px solid var(--accent);outline-offset:-2px}
+.pickbox{width:26px;height:26px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center}
+.pickbox .ic{width:16px;height:16px}
+.pickrow.on .pickbox{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 
@@ -566,7 +602,14 @@ const ICONS = {
   variants: '<rect x="3" y="3" width="11" height="14" rx="1.5"/><rect x="10" y="7" width="11" height="14" rx="1.5"/><path d="M13 12h5M15.5 9.5v5"/>',
   bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>',
-  tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>'
+  tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>',
+  undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/>', redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/>',
+  brush: '<path d="M18.4 2.6a2 2 0 012.9 2.9L12 14.8 9.2 12z"/><path d="M8.5 13.2c-2 0-3.5 1.5-3.5 3.6 0 1.3-.8 2.3-2 2.7 1.2 1 2.8 1.5 4.3 1.5 2.7 0 4.5-2 4.5-4.4z"/>',
+  eraser: '<path d="M7 21h13M4.6 15.4l9.9-9.9a2 2 0 012.8 0l2.2 2.2a2 2 0 010 2.8L11 19H7.4z"/><path d="M9 11l5 5"/>',
+  pick: '<path d="M14.5 5.5l4 4M3 21l1.5-4.5L14 7l3 3-9.5 9.5z"/><path d="M13 4l2-2 7 7-2 2"/>',
+  split: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1L20 20M8.1 15.9L20 4"/>',
+  hand: '<path d="M8 13V5.5a1.5 1.5 0 013 0V11M11 10.5v-6a1.5 1.5 0 013 0V11M14 6.5a1.5 1.5 0 013 0V12M17 9.5a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-1.5a6 6 0 01-4.6-2.2L4.4 15a1.5 1.5 0 012.3-1.9L8 14.5"/>',
+  merge: '<path d="M6 3v5a4 4 0 004 4h4a4 4 0 014 4v5M18 3v5a4 4 0 01-4 4"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
 const MODE_LABEL = { single: 'One page', double: 'Two pages', vertical: 'Vertical', horizontal: 'Horizontal' };
@@ -615,8 +658,8 @@ async function restoreGallery(g, snap) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 72; // replaced by the build with the release number
-const CHANGELOG = [{"v": 72, "name": "1.22.0-beta.2", "date": "2026-09-27", "beta": true, "items": ["Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.", "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.", "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no “eraser” layers."]}, {"v": 71, "name": "1.22.0-beta.1", "date": "2026-09-27", "beta": true, "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer, Find variants and Combine as layers.", "Find variants makes one layer per thing that changes (hair, hat, arm, bracelet, shadow…), shared by every version that has it, stacked in the right order (a bracelet on top of its arm, effects on top). It warns when a small change was not captured, names the result after what the file names share, and uses shorter page names.", "Layers: a warning (with a fix) when layers are on no saved page; groups can be renamed from their heading; the reader shows which saved combination you are on and the layers panel leaves the page visible; Combine as layers uses the image you tapped first as the base.", "Import: a cover.jpg next to chapter folders becomes the gallery's cover. “What's new” starts closed for new users and shows the latest versions first."]}, {"v": 70, "name": "1.21.2", "date": "2026-09-27", "items": ["New on the unlock screen: “Experimental version”. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.", "The change log of the experimental version is only shown to people using it."]}, {"v": 69, "name": "1.21.1", "date": "2026-09-27", "items": ["Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.", "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."]}, {"v": 68, "name": "1.21.0", "date": "2026-09-27", "items": ["Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.", "New switch “Understand see-through effects” (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.", "The preview marks options that became see-through."]}, {"v": 67, "name": "1.20.3", "date": "2026-09-27", "items": ["The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."]}, {"v": 66, "name": "1.20.2", "date": "2026-09-27", "items": ["Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."]}, {"v": 65, "name": "1.20.1", "date": "2026-09-27", "items": ["Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."]}, {"v": 64, "name": "1.20.0", "date": "2026-09-27", "items": ["Find variants finds what changes have in common: when one option contains another (an arm with a bracelet, and just the arm), it keeps only what it adds, so you get “arm” and “bracelet” as separate layers. The bracelet can be shown on its own, and the version with both shows the arm plus the bracelet.", "Find variants and Combine as layers now make a new image for the layered result instead of using up one of your images. The originals are kept, hidden from reading (for Find variants you can choose to remove them).", "Layer lists now go from the top layer down to the base, in the layers editor and in the switches."]}, {"v": 63, "name": "1.19.2", "date": "2026-09-27", "items": ["Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.", "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."]}, {"v": 62, "name": "1.19.1", "date": "2026-09-27", "items": ["Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.", "The base picture, the preview at the top, and images in the layer library open full size the same way."]}, {"v": 61, "name": "1.19.0", "date": "2026-09-27", "items": ["Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.", "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).", "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.", "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."]}, {"v": 60, "name": "1.18.2", "date": "2026-09-27", "items": ["Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.", "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."]}, {"v": 59, "name": "1.18.1", "date": "2026-09-27", "items": ["New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."]}, {"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 73; // replaced by the build with the release number
+const CHANGELOG = [{"v": 73, "name": "1.22.0-beta.3", "date": "2026-09-28", "beta": true, "items": ["New “Edit image” in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.", "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.", "New “Split a layer”: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).", "Layers menu: a pencil on each layer (and on the base image) opens the editor, and “Merge layers” mixes the layers you choose into one."]}, {"v": 72, "name": "1.22.0-beta.2", "date": "2026-09-27", "beta": true, "items": ["Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.", "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.", "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no “eraser” layers."]}, {"v": 71, "name": "1.22.0-beta.1", "date": "2026-09-27", "beta": true, "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer, Find variants and Combine as layers.", "Find variants makes one layer per thing that changes (hair, hat, arm, bracelet, shadow…), shared by every version that has it, stacked in the right order (a bracelet on top of its arm, effects on top). It warns when a small change was not captured, names the result after what the file names share, and uses shorter page names.", "Layers: a warning (with a fix) when layers are on no saved page; groups can be renamed from their heading; the reader shows which saved combination you are on and the layers panel leaves the page visible; Combine as layers uses the image you tapped first as the base.", "Import: a cover.jpg next to chapter folders becomes the gallery's cover. “What's new” starts closed for new users and shows the latest versions first."]}, {"v": 70, "name": "1.21.2", "date": "2026-09-27", "items": ["New on the unlock screen: “Experimental version”. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.", "The change log of the experimental version is only shown to people using it."]}, {"v": 69, "name": "1.21.1", "date": "2026-09-27", "items": ["Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.", "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."]}, {"v": 68, "name": "1.21.0", "date": "2026-09-27", "items": ["Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.", "New switch “Understand see-through effects” (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.", "The preview marks options that became see-through."]}, {"v": 67, "name": "1.20.3", "date": "2026-09-27", "items": ["The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."]}, {"v": 66, "name": "1.20.2", "date": "2026-09-27", "items": ["Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."]}, {"v": 65, "name": "1.20.1", "date": "2026-09-27", "items": ["Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."]}, {"v": 64, "name": "1.20.0", "date": "2026-09-27", "items": ["Find variants finds what changes have in common: when one option contains another (an arm with a bracelet, and just the arm), it keeps only what it adds, so you get “arm” and “bracelet” as separate layers. The bracelet can be shown on its own, and the version with both shows the arm plus the bracelet.", "Find variants and Combine as layers now make a new image for the layered result instead of using up one of your images. The originals are kept, hidden from reading (for Find variants you can choose to remove them).", "Layer lists now go from the top layer down to the base, in the layers editor and in the switches."]}, {"v": 63, "name": "1.19.2", "date": "2026-09-27", "items": ["Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.", "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."]}, {"v": 62, "name": "1.19.1", "date": "2026-09-27", "items": ["Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.", "The base picture, the preview at the top, and images in the layer library open full size the same way."]}, {"v": 61, "name": "1.19.0", "date": "2026-09-27", "items": ["Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.", "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).", "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.", "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."]}, {"v": 60, "name": "1.18.2", "date": "2026-09-27", "items": ["Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.", "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."]}, {"v": 59, "name": "1.18.1", "date": "2026-09-27", "items": ["New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."]}, {"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -2561,6 +2604,7 @@ function openLayerSheet(g, id, opts = {}) {
                 await withBusy(async () => { await LayLib.put(r, b, (g.meta[l.id] || [])[2] || l.name + '.png', ''); const it = r.items[r.items.length - 1]; it.name = l.name; it.from = l.id; await LayLib.save(r); });
                 toast(`${l.name} saved to the layer library. Use it on any image with “Add from the layer library”.`, 4000);
               } }, icon('bookmark')),
+              h('button', { class: 'iconbtn', 'aria-label': `Edit ${l.name}`, title: 'Edit: brush, eraser, colours, split in two', onclick: async () => { if (saveT) await flush(); openImageEditor(g, id, { target: l.id, done: () => { changed && changed(); if (box.isConnected) reopen(); } }); } }, icon('edit')),
               h('button', { class: 'iconbtn', 'aria-label': `Move ${l.name} up`, disabled: k === L.list.length - 1, onclick: () => { L.list.splice(k + 1, 0, ...L.list.splice(k, 1)); commit(); } }, icon('up')),
               h('button', { class: 'iconbtn', 'aria-label': `Move ${l.name} down`, disabled: !k, onclick: () => { L.list.splice(k - 1, 0, ...L.list.splice(k, 1)); commit(); } }, icon('down')),
               h('button', { class: 'iconbtn', 'aria-label': `Delete ${l.name}`, onclick: async e => {
@@ -2574,7 +2618,8 @@ function openLayerSheet(g, id, opts = {}) {
                   () => { if (!l.lib && !(g.meta || {})[l.id]) { forgetURL(l.id); ST.del('images', l.id).catch(() => { }); ST.del('thumbs', l.id).catch(() => { }); } });
               } }, icon('trash')))));
         });
-        rows.push(h('div', { class: 'layrow base' }, h('button', { class: 'laythumb', type: 'button', 'aria-label': 'See the base image full size', title: 'See it full size', onclick: () => openViewer('Base image', [{ label: 'Base', make: () => S.blob('images', id) }]) }), h('div', { class: 'sub' }, h('b', {}, 'Base image'), ' · always shown')));
+        rows.push(h('div', { class: 'layrow base' }, h('button', { class: 'laythumb', type: 'button', 'aria-label': 'See the base image full size', title: 'See it full size', onclick: () => openViewer('Base image', [{ label: 'Base', make: () => S.blob('images', id) }]) }), h('div', { class: 'sub' }, h('b', {}, 'Base image'), ' · always shown'),
+          h('button', { class: 'iconbtn', 'aria-label': 'Edit the base image', title: 'Edit the base image', onclick: async () => { if (saveT) await flush(); openImageEditor(g, id, { done: nid => { changed && changed(); if (nid && nid !== id) { closeSheet(); openLayerSheet(g, nid, opts); } else if (box.isConnected) reopen(); } }); } }, icon('edit'))));
       }
       rows.push(h('div', { class: 'row', style: 'flex-wrap:wrap' },
         h('button', { class: 'btn primary', onclick: addLayers }, icon('plus'), 'Add layer images'),
@@ -2588,6 +2633,7 @@ function openLayerSheet(g, id, opts = {}) {
           Lay.tidy(L2); commit(false); await withBusy(flush); reopen();
           toast(`${plural(items.length, 'layer')} added from the library${odd ? `. ${odd} had a different shape and ${odd === 1 ? 'is' : 'are'} stretched to fit` : ''}.`, 3500);
         }, reopen) }, icon('bookmark'), 'Add from the layer library'),
+        L && L.list.length >= 2 ? h('button', { class: 'btn', id: 'lay-merge', onclick: async () => { if (saveT) await flush(); openMergeSheet(g, id, () => { changed && changed(); reopen(); }); } }, icon('merge'), 'Merge layers') : null,
         L ? h('button', { class: 'btn ghost', onclick: split }, 'Turn layers into separate pages') : null));
     }
     box.replaceChildren(...rows.filter(Boolean));
@@ -3262,6 +3308,424 @@ function viewLayer(g, baseId, layerId, name, src) {
     // the image(s) the layer was taken from, while they are still in the gallery
     ...(src || []).filter(x => g.meta[x]).slice(0, 4).map((x, i, a) => ({ label: a.length > 1 ? `Original: ${Lay.nameOf(g, x)}` : 'Original image', make: () => S.blob('images', x) }))]);
 }
+/* ================= image editor =================
+   Paint, erase and adjust one picture: a page, or one of its layers. A layer can also be split in two with a brush.
+   Edits are saved as a new picture (new id), so other devices get the change when they sync, and the old one can be undone. */
+const ImgEdit = {
+  /* colour changes on pixel data; see-through is kept. a = { exposure (stops), contrast, saturation, hue (degrees), warmth } */
+  adjust(src, dst, a) {
+    const ex = Math.pow(2, a.exposure || 0), ct = a.contrast || 0, k = ct >= 0 ? 1 + ct / 50 : 1 + ct / 100;
+    const lut = new Float32Array(256); for (let i = 0; i < 256; i++) lut[i] = (i * ex - 128) * k + 128;
+    // saturation, then hue turned around the grey axis (the same maths as CSS saturate() and hue-rotate())
+    const s = 1 + (a.saturation || 0) / 100, t = (a.hue || 0) * Math.PI / 180, c = Math.cos(t), n = Math.sin(t), r = .213, g = .715, b = .072;
+    const Hm = [r + c * (1 - r) - n * r, g - c * g - n * g, b - c * b + n * (1 - b),
+      r - c * r + n * .143, g + c * (1 - g) + n * .14, b - c * b - n * .283,
+      r - c * r - n * (1 - r), g - c * g + n * g, b + c * (1 - b) + n * b];
+    const Sm = [r + (1 - r) * s, g - g * s, b - b * s, r - r * s, g + (1 - g) * s, b - b * s, r - r * s, g - g * s, b + (1 - b) * s];
+    const M = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) M.push(Hm[i * 3] * Sm[j] + Hm[i * 3 + 1] * Sm[3 + j] + Hm[i * 3 + 2] * Sm[6 + j]);
+    const wr = (a.warmth || 0) * .35, wb = -(a.warmth || 0) * .35, same = !a.saturation && !a.hue;
+    for (let o = 0; o < src.length; o += 4) {
+      const R = lut[src[o]], G = lut[src[o + 1]], B = lut[src[o + 2]];
+      if (same) { dst[o] = R + wr; dst[o + 1] = G; dst[o + 2] = B + wb; }
+      else { dst[o] = M[0] * R + M[1] * G + M[2] * B + wr; dst[o + 1] = M[3] * R + M[4] * G + M[5] * B; dst[o + 2] = M[6] * R + M[7] * G + M[8] * B + wb; }
+      dst[o + 3] = src[o + 3];
+    }
+  },
+  /* Which part each point of a layer goes to when splitting. marks: 1 or 2 where painted (0 elsewhere).
+     With auto on, unpainted points go to the part they connect to most smoothly (along similar colours);
+     otherwise they stay in part 1. Returns 1 or 2 for every point. */
+  assign(px, marks, W, H, auto) {
+    const n = W * H, lab = new Uint8Array(n);
+    if (!auto) { for (let p = 0; p < n; p++) lab[p] = marks[p] === 2 ? 2 : 1; return lab; }
+    const dist = new Int32Array(n).fill(2147483647), B = 64, buckets = Array.from({ length: B }, () => []);
+    let left = 0;
+    for (let p = 0; p < n; p++) if (marks[p]) { lab[p] = marks[p]; dist[p] = 0; buckets[0].push(p); left++; }
+    if (!left) { lab.fill(1); return lab; }
+    let cur = 0, empty = 0;
+    while (left > 0 && empty < B) {
+      const bk = buckets[cur % B]; if (!bk.length) { cur++; empty++; continue; } empty = 0;
+      const p = bk.pop(); left--;
+      if (dist[p] !== cur) { continue; }
+      const x = p % W, o = p * 4, ap = px[o + 3];
+      for (let e = 0; e < 4; e++) {
+        const q = e === 0 ? (x > 0 ? p - 1 : -1) : e === 1 ? (x < W - 1 ? p + 1 : -1) : e === 2 ? p - W : p + W;
+        if (q < 0 || q >= n) continue;
+        const u = q * 4, aq = px[u + 3];
+        // along the drawing, a small step where colours are alike and a big one across an edge; across empty space, a fixed step
+        const step = ap < 8 || aq < 8 ? 6 : 1 + Math.min(62, (Math.max(Math.abs(px[o] - px[u]), Math.abs(px[o + 1] - px[u + 1]), Math.abs(px[o + 2] - px[u + 2]), Math.abs(ap - aq)) / 4) | 0);
+        const nd = cur + step;
+        if (nd < dist[q]) { if (dist[q] === 2147483647) left++; dist[q] = nd; lab[q] = lab[p]; buckets[nd % B].push(q); }
+      }
+    }
+    for (let p = 0; p < n; p++) if (!lab[p]) lab[p] = 1;
+    return lab;
+  },
+};
+/* a new picture from a canvas, stored like any page picture; returns its id */
+async function storeCanvas(g, cv, name) {
+  let b = await new Promise(r => cv.toBlob(r, 'image/webp', .95));
+  if (!b) b = await new Promise(r => cv.toBlob(r, 'image/png'));
+  const t = await makeThumb(b), id = uid(), ext = b.type === 'image/webp' ? '.webp' : '.png';
+  await S.putBlob('images', id, b); await S.putBlob('thumbs', id, t.thumb);
+  g.meta[id] = [cv.width, cv.height, String(name || 'image').replace(/\.[a-z0-9]{2,5}$/i, '') + ext];
+  return id;
+}
+/* put new picture nid where old was, everywhere in the gallery (folders, tags, covers, layers, saved combinations…) */
+function swapImageId(g, old, nid) {
+  const m = g.meta[nid]; delete g.meta[old];
+  // changed in place, so screens holding a folder of this gallery keep working
+  const fix = v => typeof v === 'string' && v.includes(old) ? v.split(old).join(nid) : v;
+  const walk = o => {
+    if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) { if (o[i] && typeof o[i] === 'object') walk(o[i]); else o[i] = fix(o[i]); } return; }
+    for (const k of Object.keys(o)) {
+      const v = o[k]; if (v && typeof v === 'object') walk(v); else o[k] = fix(v);
+      if (k.includes(old)) { o[fix(k)] = o[k]; delete o[k]; }
+    }
+  };
+  walk(g); INH.delete(g);
+  if (m) g.meta[nid] = m; // its own name and size
+}
+/* forget a picture once nothing uses it any more */
+function dropImageLater(g, id) {
+  return () => { if ((g.meta || {})[id]) return; forgetURL(id); ST.del('images', id).catch(() => { }); ST.del('thumbs', id).catch(() => { }); };
+}
+/* In a layered image, replace one layer by others (in its place, bottom to top), shown wherever it was shown */
+function replaceLayer(g, pageId, oldId, repl) {
+  const L = Lay.of(g, pageId), k = L.list.findIndex(l => l.id === oldId), l = L.list[k];
+  L.list.splice(k, 1, ...repl.map(r => ({ group: l.group || '', ...(l.src ? { src: l.src } : {}), ...r })));
+  const fix = on => on.includes(oldId) ? [...on.filter(x => x !== oldId), ...repl.map(r => r.id)] : on;
+  L.on = fix(L.on); L.presets.forEach(p => { p.on = fix(p.on); });
+  Lay.tidy(L);
+  if (!l.lib) delete g.meta[oldId];
+}
+/* Merge layers of one image into one (drawn in their order), in the place of the topmost of them */
+async function mergeLayers(g, pageId, ids, name) {
+  const L = Lay.of(g, pageId), [W, H] = g.meta[pageId], pick = L.list.filter(l => ids.includes(l.id));
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d');
+  for (const l of pick) { const im = await Lay.bmp(l.id); if (!im) throw new Error(`“${l.name}” has not arrived on this device yet`); x.drawImage(im, 0, 0, W, H); }
+  const nid = await storeCanvas(g, cv, name), top = pick[pick.length - 1], at = L.list.indexOf(top);
+  const groups = [...new Set(pick.map(l => (l.group || '').toLowerCase()))];
+  const src = [...new Set(pick.flatMap(l => l.src || []))];
+  const merged = { id: nid, name, group: groups.length === 1 ? top.group || '' : '', ...(src.length ? { src } : {}) };
+  L.list.splice(at, 1, merged); L.list = L.list.filter(l => !ids.includes(l.id));
+  const fix = on => ids.some(i => on.includes(i)) ? [...on.filter(i => !ids.includes(i)), nid] : on;
+  L.on = fix(L.on); L.presets.forEach(p => { p.on = fix(p.on); }); Lay.tidy(L);
+  for (const l of pick) if (!l.lib) delete g.meta[l.id];
+  return { nid, gone: pick.filter(l => !l.lib).map(l => l.id) };
+}
+/* The "Merge layers" picker, from the layers editor */
+function openMergeSheet(g, pageId, back) {
+  const L = Lay.of(g, pageId), pick = new Set(), box = h('div', { class: 'stack' });
+  const nameIn = h('input', { class: 'text', placeholder: 'Name for the merged layer', 'aria-label': 'Name for the merged layer' });
+  const go1 = h('button', { class: 'btn primary', id: 'merge-go', disabled: true, onclick: async () => {
+    const ids = L.list.filter(l => pick.has(l.id)).map(l => l.id), name = nameIn.value.trim().slice(0, 60) || L.list.filter(l => pick.has(l.id)).reverse().map(l => l.name).join(' + ').slice(0, 60);
+    const snap = snapGallery(g); let r;
+    try { await withBusy(async () => { r = await mergeLayers(g, pageId, ids, name); await saveGallery(g); await Lay.changed(g, pageId); }); }
+    catch (e) { toast(e.message || 'Could not merge these layers', 4000); return; }
+    back();
+    undoToast(`Merged ${plural(ids.length, 'layer')} into “${name}”`, async () => { await restoreGallery(g, snap); await Lay.changed(g, pageId); back(); },
+      () => r.gone.forEach(id => dropImageLater(g, id)()));
+  } }, 'Merge');
+  const draw = () => {
+    go1.disabled = pick.size < 2; go1.textContent = pick.size >= 2 ? `Merge ${plural(pick.size, 'layer')}` : 'Choose 2 or more layers';
+    const ids = L.list.map(l => l.id), sel = ids.filter(i => pick.has(i)), lo = ids.indexOf(sel[0]), hi = ids.indexOf(sel[sel.length - 1]);
+    const between = sel.length >= 2 ? L.list.slice(lo, hi).filter(l => !pick.has(l.id)) : [];
+    box.replaceChildren(
+      h('p', { class: 'hint', style: 'margin:0' }, 'Choose the layers to mix into one picture. They are drawn in their order, and the merged layer takes the place of the top one. It shows wherever any of them showed.'),
+      h('div', { class: 'stack', style: 'gap:6px' }, [...L.list].reverse().map(l => {
+        const on = pick.has(l.id), th = h('span', { class: 'laythumb' }); imgURL(l.id, 'thumbs').then(u => { if (u) th.replaceChildren(h('img', { src: u, alt: '' })); });
+        return h('button', { class: 'layrow pickrow' + (on ? ' on' : ''), 'aria-pressed': String(on), onclick: () => { on ? pick.delete(l.id) : pick.add(l.id); draw(); } },
+          th, h('span', { style: 'text-align:left' }, h('b', {}, l.name), l.group ? h('span', { class: 'hint' }, ` · ${l.group}`) : null), h('span', { class: 'pickbox' }, on ? icon('check') : null));
+      })),
+      between.length ? h('div', { class: 'banner', style: 'margin:0' }, `${between.map(l => l.name).join(', ')} ${between.length === 1 ? 'is' : 'are'} between them, so the merged layer will cover ${between.length === 1 ? 'it' : 'them'} where they overlap.`) : null,
+      nameIn, h('div', { class: 'row', style: 'flex-wrap:wrap' }, go1, h('button', { class: 'btn ghost', onclick: back }, 'Cancel')));
+  };
+  draw(); openSheet('Merge layers', box, null);
+}
+/* The editor, over the whole screen. target: a layer id, or null for the page's own picture. mode 'split' starts with the split brush. */
+async function openImageEditor(g, pageId, opts = {}) {
+  let target = opts.target || null, dirty = false, tool = opts.mode === 'split' ? 'split' : 'brush';
+  const [W, H] = g.meta[pageId] || [0, 0]; if (!W) return;
+  const pal = { brush: { size: Math.max(4, Math.round(W / 120)), opacity: 100, soft: 20 }, eraser: { size: Math.max(8, Math.round(W / 60)), opacity: 100, soft: 20 }, split: { size: Math.max(10, Math.round(W / 40)), part: 1 } };
+  let colour = '#1a1a1a', showUnder = true, showOver = false, autoFill = true;
+  const recent = ['#1a1a1a', '#ffffff'];
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  const underC = mk(), workC = mk(), overC = mk(), marksC = mk(), previewC = mk(), strokeC = mk(), beforeC = mk();
+  underC.className = 'ie-under'; workC.className = 'ie-work'; overC.className = 'ie-over'; marksC.className = 'ie-marks'; previewC.className = 'ie-prev';
+  const wx = workC.getContext('2d', { willReadFrequently: true }), mx = marksC.getContext('2d', { willReadFrequently: true }), sx = strokeC.getContext('2d');
+  const wrap = h('div', { class: 'ie-wrap', style: `width:${W}px;height:${H}px` }, underC, workC, overC, previewC, marksC);
+  const stage = h('div', { class: 'ie-stage' }, wrap);
+  const L0 = () => Lay.of(g, pageId);
+  const targetName = () => target ? (L0().list.find(l => l.id === target) || {}).name || 'Layer' : Lay.nameOf(g, pageId);
+  // ---- loading the picture being edited, and what is under and over it
+  const load = async () => {
+    const L = L0(), list = L ? L.list : [], on = L ? L.on : [], k = target ? list.findIndex(l => l.id === target) : -1;
+    const ux = underC.getContext('2d'), ox = overC.getContext('2d');
+    ux.clearRect(0, 0, W, H); ox.clearRect(0, 0, W, H); wx.clearRect(0, 0, W, H);
+    ux.fillStyle = '#fff'; ux.fillRect(0, 0, W, H);
+    const drawIn = async (x, id) => { const im = await Lay.bmp(id); if (im) x.drawImage(im, 0, 0, W, H); return !!im; };
+    if (!target) { if (!await drawIn(wx, pageId)) throw new Error('This picture has not arrived on this device yet'); for (const l of list) if (on.includes(l.id)) await drawIn(ox, l.id); }
+    else {
+      await drawIn(ux, pageId);
+      for (const [i, l] of list.entries()) { if (i === k) { if (!await drawIn(wx, l.id)) throw new Error('This layer has not arrived on this device yet'); } else if (on.includes(l.id)) await drawIn(i < k ? ux : ox, l.id); }
+    }
+    mx.clearRect(0, 0, W, H); previewC.getContext('2d').clearRect(0, 0, W, H);
+    undo.length = 0; redo.length = 0; dirty = false; adj = null;
+  };
+  // ---- undo: whole-picture snapshots (as many as memory comfortably allows)
+  const undo = [], redo = [], maxSteps = clamp(Math.floor(240e6 / (W * H * 4)), 3, 20);
+  const snap = which => ({ which, data: (which === 'marks' ? mx : wx).getImageData(0, 0, W, H) });
+  const pushUndo = which => { undo.push(snap(which)); if (undo.length > maxSteps) undo.shift(); redo.length = 0; if (which === 'work') dirty = true; bar(); };
+  const stepBack = (from, to) => { const s = from.pop(); if (!s) return; to.push(snap(s.which)); (s.which === 'marks' ? mx : wx).putImageData(s.data, 0, 0); if (s.which === 'work') dirty = true; else splitPreview(); bar(); };
+  // ---- the view: pan and zoom
+  let vs = 1, vx = 0, vy = 0;
+  const view = () => { wrap.style.transform = `translate(${vx}px,${vy}px) scale(${vs})`; };
+  const fit = () => { const r = stage.getBoundingClientRect(); vs = Math.min(r.width / W, r.height / H) * .96; vx = (r.width - W * vs) / 2; vy = (r.height - H * vs) / 2; view(); };
+  const zoomAt = (f, cx, cy) => { const ns = clamp(vs * f, .05, 16); vx = cx - (cx - vx) * ns / vs; vy = cy - (cy - vy) * ns / vs; vs = ns; view(); };
+  const toImg = e => { const r = stage.getBoundingClientRect(); return [(e.clientX - r.left - vx) / vs, (e.clientY - r.top - vy) / vs]; };
+  // ---- brushes: soft round dabs along the stroke, into a stroke canvas; the stroke is laid on the picture as a whole
+  let stamp = null, stampKey = '';
+  const getStamp = (d, soft, col) => {
+    const key = [d, soft, col].join(); if (key === stampKey) return stamp;
+    const c = document.createElement('canvas'), s = Math.max(1, Math.ceil(d)); c.width = c.height = s; const x = c.getContext('2d');
+    const gr = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2), hard = clamp(1 - soft / 100, 0, .99);
+    gr.addColorStop(0, col); gr.addColorStop(hard, col); gr.addColorStop(1, col.replace(/rgb\((.*)\)/, 'rgba($1,0)'));
+    x.fillStyle = gr; x.beginPath(); x.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); x.fill();
+    stamp = c; stampKey = key; return c;
+  };
+  const rgbOf = hex => { const v = parseInt(hex.slice(1), 16); return `rgb(${v >> 16 & 255},${v >> 8 & 255},${v & 255})`; };
+  let stroke = null, raf = 0;
+  const dab = (x, y) => { const st = stroke.st, d = st.width; stroke.cx.drawImage(st, x - d / 2, y - d / 2); };
+  const lineTo = (x, y) => {
+    const [px, py] = stroke.last, dx = x - px, dy = y - py, len = Math.hypot(dx, dy), gap = Math.max(1, stroke.st.width * .12);
+    let t = stroke.carry; while (t <= len) { dab(px + dx * t / len, py + dy * t / len); t += gap; }
+    stroke.carry = t - len; stroke.last = [x, y];
+  };
+  const showStroke = () => {
+    raf = 0; if (!stroke) return;
+    if (stroke.kind === 'marks') return;
+    wx.save(); wx.globalCompositeOperation = 'copy'; wx.drawImage(beforeC, 0, 0); wx.restore();
+    wx.save(); wx.globalAlpha = stroke.alpha; wx.globalCompositeOperation = stroke.kind === 'eraser' ? 'destination-out' : 'source-over'; wx.drawImage(strokeC, 0, 0); wx.restore();
+  };
+  const begin = (x, y) => {
+    if (tool === 'split') {
+      pushUndo('marks'); const s = pal.split; const col = s.part === 1 ? 'rgb(230,60,60)' : s.part === 2 ? 'rgb(40,110,240)' : 'rgb(0,0,0)';
+      stroke = { kind: 'marks', erase: s.part === 0, st: getStamp(s.size, 0, col), last: [x, y], carry: 0, cx: mx };
+      mx.save(); if (stroke.erase) mx.globalCompositeOperation = 'destination-out';
+      dab(x, y); return;
+    }
+    const p = pal[tool]; pushUndo('work');
+    beforeC.getContext('2d').clearRect(0, 0, W, H); beforeC.getContext('2d').drawImage(workC, 0, 0);
+    sx.clearRect(0, 0, W, H);
+    stroke = { kind: tool, alpha: p.opacity / 100, st: getStamp(p.size, p.soft, tool === 'eraser' ? 'rgb(0,0,0)' : rgbOf(colour)), last: [x, y], carry: 0, cx: sx };
+    dab(x, y); if (!raf) raf = requestAnimationFrame(showStroke);
+  };
+  const move = (x, y) => { if (!stroke) return; lineTo(x, y); if (stroke.kind !== 'marks' && !raf) raf = requestAnimationFrame(showStroke); };
+  const end = () => {
+    if (!stroke) return; const s = stroke;
+    if (s.kind === 'marks') { mx.restore(); stroke = null; splitPreview(); return; }
+    showStroke(); stroke = null; sx.clearRect(0, 0, W, H);
+  };
+  const cancelStroke = () => {
+    if (!stroke) return;
+    if (stroke.kind === 'marks') { mx.restore(); stroke = null; stepBack(undo, []); return; }
+    stroke = null; wx.save(); wx.globalCompositeOperation = 'copy'; wx.drawImage(beforeC, 0, 0); wx.restore(); undo.pop(); bar();
+  };
+  const pickColour = (x, y) => {
+    const c = document.createElement('canvas'); c.width = c.height = 1; const cx = c.getContext('2d');
+    for (const src of [underC, workC, overC]) if (src !== overC || showOver) cx.drawImage(src, Math.floor(x), Math.floor(y), 1, 1, 0, 0, 1, 1);
+    const d = cx.getImageData(0, 0, 1, 1).data; colour = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+    if (!recent.includes(colour)) { recent.unshift(colour); recent.length = Math.min(recent.length, 8); }
+    tool = 'brush'; panel(); toast('Colour picked');
+  };
+  // ---- pointers: one finger or the mouse uses the tool; two fingers (or the hand tool, or the middle button) move and zoom
+  const ptrs = new Map(); let pan = null, pinch = null;
+  stage.addEventListener('pointerdown', e => {
+    try { stage.setPointerCapture(e.pointerId); } catch (x) { } ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (ptrs.size === 2) { cancelStroke(); pan = null; const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2 }; return; }
+    if (ptrs.size > 2) return;
+    if (tool === 'hand' || e.button === 1 || spaceDown) { pan = [e.clientX, e.clientY]; return; }
+    if (e.button !== 0) return;
+    const [x, y] = toImg(e);
+    if (tool === 'pick') return pickColour(x, y);
+    if (tool === 'adjust') return;
+    if (tool === 'split' && !target) return;
+    begin(x, y);
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2, r = stage.getBoundingClientRect();
+      vx += cx - pinch.cx; vy += cy - pinch.cy; view(); if (pinch.d > 10) zoomAt(d / pinch.d, cx - r.left, cy - r.top);
+      pinch = { d, cx, cy }; return;
+    }
+    if (pan) { vx += e.clientX - pan[0]; vy += e.clientY - pan[1]; pan = [e.clientX, e.clientY]; view(); return; }
+    if (stroke) { const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; for (const ev of (evs.length ? evs : [e])) { const [x, y] = toImg(ev); move(x, y); } }
+  });
+  const up = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) { pan = null; end(); } };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', e => { cancelStroke(); up(e); });
+  stage.addEventListener('wheel', e => { e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * .0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  let spaceDown = false;
+  // ---- colour adjustments: previewed live, kept when you tap Apply or change tool
+  let adj = null; const A0 = { exposure: 0, contrast: 0, saturation: 0, hue: 0, warmth: 0 };
+  const adjRun = () => { if (!adj || adj.raf) return; adj.raf = requestAnimationFrame(() => { adj.raf = 0; const out = new ImageData(W, H); ImgEdit.adjust(adj.src.data, out.data, adj.v); wx.putImageData(out, 0, 0); }); };
+  const adjStart = () => { if (!adj) adj = { src: wx.getImageData(0, 0, W, H), v: { ...A0 }, raf: 0 }; };
+  const adjChanged = () => adj && Object.keys(A0).some(k => adj.v[k]);
+  const adjApply = () => { if (!adj) return; if (adjChanged()) { if (adj.raf) { cancelAnimationFrame(adj.raf); adj.raf = 0; const out = new ImageData(W, H); ImgEdit.adjust(adj.src.data, out.data, adj.v); wx.putImageData(out, 0, 0); } undo.push({ which: 'work', data: adj.src }); if (undo.length > maxSteps) undo.shift(); redo.length = 0; dirty = true; } adj = null; };
+  const adjReset = () => { if (!adj) return; wx.putImageData(adj.src, 0, 0); adj = null; };
+  // ---- splitting a layer: marks in two colours; the preview shows which part each point goes to
+  let prevT = 0;
+  const marksOf = (w2, h2) => {
+    const c = document.createElement('canvas'); c.width = w2; c.height = h2; const x = c.getContext('2d', { willReadFrequently: true });
+    x.imageSmoothingEnabled = false; x.drawImage(marksC, 0, 0, w2, h2); const d = x.getImageData(0, 0, w2, h2).data, m = new Uint8Array(w2 * h2); let any = false;
+    for (let p = 0, o = 0; p < m.length; p++, o += 4) if (d[o + 3] > 100) { m[p] = d[o] > d[o + 2] ? 1 : 2; any = true; }
+    return any ? m : null;
+  };
+  const pixelsOf = (w2, h2) => { const c = document.createElement('canvas'); c.width = w2; c.height = h2; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(workC, 0, 0, w2, h2); return x.getImageData(0, 0, w2, h2).data; };
+  const splitPreview = () => {
+    clearTimeout(prevT); const pc = previewC.getContext('2d'); pc.clearRect(0, 0, W, H);
+    if (tool !== 'split' || !target) return;
+    prevT = setTimeout(() => {
+      // worked out on a smaller copy, so it follows each stroke quickly
+      const sc = Math.min(1, Math.sqrt(500000 / (W * H))), w2 = Math.max(1, Math.round(W * sc)), h2 = Math.max(1, Math.round(H * sc));
+      const m = marksOf(w2, h2); if (!m) return;
+      const px = pixelsOf(w2, h2), lab = ImgEdit.assign(px, m, w2, h2, autoFill), out = new ImageData(w2, h2);
+      for (let p = 0, o = 0; p < lab.length; p++, o += 4) { if (px[o + 3] < 8) continue; if (lab[p] === 2) { out.data[o] = 40; out.data[o + 1] = 110; out.data[o + 2] = 240; } else { out.data[o] = 230; out.data[o + 1] = 60; out.data[o + 2] = 60; } out.data[o + 3] = 150; }
+      const c = document.createElement('canvas'); c.width = w2; c.height = h2; c.getContext('2d').putImageData(out, 0, 0);
+      pc.clearRect(0, 0, W, H); pc.drawImage(c, 0, 0, W, H);
+    }, 120);
+  };
+  const doSplit = async (n1, n2) => {
+    const m = marksOf(W, H); if (!m) return toast('Paint over what goes into each part first.', 3000);
+    if (![...m].some(v => v === 2)) return toast('Paint part 2 (blue) over what goes into the new layer.', 3500);
+    const snapG = snapGallery(g); let ids;
+    await withBusy(async () => {
+      await sleep(30);
+      const img = wx.getImageData(0, 0, W, H), lab = ImgEdit.assign(img.data, m, W, H, autoFill);
+      const a = new ImageData(W, H), b = new ImageData(W, H);
+      for (let p = 0, o = 0; p < lab.length; p++, o += 4) { const d = lab[p] === 2 ? b.data : a.data; d[o] = img.data[o]; d[o + 1] = img.data[o + 1]; d[o + 2] = img.data[o + 2]; d[o + 3] = img.data[o + 3]; }
+      const ca = mk(), cb = mk(); ca.getContext('2d').putImageData(a, 0, 0); cb.getContext('2d').putImageData(b, 0, 0);
+      const ia = await storeCanvas(g, ca, n1), ib = await storeCanvas(g, cb, n2);
+      ids = [ia, ib]; replaceLayer(g, pageId, target, [{ id: ia, name: n1 }, { id: ib, name: n2 }]);
+      await saveGallery(g); await Lay.changed(g, pageId);
+    });
+    const old = target; close(true);
+    undoToast(`Split into “${n1}” and “${n2}”`, async () => { await restoreGallery(g, snapG); await Lay.changed(g, pageId); opts.done && opts.done(); }, dropImageLater(g, old));
+  };
+  // ---- saving: a new picture in place of the old one (or next to it, as a copy)
+  const save = async copy => {
+    adjApply();
+    const snapG = snapGallery(g), old = target || pageId, name = targetName();
+    let nid;
+    await withBusy(async () => {
+      nid = await storeCanvas(g, workC, name);
+      if (target) {
+        if (copy) { const L = L0(), k = L.list.findIndex(l => l.id === target); L.list.splice(k + 1, 0, { id: nid, name: name + ' (edited)', group: L.list[k].group || '' }); if (L.on.includes(target)) L.on.push(nid); Lay.tidy(L); }
+        else replaceLayer(g, pageId, target, [{ id: nid, name, lib: undefined }]);
+      } else if (copy) {
+        const c = g.chapters.find(x => x.pages.includes(pageId)); c.pages.splice(c.pages.indexOf(pageId) + 1, 0, nid); g.meta[nid][2] = name + ' (edited)' + g.meta[nid][2].match(/\.[a-z0-9]+$/i)[0];
+        const O = Lay.of(g, pageId); if (O) g.layers[nid] = await copyLayerSet(g, O);
+      } else swapImageId(g, pageId, nid);
+      await saveGallery(g);
+      const pid = !target && !copy ? nid : pageId; Lay.forget(pageId); await Lay.changed(g, pid); if (copy && !target) await Lay.changed(g, nid);
+    });
+    const newPage = !target && !copy ? nid : pageId;
+    close(true, newPage);
+    if (copy) toast(target ? 'Saved as a new layer above the original' : 'Saved as a new image after the original', 3000);
+    else undoToast(`Saved the changes to “${name}”`, async () => { await restoreGallery(g, snapG); Lay.forget(nid); await Lay.changed(g, pageId); opts.done && opts.done(pageId); }, dropImageLater(g, old));
+  };
+  // ---- the screen
+  const title = h('div', { class: 'ie-title' });
+  const undoB = h('button', { class: 'iconbtn', 'aria-label': 'Undo', title: 'Undo (Ctrl+Z)', onclick: () => { adjReset(); stepBack(undo, redo); } }, icon('undo'));
+  const redoB = h('button', { class: 'iconbtn', 'aria-label': 'Redo', title: 'Redo (Ctrl+Y)', onclick: () => stepBack(redo, undo) }, icon('redo'));
+  const saveB = h('button', { class: 'btn primary small', id: 'ie-save', onclick: () => save(false) }, 'Save');
+  const moreB = h('button', { class: 'btn small ghost', id: 'ie-copy', 'aria-label': 'Save as a copy', title: 'Save as a copy, keeping the original', onclick: () => save(true) }, h('span', { class: 'wide' }, 'Save as a copy'), h('span', { class: 'narrow' }, 'Copy'));
+  const bar = () => { undoB.disabled = !undo.length; redoB.disabled = !redo.length; saveB.disabled = !(dirty || adjChanged()); moreB.disabled = saveB.disabled; };
+  const tools = h('div', { class: 'ie-tools', role: 'toolbar', 'aria-label': 'Tools' });
+  const opt = h('div', { class: 'ie-opts' });
+  const slider = (label, min, max, val, set, unit = '', step = 1) => {
+    const out = h('span', { class: 'num' }, val + unit);
+    return h('label', { class: 'ie-slider' }, h('span', {}, label), h('input', { type: 'range', min, max, step, value: val, 'aria-label': label, oninput: e => { const v = +e.target.value; out.textContent = (Math.round(v * 100) / 100) + unit; set(v); } }), out);
+  };
+  const sw = (label, on, set) => h('label', { class: 'pick1' }, h('span', {}, label), h('button', { class: 'switch small', role: 'switch', 'aria-checked': String(on), onclick: e => { const b = e.currentTarget, v = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', String(v)); set(v); } }));
+  const TOOLS = [['brush', 'Brush', 'brush', 'Brush'], ['eraser', 'Eraser', 'eraser', 'Eraser'], ['pick', 'Pick a colour', 'pick', 'Colour'], ['adjust', 'Adjust colours', 'tune', 'Adjust'], ['split', 'Split the layer in two', 'split', 'Split'], ['hand', 'Move the view', 'hand', 'Move']];
+  const setTool = t => {
+    if (t === tool) return;
+    if (tool === 'adjust') adjApply();
+    if (t === 'split' && !target) return toast('Only a layer can be split. Choose a layer at the top first.', 3500);
+    tool = t; if (t === 'adjust') adjStart();
+    marksC.style.display = previewC.style.display = t === 'split' ? '' : 'none';
+    panel(); splitPreview(); bar();
+  };
+  const panel = () => {
+    tools.replaceChildren(...TOOLS.filter(([t]) => t !== 'split' || target).map(([t, label, ic, short]) => h('button', { class: 'ie-tool', 'data-tool': t, 'aria-pressed': String(tool === t), 'aria-label': label, title: label, onclick: () => setTool(t) }, icon(ic), h('span', {}, short))));
+    const rows = [];
+    if (tool === 'brush' || tool === 'eraser') {
+      const p = pal[tool];
+      if (tool === 'brush') rows.push(h('div', { class: 'ie-colours' },
+        h('input', { type: 'color', value: colour, 'aria-label': 'Brush colour', oninput: e => { colour = e.target.value; }, onchange: e => { if (!recent.includes(colour)) { recent.unshift(colour); recent.length = Math.min(recent.length, 8); panel(); } } }),
+        ...recent.map(c => h('button', { class: 'ie-swatch' + (c === colour ? ' on' : ''), style: `background:${c}`, 'aria-label': `Colour ${c}`, onclick: () => { colour = c; panel(); } })),
+        h('button', { class: 'btn small ghost', onclick: () => setTool('pick') }, icon('pick'), 'Pick from the picture')));
+      rows.push(slider('Size', 1, Math.max(200, Math.round(W / 6)), p.size, v => p.size = v, ' px'), slider('Opacity', 5, 100, p.opacity, v => p.opacity = v, '%'), slider('Softness', 0, 100, p.soft, v => p.soft = v, '%'));
+    } else if (tool === 'pick') rows.push(h('p', { class: 'hint' }, 'Tap the picture to take its colour for the brush.'));
+    else if (tool === 'hand') rows.push(h('p', { class: 'hint' }, 'Drag to move around. Pinch, or use the mouse wheel, to zoom. With two fingers you can always move and zoom, whatever the tool.'));
+    else if (tool === 'adjust') {
+      adjStart();
+      const set = k => v => { adj.v[k] = v; adjRun(); bar(); };
+      rows.push(slider('Exposure', -2, 2, adj.v.exposure, set('exposure'), '', .05), slider('Contrast', -100, 100, adj.v.contrast, set('contrast')), slider('Saturation', -100, 100, adj.v.saturation, set('saturation')),
+        slider('Hue', -180, 180, adj.v.hue, set('hue'), '°'), slider('Warmth', -100, 100, adj.v.warmth, set('warmth')),
+        h('div', { class: 'row' }, h('button', { class: 'btn small primary', onclick: () => { adjApply(); adjStart(); panel(); bar(); } }, 'Apply'), h('button', { class: 'btn small ghost', onclick: () => { adjReset(); adjStart(); panel(); bar(); } }, 'Reset')));
+    } else if (tool === 'split') {
+      const s = pal.split, L = L0(), l = L.list.find(x => x.id === target) || {};
+      const n1 = h('input', { class: 'text', value: s.n1 || l.name, 'aria-label': 'Name of part 1', oninput: e => s.n1 = e.target.value });
+      const n2 = h('input', { class: 'text', value: s.n2 || `${l.name} (part 2)`, 'aria-label': 'Name of part 2', oninput: e => s.n2 = e.target.value });
+      rows.push(h('p', { class: 'hint' }, 'Paint roughly over each part: red stays in this layer, blue goes into a new layer on top. You do not need to cover everything.'),
+        h('div', { class: 'seg', role: 'group', 'aria-label': 'Paint' }, [[1, 'Part 1 (red)'], [2, 'Part 2 (blue)'], [0, 'Erase marks']].map(([v, t]) => h('button', { 'aria-pressed': String(s.part === v), onclick: () => { s.part = v; panel(); } }, t))),
+        slider('Size', 2, Math.max(200, Math.round(W / 6)), s.size, v => s.size = v, ' px'),
+        sw('Fill in the rest automatically', autoFill, v => { autoFill = v; splitPreview(); }),
+        h('p', { class: 'hint' }, autoFill ? 'Everything you did not paint goes with the part it is joined to by similar colours.' : 'Everything you did not paint stays in part 1.'),
+        h('div', { class: 'ie-names' }, n1, n2),
+        h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('button', { class: 'btn primary', id: 'ie-split', onclick: () => doSplit((n1.value.trim() || l.name).slice(0, 60), (n2.value.trim() || l.name + ' (part 2)').slice(0, 60)) }, icon('split'), 'Split into two layers'),
+          h('button', { class: 'btn small ghost', onclick: () => { pushUndo('marks'); mx.clearRect(0, 0, W, H); splitPreview(); } }, 'Clear marks')));
+    }
+    const L = L0();
+    if (L) rows.push(h('div', { class: 'row', style: 'flex-wrap:wrap;gap:6px 14px' },
+      target ? sw('Show what is under', showUnder, v => { showUnder = v; underC.style.visibility = v ? '' : 'hidden'; }) : null,
+      sw('Show layers above', showOver, v => { showOver = v; overC.style.visibility = v ? '' : 'hidden'; })));
+    opt.replaceChildren(...rows.filter(Boolean));
+  };
+  const pickTarget = () => {
+    const L = L0(); if (!L) return h('b', {}, Lay.nameOf(g, pageId));
+    return h('select', { class: 'text ie-target', 'aria-label': 'What to edit', onchange: async e => {
+      const v = e.target.value || null;
+      if (dirty || adjChanged()) { if (!await askYes('Leave without saving?', `The changes to “${targetName()}” are not saved yet.`, 'Leave them')) { e.target.value = target || ''; return; } }
+      adjReset(); target = v; if (tool === 'split' && !target) tool = 'brush';
+      await withBusy(load); title.replaceChildren(pickTarget()); setTool(tool === 'adjust' ? 'brush' : tool); panel(); bar();
+    } }, [...L.list].reverse().map(l => h('option', { value: l.id, selected: l.id === target }, `Layer: ${l.name}`)), h('option', { value: '', selected: !target }, 'Base image'));
+  };
+  const key = e => {
+    if (e.target.closest && e.target.closest('input,select,textarea')) return;
+    if (e.key === ' ') { spaceDown = e.type === 'keydown'; e.preventDefault(); stage.style.cursor = spaceDown ? 'grab' : ''; return; }
+    if (e.type !== 'keydown' || $('.askyes')) return;
+    if (e.key === 'Escape') { e.preventDefault(); tryClose(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? stepBack(redo, undo) : (adjReset(), stepBack(undo, redo)); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); stepBack(redo, undo); }
+    else if (!e.ctrlKey && !e.metaKey && !e.altKey) { const t = { b: 'brush', e: 'eraser', i: 'pick', a: 'adjust', s: 'split', h: 'hand' }[e.key.toLowerCase()]; if (t) setTool(t); else if (e.key === '0') fit(); else if (e.key === '[' || e.key === ']') { const p = pal[tool]; if (p) { p.size = clamp(Math.round(p.size * (e.key === ']' ? 1.25 : .8)), 1, 2000); panel(); } } }
+  };
+  const el = h('div', { id: 'imged', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Edit image' },
+    h('header', {}, h('button', { class: 'iconbtn', 'aria-label': 'Close', onclick: () => tryClose() }, icon('x')), title, undoB, redoB,
+      h('button', { class: 'iconbtn ie-fit', 'aria-label': 'Fit to the screen', title: 'Fit (0)', onclick: fit }, icon('full')), moreB, saveB),
+    stage, h('div', { class: 'ie-bottom' }, opt, tools));
+  const close = (saved, newPage) => { el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', key); if (saved) opts.done && opts.done(newPage || pageId); };
+  const tryClose = async () => { if ((dirty || adjChanged()) && !await askYes('Leave without saving?', 'Your changes to this picture will be lost.', 'Leave them')) return; close(false); };
+  title.replaceChildren(pickTarget());
+  document.body.append(el); document.addEventListener('keydown', key); document.addEventListener('keyup', key);
+  try { await withBusy(load); } catch (e) { el.remove(); document.removeEventListener('keydown', key); document.removeEventListener('keyup', key); return toast(e.message, 4000); }
+  marksC.style.display = previewC.style.display = tool === 'split' ? '' : 'none'; overC.style.visibility = showOver ? '' : 'hidden';
+  if (tool === 'split' && !target) tool = 'brush';
+  panel(); bar(); requestAnimationFrame(fit); splitPreview();
+  window.__ie = { get tool() { return tool; }, setTool, get target() { return target; }, wx, mx, W, H, pal, save, doSplit, fit, get dirty() { return dirty; } }; // for tests
+}
 let LAYDROP = null;
 /* ================= layer library =================
    Per account: layer images kept to reuse on any layered image (artists often reuse the same pose with other extras).
@@ -3468,6 +3932,11 @@ async function renderPages(id, chId, host, gIn) {
         one ? null : 'Select exactly one image to use this', () => openLayerSheet(g, pages[0], { edit: true, save: () => saveGallery(g), changed: draw })),
       tool('layers', 'Combine as layers', 'The first selected image becomes the base; the others become layers on top of it',
         n >= 2 ? null : 'Select 2 or more images, or a folder with them, to use this', combineSel),
+      tool('edit', 'Edit image', 'Brushes, eraser and colour picker, plus exposure, contrast, saturation, hue and warmth. Works on the image or any of its layers',
+        one ? null : 'Select exactly one image to use this', () => openImageEditor(g, pages[0], { done: nid => { sel.clear(); if (nid && ch.pages.includes(nid)) sel.add('p:' + nid); draw(); } })),
+      tool('split', 'Split a layer', 'Paint roughly over two parts of a layer to turn it into two layers you can show or hide separately',
+        !one ? 'Select exactly one image to use this' : !L1 ? 'This image has no layers yet. Add layers or use Find variants first' : null,
+        () => openImageEditor(g, pages[0], { target: L1.list[L1.list.length - 1].id, mode: 'split', done: () => draw() })),
       tool('variants', 'Find variants', 'For versions of the same picture: finds what they share and makes a layer with only what is different in each',
         n >= 2 && n <= 12 ? null : n > 12 ? `Works with up to 12 images; ${n} are selected` : 'Select 2 to 12 images, or a folder with them, to use this',
         () => openVariantSheet(g, pages, id => { sel.clear(); if (ch.pages.includes(id)) sel.add('p:' + id); draw(); }))));

@@ -1,6 +1,6 @@
 {
- "version": 72,
- "name": "1.22.0-beta.2",
+ "version": 73,
+ "name": "1.22.0-beta.3",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,8 +17,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.",
-  "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.",
-  "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no \u201ceraser\u201d layers."
+  "New \u201cEdit image\u201d in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.",
+  "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.",
+  "New \u201cSplit a layer\u201d: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).",
+  "Layers menu: a pencil on each layer (and on the base image) opens the editor, and \u201cMerge layers\u201d mixes the layers you choose into one."
  ]
 }
