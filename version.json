@@ -1,6 +1,6 @@
 {
- "version": 67,
- "name": "1.20.3",
+ "version": 68,
+ "name": "1.21.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,6 +16,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "The \u201cOriginal image\u201d view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."
+  "Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.",
+  "New switch \u201cUnderstand see-through effects\u201d (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.",
+  "The preview marks options that became see-through."
  ]
 }
