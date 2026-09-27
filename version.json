@@ -1,6 +1,6 @@
 {
- "version": 52,
- "name": "1.14.0",
+ "version": 53,
+ "name": "1.15.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,8 +16,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.",
-  "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.",
-  "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."
+  "Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.",
+  "You can still choose \u201cMake a new gallery instead\u201d. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).",
+  "While dragging, the window shows where the files will go."
  ]
 }

@@ -1,5 +1,15 @@
 [
   {
+    "v": 53,
+    "name": "1.15.0",
+    "date": "2026-09-27",
+    "items": [
+      "Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.",
+      "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).",
+      "While dragging, the window shows where the files will go."
+    ]
+  },
+  {
     "v": 52,
     "name": "1.14.0",
     "date": "2026-09-27",
