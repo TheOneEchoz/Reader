@@ -1,5 +1,13 @@
 [
   {
+    "v": 59,
+    "name": "1.18.1",
+    "date": "2026-09-27",
+    "items": [
+      "New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."
+    ]
+  },
+  {
     "v": 58,
     "name": "1.18.0",
     "date": "2026-09-27",

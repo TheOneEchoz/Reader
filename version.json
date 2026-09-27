@@ -1,6 +1,6 @@
 {
- "version": 58,
- "name": "1.18.0",
+ "version": 59,
+ "name": "1.18.1",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,9 +16,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap \u201cFind variants\u201d. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.",
-  "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.",
-  "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.",
-  "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."
+  "New \u201cEditing tools\u201d button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."
  ]
 }
