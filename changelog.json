@@ -1,5 +1,17 @@
 [
   {
+    "v": 51,
+    "name": "1.13.0",
+    "date": "2026-09-27",
+    "items": [
+      "New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.",
+      "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.",
+      "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.",
+      "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.",
+      "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."
+    ]
+  },
+  {
     "v": 50,
     "name": "1.12.0",
     "date": "2026-09-27",

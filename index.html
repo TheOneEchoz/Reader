@@ -226,6 +226,18 @@ body.reading .bgprog{display:none}
 #v-lock{padding-inline:16px}
 .lockbox{max-width:420px;margin:0 auto;padding-block:10vh 48px;display:grid;gap:16px}
 .lockbox h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:8px 0 0;text-wrap:balance}
+.laymark{position:absolute;right:4px;bottom:4px;z-index:2;display:inline-flex;gap:3px;align-items:center;background:rgba(10,11,13,.78);color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px}
+.laymark .ic{width:12px;height:12px}
+.pcell.off .laymark{right:32px}
+.layprev{display:block;max-width:100%;max-height:42vh;margin:0 auto;border-radius:10px;background:var(--surface2);object-fit:contain}
+.layrow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:8px;border-radius:12px;background:var(--surface2)}
+.layrow.base{grid-template-columns:52px 1fr}
+.laythumb{width:52px;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--surface);display:block}
+.laythumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.layfields{display:grid;gap:6px;min-width:0}
+.layfields .text{height:38px}
+.laybtns{display:flex;gap:2px}
+.laybtns .iconbtn.armed{background:var(--danger,#c0392b);color:#fff}
 .tagmark{position:absolute;left:4px;top:4px;z-index:2;max-width:calc(100% - 8px);display:inline-flex;gap:3px;align-items:center;background:rgba(10,11,13,.78);color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;white-space:nowrap;overflow:hidden}
 .tagmark .ic{width:11px;height:11px;flex:none}
 .tagmark span{overflow:hidden;text-overflow:ellipsis}
@@ -385,6 +397,7 @@ body.reading .bgprog{display:none}
   <header id="rtop" class="rbar">
     <button class="iconbtn" id="rBack" aria-label="Close reader"></button>
     <div class="tt"><b id="rTitle"></b><span id="rChap"></span></div>
+    <button class="iconbtn" id="rLayers" aria-label="Layers" hidden></button>
     <button class="iconbtn" id="rChapters" aria-label="Chapters"></button>
     <button class="iconbtn" id="rFull" aria-label="Full screen"></button>
     <button class="iconbtn" id="rSettings" aria-label="Reading settings"></button>
@@ -475,6 +488,7 @@ const ICONS = {
   more: '<g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g>', chevr: '<path d="M9 6l6 6-6 6"/>',
   eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.5 6.6C4.4 8 2.9 10 2 12c1 2.5 5 7 10 7 1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 004.2 4.2"/>', eye: '<path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z"/><circle cx="12" cy="12" r="3"/>',
   star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>',
   tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
@@ -504,8 +518,8 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 50; // replaced by the build with the release number
-const CHANGELOG = [{"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 51; // replaced by the build with the release number
+const CHANGELOG = [{"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -930,6 +944,7 @@ function inheritedTags(g, key) {
 }
 /* Own tags first, then inherited ones. */
 function allTagsOf(g, key) { const own = tagsOf(g, key); return own.concat(inheritedTags(g, key).map(e => e.t).filter(t => !own.some(o => tagEq(o, t)))); }
+function layMark(g, id) { const L = Lay.of(g, id); return L ? h('span', { class: 'laymark', title: plural(L.list.length, 'layer') }, icon('layers'), h('span', { class: 'num' }, L.list.length)) : null; }
 function tagMark(list) { return list.length ? h('span', { class: 'tagmark', title: list.map(t => '#' + t).join(' ') }, icon('tag'), h('span', {}, list[0] + (list.length > 1 ? ` +${list.length - 1}` : ''))) : null; }
 /* A text box with a dropdown of the tags that already exist and fit what was typed. */
 function tagPicker({ id, input, placeholder, onPick, exclude = () => false, allowNew = true, refocus = true, showEmpty = true }) {
@@ -1605,7 +1620,7 @@ async function renderDetail(id, folderId, tq) {
       pageNo++;
       const cur = pi && pi.ci === it.ci && pi.page === it.i, off = hid[it.id] || hiddenHere, offMark = hid0[it.id] || wasHidden;
       return h('button', { class: 'btile' + (cur ? ' current' : '') + (off ? ' off' : ''), 'aria-label': `Page ${pageNo}${off ? ', hidden from reading' : ''}${cur ? ', where you stopped' : ''}`, onclick: () => go('reader', off ? { id, scope: F.id, only: hiddenHere ? undefined : 1, ch: it.ci, page: it.i } : { id, ch: it.ci, page: it.i }) },
-        h('span', { class: 'bthumb' }, lazyThumb(it.id), tagMark(allTagsOf(g, 'p:' + it.id)), cur ? h('span', { class: 'bchip' }, 'READING') : offMark ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
+        h('span', { class: 'bthumb' }, lazyThumb(it.id), tagMark(allTagsOf(g, 'p:' + it.id)), layMark(g, it.id), cur ? h('span', { class: 'bchip' }, 'READING') : offMark ? h('span', { class: 'bchip done' }, icon('eyeoff')) : null),
         h('span', { class: 'bcap num' }, `${pageNo}`));
     }
     const c = chs[it.ci], n = Tree.subtreePages(chs, it.ci), sub = chs.slice(it.ci + 1, Tree.end(chs, it.ci)).filter(x => Tree.dep(x) === Tree.dep(c) + 1).length;
@@ -1897,11 +1912,191 @@ async function dropCustomCover(g) {
 }
 async function removePages(g, ids) {
   const set = new Set(ids);
+  const under = Lay.under(g, ids); ids.forEach(i => { if (g.layers) delete g.layers[i]; }); ids = [...ids, ...under];
   Tree.fixAt(g.chapters, set);
   g.chapters.forEach(c => c.pages = c.pages.filter(p => !set.has(p)));
   ids.forEach(i => { delete g.meta[i]; forgetURL(i); });
   if (set.has(g.cover)) g.cover = null;
   await ST.delMany('images', ids); await ST.delMany('thumbs', ids);
+}
+
+/* ================= layered images =================
+   A layered image is a page with full-size images drawn over it that can each be shown or hidden.
+   g.layers[pageId] = { list: [{ id, name, group }], on: [ids shown], presets: [{ name, on: [ids] }] }
+   list is drawn bottom to top. Layers in the same group are "pick one": at most one shows.
+   Layer images are stored like pages (g.meta[id] = [w, h, name], image + small copy), so they sync and back up the same way,
+   but they are not in any folder. The page's small copy shows the layers as they are set. */
+async function decodeImg(blob) {
+  try { return await createImageBitmap(blob); } catch (e) { }
+  const u = URL.createObjectURL(blob);
+  try { const i = new Image(); i.src = u; await i.decode(); return i; } finally { setTimeout(() => URL.revokeObjectURL(u), 1000); }
+}
+const Lay = {
+  cache: new Map(), // page id -> { key, url: Promise<string> }
+  of(g, id) { const L = g && g.layers && g.layers[id]; return L && L.list.length ? L : null; },
+  ensure(g, id) { g.layers = g.layers || {}; return g.layers[id] || (g.layers[id] = { list: [], on: [], presets: [] }); },
+  shown(g, id) { const L = this.of(g, id); return L ? L.list.filter(l => L.on.includes(l.id) && g.meta[l.id]) : []; },
+  nameOf: (g, id) => ((g.meta[id] || [])[2] || 'Layer').replace(/\.[a-z0-9]{2,5}$/i, ''),
+  /* the picture as it is set now */
+  async blob(g, id) {
+    const on = this.shown(g, id), base = await S.blob('images', id);
+    if (!on.length || !base) return base;
+    const [w, hh] = g.meta[id];
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = hh; const cx = cv.getContext('2d');
+    for (const b of [base, ...await Promise.all(on.map(l => S.blob('images', l.id)))]) {
+      if (!b) continue; // a layer that has not arrived from another device yet
+      try { const im = await decodeImg(b); cx.drawImage(im, 0, 0, w, hh); if (im.close) im.close(); } catch (e) { }
+    }
+    return (await new Promise(r => cv.toBlob(r, 'image/webp', .95))) || await new Promise(r => cv.toBlob(r, 'image/png'));
+  },
+  url(g, id) {
+    if (!this.of(g, id) || !this.shown(g, id).length) return imgURL(id);
+    const key = this.shown(g, id).map(l => l.id).join(','), c = this.cache.get(id);
+    if (c && c.key === key) return c.url;
+    this.drop(id);
+    const url = this.blob(g, id).then(b => b ? URL.createObjectURL(b) : null).catch(() => null);
+    this.cache.set(id, { key, url });
+    if (this.cache.size > 12) { const [k] = this.cache.keys(); this.drop(k); }
+    return url;
+  },
+  drop(id) { const c = this.cache.get(id); if (c) { this.cache.delete(id); setTimeout(() => c.url.then(u => u && URL.revokeObjectURL(u)), 4000); } },
+  /* after a change: forget the old picture and remake the small copy */
+  async changed(g, id) {
+    this.drop(id); if (typeof PRE !== 'undefined') { PRE.delete(id); READY.delete(id); }
+    try { const b = await this.blob(g, id); if (b) { const t = await makeThumb(b); await S.putBlob('thumbs', id, t.thumb); } } catch (e) { console.error(e); }
+    forgetURL(id);
+  },
+  setOn(g, id, lid, val) {
+    const L = this.of(g, id); if (!L) return;
+    const l = L.list.find(x => x.id === lid);
+    L.on = L.on.filter(x => x !== lid);
+    if (val) {
+      if (l && l.group) L.on = L.on.filter(x => { const o = L.list.find(y => y.id === x); return !(o && o.group && tagEq(o.group, l.group)); });
+      L.on.push(lid);
+    }
+  },
+  /* keep at most one shown layer per group */
+  tidy(L) {
+    const seen = new Set();
+    L.on = L.on.filter(x => L.list.some(l => l.id === x));
+    for (const l of L.list) if (l.group && L.on.includes(l.id)) { const k = l.group.toLowerCase(); if (seen.has(k)) L.on = L.on.filter(x => x !== l.id); else seen.add(k); }
+    L.presets = (L.presets || []).map(p => ({ ...p, on: p.on.filter(x => L.list.some(l => l.id === x)) }));
+  },
+  /* put other pages (and their own layers) on top of base as layers. Returns how many have a different shape. */
+  combine(g, base, others) {
+    const L = this.ensure(g, base), [bw, bh] = g.meta[base] || [1, 1]; let odd = 0;
+    for (const o of others) {
+      const m = g.meta[o]; if (!m || o === base) continue;
+      if (Math.abs(m[0] / m[1] - bw / bh) > .02 * (bw / bh)) odd++;
+      L.list.push({ id: o, name: this.nameOf(g, o), group: '' }); L.on.push(o);
+      const O = g.layers[o];
+      if (O) { L.list.push(...O.list); L.on.push(...O.on); delete g.layers[o]; }
+      if (g.hid) delete g.hid[o];
+    }
+    this.tidy(L); return odd;
+  },
+  /* every layer id under these pages */
+  under(g, ids) { return ids.flatMap(i => (g.layers && g.layers[i] ? g.layers[i].list.map(l => l.id) : [])); },
+};
+
+/* The layers sheet. In the reader it only switches layers and saved combinations; in the editor it also edits them. */
+function openLayerSheet(g, id, { edit = false, save, changed } = {}) {
+  const box = h('div', { class: 'stack' });
+  const prev = edit ? h('img', { class: 'layprev', alt: 'How it looks now' }) : null;
+  const showPrev = () => prev && Lay.url(g, id).then(u => { if (u) prev.src = u; });
+  const commit = async (redraw = true) => { await save(); await Lay.changed(g, id); changed && changed(); showPrev(); if (redraw) draw(); };
+  const draw = () => {
+    const L = Lay.of(g, id), rows = [];
+    if (prev) rows.push(prev);
+    if (!L) rows.push(h('p', { class: 'hint', style: 'margin:0' }, edit
+      ? 'Add layers to make this a layered image: full-size images the same size as this one, transparent where they add nothing. Then you can show or hide each one while reading.'
+      : 'This image has no layers.'));
+    else {
+      const groups = new Map(), loose = [];
+      for (const l of L.list) { if (l.group) { const k = l.group.toLowerCase(); if (!groups.has(k)) groups.set(k, { name: l.group, items: [] }); groups.get(k).items.push(l); } else loose.push(l); }
+      rows.push(h('div', { class: 'label' }, 'Show'));
+      for (const l of loose) {
+        const on = L.on.includes(l.id);
+        rows.push(h('div', { class: 'setrow inline' }, h('span', { class: 'lab' }, l.name),
+          h('button', { class: 'switch', role: 'switch', 'aria-label': `Show ${l.name}`, 'aria-checked': String(on), onclick: () => { Lay.setOn(g, id, l.id, !on); commit(); } })));
+      }
+      for (const gr of groups.values()) {
+        const cur = gr.items.find(l => L.on.includes(l.id));
+        rows.push(h('div', { class: 'setrow' }, h('div', { class: 'lab' }, gr.name + ' · pick one'),
+          h('div', { class: 'seg', role: 'group', 'aria-label': gr.name }, [
+            h('button', { 'aria-pressed': String(!cur), onclick: () => { gr.items.forEach(l => Lay.setOn(g, id, l.id, false)); commit(); } }, 'None'),
+            ...gr.items.map(l => h('button', { 'aria-pressed': String(cur === l), onclick: () => { Lay.setOn(g, id, l.id, true); commit(); } }, l.name))])));
+      }
+      // saved combinations
+      const same = p => p.on.length === L.on.length && p.on.every(x => L.on.includes(x));
+      const nameIn = h('input', { class: 'text', placeholder: 'Name for what is shown now', 'aria-label': 'Name for this combination', style: 'flex:1;min-width:0' });
+      rows.push(h('div', { class: 'label' }, 'Saved combinations'),
+        L.presets.length ? h('div', { class: 'tagchips' }, L.presets.map((p, k) => h('span', { class: 'tagchip' + (same(p) ? ' tq-must' : '') },
+          h('button', { class: 'tc-add', type: 'button', 'aria-label': `Show ${p.name}`, onclick: () => { L.on = [...p.on]; Lay.tidy(L); commit(); } }, p.name),
+          h('button', { class: 'tc-x', type: 'button', 'aria-label': `Delete ${p.name}`, onclick: () => { L.presets.splice(k, 1); save().then(draw); } }, icon('x'))))) : h('p', { class: 'hint', style: 'margin:0' }, 'Save what is shown now to switch back to it with one tap.'),
+        h('form', { class: 'row', onsubmit: e => {
+          e.preventDefault(); const n = nameIn.value.trim().slice(0, 40); if (!n) return nameIn.focus();
+          L.presets = L.presets.filter(p => p.name.toLowerCase() !== n.toLowerCase()); L.presets.push({ name: n, on: [...L.on] }); save().then(draw); toast(`Saved “${n}”`);
+        } }, nameIn, h('button', { class: 'btn', type: 'submit' }, 'Save')));
+    }
+    if (edit) {
+      const groupNames = [...new Set((L ? L.list : []).map(l => l.group).filter(Boolean))];
+      const dl = h('datalist', { id: 'lay-groups' }, groupNames.map(n => h('option', { value: n })));
+      rows.push(h('div', { class: 'label' }, L ? `Layers · ${L.list.length} (bottom to top)` : 'Layers'), dl);
+      if (L) {
+        rows.push(h('div', { class: 'layrow base' }, h('span', { class: 'laythumb' }), h('div', { class: 'sub' }, h('b', {}, 'Base image'), ' · always shown')));
+        L.list.forEach((l, k) => {
+          const th = h('span', { class: 'laythumb' }); imgURL(l.id, 'thumbs').then(u => { if (u) th.replaceChildren(h('img', { src: u, alt: '' })); });
+          rows.push(h('div', { class: 'layrow' }, th,
+            h('div', { class: 'layfields' },
+              h('input', { class: 'text', value: l.name, 'aria-label': 'Layer name', onchange: e => { l.name = e.target.value.trim().slice(0, 60) || l.name; commit(); } }),
+              h('input', { class: 'text', value: l.group || '', list: 'lay-groups', placeholder: 'Pick-one group (optional)', 'aria-label': `Group for ${l.name}`, onchange: e => { l.group = e.target.value.trim().slice(0, 40); Lay.tidy(L); commit(); } })),
+            h('div', { class: 'laybtns' },
+              h('button', { class: 'iconbtn', 'aria-label': `Move ${l.name} down`, disabled: !k, onclick: () => { L.list.splice(k - 1, 0, ...L.list.splice(k, 1)); commit(); } }, icon('down')),
+              h('button', { class: 'iconbtn', 'aria-label': `Move ${l.name} up`, disabled: k === L.list.length - 1, onclick: () => { L.list.splice(k + 1, 0, ...L.list.splice(k, 1)); commit(); } }, icon('up')),
+              h('button', { class: 'iconbtn', 'aria-label': `Delete ${l.name}`, onclick: async e => {
+                const b = e.currentTarget; if (!b.dataset.armed) { b.dataset.armed = '1'; b.classList.add('armed'); b.setAttribute('aria-label', `Tap again to delete ${l.name}`); toast('Tap the bin again to delete this layer'); return; }
+                L.list.splice(k, 1); Lay.tidy(L); delete g.meta[l.id]; forgetURL(l.id);
+                if (!L.list.length) delete g.layers[id];
+                await ST.del('images', l.id).catch(() => { }); await ST.del('thumbs', l.id).catch(() => { });
+                commit(); toast(`Deleted ${l.name}`);
+              } }, icon('trash')))));
+        });
+      }
+      rows.push(h('div', { class: 'row', style: 'flex-wrap:wrap' },
+        h('button', { class: 'btn primary', onclick: addLayers }, icon('plus'), 'Add layer images'),
+        L ? h('button', { class: 'btn ghost', onclick: split }, 'Turn layers into separate pages') : null));
+    }
+    box.replaceChildren(...rows.filter(Boolean));
+    const bt = $('.layrow.base .laythumb', box); if (bt) imgURL(id).then(u => { if (u) bt.replaceChildren(h('img', { src: u, alt: '' })); });
+  };
+  const addLayers = async () => {
+    const files = (await pickFiles({ accept: 'image/*' })).filter(f => IMG_EXT.test(f.name) || (f.type || '').startsWith('image/'));
+    if (!files.length) return;
+    const L = Lay.ensure(g, id), [bw, bh] = g.meta[id]; let odd = 0, bad = 0;
+    await withBusy(async () => {
+      for (const f of files.sort((a, b) => natural(a.name, b.name))) {
+        try {
+          const t = await makeThumb(f), lid = uid();
+          await S.putBlob('images', lid, f); await S.putBlob('thumbs', lid, t.thumb);
+          g.meta[lid] = [t.w, t.h, f.name];
+          if (Math.abs(t.w / t.h - bw / bh) > .02 * (bw / bh)) odd++;
+          L.list.push({ id: lid, name: Lay.nameOf(g, lid), group: '' }); L.on.push(lid);
+        } catch (e) { bad++; }
+      }
+      if (!L.list.length) delete g.layers[id];
+      await commit();
+    });
+    toast(`${plural(files.length - bad, 'layer')} added${odd ? `. ${odd} had a different shape and ${odd === 1 ? 'was' : 'were'} stretched to fit` : ''}${bad ? `. ${bad} could not be read` : ''}.`, 4500);
+  };
+  const split = async () => {
+    const L = Lay.of(g, id); if (!L) return;
+    const c = g.chapters.find(x => x.pages.includes(id)); if (!c) return;
+    c.pages.splice(c.pages.indexOf(id) + 1, 0, ...L.list.map(l => l.id)); delete g.layers[id];
+    await commit(false); closeSheet(); toast(`${plural(L.list.length, 'layer')} are separate pages again`);
+  };
+  draw(); showPrev();
+  openSheet(edit ? `Layers · ${Lay.nameOf(g, id)}` : 'Layers', box);
 }
 
 async function renderPages(id, chId, host, gIn) {
@@ -1936,7 +2131,7 @@ async function renderPages(id, chId, host, gIn) {
       const pid = it.id, num = ++n, k = 'p:' + pid, off = !!(g.hid && g.hid[pid]);
       return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : '') + (off ? ' off' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}${off ? ', hidden from reading' : ''}`, 'aria-pressed': String(sel.has(k)),
         onclick: e => toggle(k, e.currentTarget) },
-        lazyThumb(pid), tagMark(allTagsOf(g, k)), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, (ch.root ? g.cover : ch.cover) === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+        lazyThumb(pid), tagMark(allTagsOf(g, k)), layMark(g, pid), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, (ch.root ? g.cover : ch.cover) === pid ? h('span', { class: 'cv' }, 'COVER') : null);
     }));
     drawSel();
   };
@@ -1986,6 +2181,15 @@ async function renderPages(id, chId, host, gIn) {
           toast(hide ? 'Hidden from reading. They stay here and in the gallery, where you can still open them.' : 'These will show when reading again.', 4000);
         } }, icon(allOff ? 'eye' : 'eyeoff'), allOff ? 'Show in reading' : 'Hide from reading');
       })(),
+      sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: () => openLayerSheet(g, pages[0], { edit: true, save: () => saveGallery(g), changed: draw }) }, icon('layers'), Lay.of(g, pages[0]) ? 'Layers' : 'Add layers') : null,
+      pages.length > 1 && !folders.length ? h('button', { class: 'btn', onclick: async () => {
+        const ord = ch.pages.filter(p => sel.has('p:' + p)), base = ord[0], rest = ord.slice(1), gone = new Set(rest);
+        const odd = Lay.combine(g, base, rest);
+        Tree.fixAt(g.chapters, gone); ch.pages = ch.pages.filter(p => !gone.has(p));
+        if (gone.has(g.cover)) g.cover = base; g.chapters.forEach(c => { if (gone.has(c.cover)) c.cover = base; });
+        await saveGallery(g); await withBusy(() => Lay.changed(g, base)); sel.clear(); sel.add('p:' + base); draw();
+        toast(`Made one layered image: the first one is the base, the other ${plural(rest.length, 'image')} are layers on top.${odd ? ` ${odd} had a different shape and ${odd === 1 ? 'is' : 'are'} stretched to fit.` : ''}`, 5000);
+      } }, icon('layers'), 'Combine as layers') : null,
       sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => {
         if (ch.root) { await dropCustomCover(g); g.cover = pages[0]; } else { await dropFolderCover(g, ch); ch.cover = pages[0]; }
         await saveGallery(g); sel.clear(); draw(); toast(ch.root ? 'Gallery cover updated' : 'Folder cover updated');
@@ -2301,7 +2505,7 @@ function buildSpreads() {
 const PRE = new Map(), READY = new Set();
 function getPage(id) {
   if (PRE.has(id)) return PRE.get(id);
-  const p = imgURL(id).then(async u => {
+  const p = Lay.url(R.g, id).then(async u => {
     if (!u) return null;
     const img = new Image(); img.decoding = 'async'; img.draggable = false; img.src = u;
     try { await img.decode(); } catch (e) { }
@@ -2453,8 +2657,20 @@ function saveProgress(now) {
   };
   now ? doit() : (saveT = setTimeout(doit, 350));
 }
+/* the layered image on screen now, if any */
+function shownLayered() {
+  if (!R.g || !R.pages.length) return null;
+  const idxs = paged(R.p.mode) ? currentIdx() : [R.pos];
+  const hit = idxs.map(i => R.pages[i] && R.pages[i].id).find(id => id && Lay.of(R.g, id));
+  return hit || null;
+}
+/* show a page again after its layers changed */
+function readerRedraw(id) {
+  if (paged(R.p.mode)) { if (currentIdx().some(i => R.pages[i].id === id)) renderPaged(); }
+  else $$('.pg', strip).forEach(el => { if (R.pages[+el.dataset.i].id === id && el._want) { el.replaceChildren(); loadPg(el); } });
+}
 function updateUI() {
-  const g = R.g; $('#rTitle').textContent = R.tq ? `${g.title} · ${tagLabel(R.tq)}` : R.extra ? `${g.title} · extras` : g.title;
+  const g = R.g; $('#rLayers').hidden = !shownLayered(); $('#rTitle').textContent = R.tq ? `${g.title} · ${tagLabel(R.tq)}` : R.extra ? `${g.title} · extras` : g.title;
   const c = R.pages[R.pos];
   if (!c) { $('#rChap').textContent = ''; $('#rLabel').textContent = ''; $('#pnum').hidden = true; return; }
   const list = R.chPages[c.ch], n = list.length, posIn = k => list.indexOf(k) + 1;
@@ -2530,7 +2746,7 @@ function loadPg(el) {
   el._want = true; if (el.firstChild) return;
   const img = new Image(); img.decoding = 'async'; img.draggable = false; img.alt = `Page ${+el.dataset.i + 1}`;
   el.append(img);
-  imgURL(R.pages[+el.dataset.i].id).then(u => { if (u && el._want && img.isConnected) img.src = u; });
+  Lay.url(R.g, R.pages[+el.dataset.i].id).then(u => { if (u && el._want && img.isConnected) img.src = u; });
 }
 function unloadPg(el) { el._want = false; el.replaceChildren(); }
 function scrollToIdx(idx, frac = 0) {
@@ -2826,6 +3042,13 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) ownEx
 $('#rZoomOut').append(icon('zoomout')); $('#rZoomIn').append(icon('zoomin'));
 $('#rZoomOut').addEventListener('click', () => zoomStep(-1)); $('#rZoomIn').addEventListener('click', () => zoomStep(1));
 $('#rZoomLbl').addEventListener('click', () => zoomCenter(1)); $('#rZoomOpts').addEventListener('click', openZoomSheet);
+$('#rLayers').append(icon('layers'));
+$('#rLayers').addEventListener('click', () => {
+  const id = shownLayered(); if (!id) return;
+  openLayerSheet(R.g, id, {
+    save: async () => { const cur = await S.gal(R.g.id); if (cur) { cur.layers = R.g.layers; await saveGallery(cur); } },
+    changed: () => readerRedraw(id) });
+});
 $('#rBack').append(icon('back')); $('#rChapters').append(icon('list')); $('#rSettings').append(icon('tune')); $('#rFull').append(icon('full'));
 $('#rBack').addEventListener('click', () => back('detail', { id: R.g.id }));
 $('#rFull').addEventListener('click', async () => {
@@ -3586,10 +3809,15 @@ async function exportZip(g) {
       }
       for (const [pi, id] of c.pages.entries()) {
         if (cancel) throw new Error('stopped');
-        const b = await S.blob('images', id); if (!b) continue;
-        const nm = (g.meta[id] || [])[2] || '';
-        const ext = ((nm.match(/\.[a-z0-9]{2,5}$/i) || [])[0] || '.' + ((b.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'))).toLowerCase();
-        folder.file(pad(pi + 1, 3) + ext, b, { binary: true });
+        const L = Lay.of(g, id);
+        const b = L ? await Lay.blob(g, id) : await S.blob('images', id); if (!b) continue;
+        const nm = (g.meta[id] || [])[2] || '', extOf = (n, bb) => (((!L || bb !== b) && (n.match(/\.[a-z0-9]{2,5}$/i) || [])[0]) || '.' + ((bb.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'))).toLowerCase();
+        folder.file(pad(pi + 1, 3) + extOf(nm, b), b, { binary: true });
+        if (L) { // the pieces too, so nothing is lost
+          const lf = folder.folder(pad(pi + 1, 3) + ' layers'), base = await S.blob('images', id);
+          if (base) lf.file('00 base' + extOf(nm, base), base, { binary: true });
+          for (const [k, l] of L.list.entries()) { const lb = await S.blob('images', l.id); if (lb) lf.file(`${pad(k + 1, 2)} ${safe(l.name)}${extOf((g.meta[l.id] || [])[2] || '', lb)}`, lb, { binary: true }); }
+        }
         done++; lbl.textContent = `Adding page ${done.toLocaleString()} of ${total.toLocaleString()}`; bar.firstChild.style.width = (80 * done / total) + '%';
       }
     }

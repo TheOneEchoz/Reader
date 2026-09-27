@@ -1,6 +1,6 @@
 {
- "version": 50,
- "name": "1.12.0",
+ "version": 51,
+ "name": "1.13.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,8 +16,10 @@
   "qrcode.js"
  ],
  "notes": [
-  "The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.",
-  "Every tag in your account shows up everywhere, not only in the gallery where it was made.",
-  "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."
+  "New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.",
+  "To make one, in Edit select the base image first and then its layers, and tap \u201cCombine as layers\u201d. Or select one image and tap \u201cAdd layers\u201d to add layer files to it.",
+  "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.",
+  "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.",
+  "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."
  ]
 }
