@@ -1,6 +1,6 @@
 {
- "version": 49,
- "name": "1.11.1",
+ "version": 50,
+ "name": "1.12.0",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,7 +16,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Tag search: tags stay in place when you switch them between must have, any of and must not have.",
-  "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."
+  "The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.",
+  "Every tag in your account shows up everywhere, not only in the gallery where it was made.",
+  "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."
  ]
 }
