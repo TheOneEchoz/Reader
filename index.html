@@ -491,8 +491,11 @@ function toast(msg, ms = 2200) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 43; // replaced by the build with the release number
-const CHANGELOG = [{"v": 43, "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 44; // replaced by the build with the release number
+const CHANGELOG = [{"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+/* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
+const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
+const APP_VNAME = VNAME(APP_VERSION);
 const SITE = 'https://theoneechoz.github.io/Reader/';
 const Nat = name => ANDROID ? (Capacitor.Plugins[name] || Capacitor.registerPlugin(name)) : null;
 const u8ToB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -1441,9 +1444,9 @@ function openGlobalSettings() {
       setItem('archive', 'Storage', h('span', {}, NATIVE ? (DESK ? 'Documents › Tankobon' : 'The app\'s own storage') : ST.folder ? 'A phone folder' : 'This browser', ' · ', usage), () => { closeSheet(); openStorage(); }),
       setItem('plus', 'Add the sample gallery', 'A short example comic to try the reader with', () => { closeSheet(); addSample(); })),
     setGroup('App',
-      NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VERSION} · version ${upd.version} is available` : `Version ${APP_VERSION}`, go2(openUpdates), upd ? h('span', { class: 'chip' }, 'NEW') : null) : null,
+      NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VNAME} · version ${VNAME(upd.version, upd)} is available` : `Version ${APP_VNAME}`, go2(openUpdates), upd ? h('span', { class: 'chip' }, 'NEW') : null) : null,
       !NATIVE && !isStandalone() ? setItem('plus', 'Install the app', 'Open it from its own icon, full screen', go2(openInstallHelp)) : null,
-      !NATIVE ? setItem('download', 'Version', `${APP_VERSION || 'web'} · updates arrive by themselves`) : null)));
+      !NATIVE ? setItem('download', 'Version', `${APP_VNAME} · updates arrive by themselves`) : null)));
 }
 function openReadingDefaults() {
   const vals = { ...GLOBAL };
@@ -4016,7 +4019,7 @@ const Upd = (() => {
   async function notify(v) {
     if (UI.notifiedVersion === v.version) return;
     UI.notifiedVersion = v.version; saveMeta();
-    try { await UPB.notify('Tankōbon update available', `Version ${v.version} is ready. Open the app and ${DESK ? 'click' : 'tap'} Update.`); } catch (e) { console.warn('notify', e); }
+    try { await UPB.notify('Tankōbon update available', `Version ${VNAME(v.version, v)} is ready. Open the app and ${DESK ? 'click' : 'tap'} Update.`); } catch (e) { console.warn('notify', e); }
   }
   async function cleanup() {
     try {
@@ -4035,9 +4038,9 @@ const Upd = (() => {
         finally { setTimeout(() => { checking = null; }, 0); }
         const v = newer();
         drawUpdateBanner();
-        if (!v) { if (manual) toast(`You have the latest version (${APP_VERSION}).`); return null; }
+        if (!v) { if (manual) toast(`You have the latest version (${APP_VNAME}).`); return null; }
         if (UI.autoUpdate) {
-          try { await download(v); await DB.put('meta', { id: 'pendingUpdate', v: { version: v.version } }); toast(`Version ${v.version} downloaded. It will be used the next time you open the app.`, 4500); }
+          try { await download(v); await DB.put('meta', { id: 'pendingUpdate', v: { version: v.version } }); toast(`Version ${VNAME(v.version, v)} downloaded. It will be used the next time you open the app.`, 4500); }
           catch (e) { console.warn('auto update', e); }
         } else notify(v);
         return v;
@@ -4080,9 +4083,9 @@ function changeLogPanel() {
   const latest = CHANGELOG[0].v, unseen = (UI.seenChanges || 0) < latest;
   const fmt = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return d; } };
   const box = h('details', { class: 'panel changelog', style: 'background:var(--surface2);margin-top:8px', open: unseen, ontoggle: e => { if (e.target.open && unseen) { UI.seenChanges = latest; saveMeta(); } } },
-    h('summary', {}, h('b', {}, 'What\'s new'), h('span', { class: 'hint num', style: 'margin-left:6px' }, `version ${latest}`), unseen ? h('span', { class: 'cl-tag' }, 'New') : null),
+    h('summary', {}, h('b', {}, 'What\'s new'), h('span', { class: 'hint num', style: 'margin-left:6px' }, `version ${VNAME(latest)}`), unseen ? h('span', { class: 'cl-tag' }, 'New') : null),
     h('div', { class: 'cl-list' }, CHANGELOG.map((c, i) => h('section', { class: 'cl-item' },
-      h('div', { class: 'cl-head' }, h('b', { class: 'num' }, c.v === 22 ? 'Before version 27' : `Version ${c.v}`), h('span', { class: 'hint' }, fmt(c.date)), c.v === APP_VERSION ? h('span', { class: 'cl-tag' }, 'Installed') : null),
+      h('div', { class: 'cl-head' }, h('b', { class: 'num' }, `Version ${c.name || c.v}`), h('span', { class: 'hint' }, fmt(c.date)), c.v === APP_VERSION ? h('span', { class: 'cl-tag' }, 'Installed') : null),
       h('ul', {}, c.items.map(t => h('li', {}, t)))))));
   if (unseen) { UI.seenChanges = latest; saveMeta(); }
   return box;
@@ -4098,15 +4101,15 @@ function drawLockUpdates(box = $('#lockupd')) {
   const v = Upd.latest, prog = h('p', { class: 'hint num', style: 'margin:0' });
   box.replaceChildren(
     h('div', { class: 'row', style: 'justify-content:space-between;align-items:center' },
-      h('div', { class: 'label' }, `App version ${APP_VERSION}`),
+      h('div', { class: 'label' }, `App version ${APP_VNAME}`),
       v ? h('button', { class: 'btn small primary', type: 'button', onclick: async e => {
         e.currentTarget.disabled = true; prog.textContent = 'Downloading…';
         try { await Upd.install((i, n) => prog.textContent = `Downloading ${i} of ${n}`); }
         catch (x) { prog.textContent = 'The update could not be downloaded: ' + (x.message || x); e.currentTarget.disabled = false; }
-      } }, icon('download'), `Update to version ${v.version}`)
+      } }, icon('download'), `Update to version ${VNAME(v.version, v)}`)
         : h('button', { class: 'btn small ghost', type: 'button', onclick: async e => { e.currentTarget.disabled = true; await Upd.check(true); drawLockUpdates(); } }, 'Check for updates')),
     prog,
-    v && v.notes && v.notes.length ? h('div', { class: 'cl-item' }, h('div', { class: 'cl-head' }, h('b', {}, `New in version ${v.version}`)), h('ul', {}, v.notes.map(t => h('li', {}, t)))) : null,
+    v && v.notes && v.notes.length ? h('div', { class: 'cl-item' }, h('div', { class: 'cl-head' }, h('b', {}, `New in version ${VNAME(v.version, v)}`)), h('ul', {}, v.notes.map(t => h('li', {}, t)))) : null,
     h('div', { class: 'setrow inline' }, h('label', { class: 'lab', for: 'sw-auto' }, 'Update automatically (downloads in the background and switches the next time the app opens)'),
       h('button', { class: 'switch', id: 'sw-auto', type: 'button', role: 'switch', 'aria-checked': String(!!UI.autoUpdate), onclick: e => { UI.autoUpdate = !UI.autoUpdate; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(UI.autoUpdate)); if (UI.autoUpdate) Upd.check(false); } })));
 }
@@ -4115,7 +4118,7 @@ function drawUpdateBanner() {
   const b = $('#updbanner'); const v = Upd.latest;
   if (!b) return;
   b.hidden = !v; if (!v) return;
-  b.replaceChildren(h('span', {}, `Update available: version ${v.version}`), h('button', { class: 'btn small primary', onclick: openUpdates }, 'Update'));
+  b.replaceChildren(h('span', {}, `Update available: version ${VNAME(v.version, v)}`), h('button', { class: 'btn small primary', onclick: openUpdates }, 'Update'));
 }
 function openUpdates() {
   if (!NATIVE) return;
@@ -4124,7 +4127,7 @@ function openUpdates() {
     const v = Upd.latest;
     const prog = h('p', { class: 'hint num' });
     box.replaceChildren(
-      h('p', { class: 'hint' }, `This app is on version ${APP_VERSION}.${v ? ` Version ${v.version} is available.` : ''}`),
+      h('p', { class: 'hint' }, `This app is on version ${APP_VNAME}.${v ? ` Version ${VNAME(v.version, v)} is available.` : ''}`),
       !nativeHas('lanFetch') ? h('div', { class: 'banner stack', style: 'gap:8px' },
         h('span', {}, `A newer app file is available. It adds opening ZIP and CBZ files from other apps and fast direct Wi‑Fi transfer between the apps. Install it over this one; your library and accounts are kept.`),
         h('div', {}, h('button', { class: 'btn small primary', onclick: () => window.open(ANDROID ? 'https://github.com/TheOneEchoz/Reader/releases/latest' : 'https://github.com/TheOneEchoz/Reader/releases', '_blank') }, icon('download'), 'Get the new app file'))) : null,
@@ -4132,7 +4135,7 @@ function openUpdates() {
         e.currentTarget.disabled = true; prog.textContent = 'Downloading…';
         try { await Upd.install((i, n) => prog.textContent = `Downloading ${i} of ${n}`); }
         catch (x) { prog.textContent = 'The update could not be downloaded: ' + (x.message || x); e.currentTarget.disabled = false; }
-      } }, icon('download'), `Update to version ${v.version}`) : h('button', { class: 'btn', onclick: async () => { await Upd.check(true); draw(); } }, 'Check for updates'),
+      } }, icon('download'), `Update to version ${VNAME(v.version, v)}`) : h('button', { class: 'btn', onclick: async () => { await Upd.check(true); draw(); } }, 'Check for updates'),
       prog,
       v ? h('p', { class: 'hint' }, 'The app restarts after updating, so you will need your password again. Your library is not touched.') : null,
       h('p', { class: 'hint' }, `Automatic updates are ${UI.autoUpdate ? 'on' : 'off'}. You can switch them on the unlock screen, and update from there too without unlocking.`),

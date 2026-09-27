@@ -38,7 +38,7 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: |
           set -o pipefail
-          export VERSION_NAME="1.$(python3 -c "import json;print(json.load(open('version.json'))['version'])").${{ github.run_number }}"
+          export VERSION_NAME="$(python3 -c "import json;print(json.load(open('version.json'))['name'])")"
           cd android-app/android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee ../../build.log

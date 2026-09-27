@@ -1,5 +1,6 @@
 {
- "version": 43,
+ "version": 44,
+ "name": "1.9.2",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -15,6 +16,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "New \u201cWhat's new\u201d section on the unlock screen, so you can see what changed in each version."
+  "Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."
  ]
 }
