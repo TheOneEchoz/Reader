@@ -1,6 +1,6 @@
 {
- "version": 45,
- "name": "1.10.0",
+ "version": 46,
+ "name": "1.10.1",
  "files": [
   "Sortable.min.js",
   "apple-touch-icon.png",
@@ -16,9 +16,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.",
-  "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tank\u014dbon to install apps.",
-  "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.",
-  "This needs one last manual install of the new app file."
+  "Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.",
+  "The sync progress card now says whether pages come directly over Wi\u2011Fi or over the normal connection, and how many pages per second arrive."
  ]
 }

@@ -1,5 +1,14 @@
 [
  {
+  "v": 46,
+  "name": "1.10.1",
+  "date": "2026-09-27",
+  "items": [
+   "Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.",
+   "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."
+  ]
+ },
+ {
   "v": 45,
   "name": "1.10.0",
   "date": "2026-09-27",
