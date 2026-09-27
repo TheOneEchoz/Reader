@@ -1,6 +1,6 @@
 {
- "version": 73,
- "name": "1.22.0-beta.3",
+ "version": 74,
+ "name": "1.22.0-beta.4",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,9 +17,10 @@
   "qrcode.js"
  ],
  "notes": [
-  "New \u201cEdit image\u201d in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.",
-  "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.",
-  "New \u201cSplit a layer\u201d: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).",
-  "Layers menu: a pencil on each layer (and on the base image) opens the editor, and \u201cMerge layers\u201d mixes the layers you choose into one."
+  "Split and Merge are now tools inside Edit image, next to the brush and eraser, instead of separate buttons.",
+  "Split works on the image itself too: blue becomes a new layer on top, so a plain image can become a layered one.",
+  "Merge can mix layers into each other, or into the image itself.",
+  "After a split or merge the editor stays open on the result, and Undo works without leaving it.",
+  "Fixed: undoing a change in a folder could leave its page grid out of date."
  ]
 }
