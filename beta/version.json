@@ -1,6 +1,6 @@
 {
- "version": 83,
- "name": "1.22.0-beta.13",
+ "version": 84,
+ "name": "1.22.0-beta.14",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,7 +17,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants: new experimental switch \u201cKeep whole objects together\u201d. A small AI (MobileSAM) looks at each picture to see where objects end, so an edge shared by versions goes into each object's own layer instead of becoming a separate layer you have to turn on with them.",
-  "The AI runs on this device; nothing is sent anywhere. It downloads about 33 MB the first time it's used, then works offline. It makes Find variants slower, especially on phones."
+  "Find variants with AI: a layer holding two different things (a collar, and a bit of hair that only comes with it) is split, so each thing is its own layer. Two of the same kind of thing (both eyes) stay together, and a shadow stays with what casts it.",
+  "Find variants with AI: a thing with a missing piece, because most versions have just that piece (a splash whose drop is also in other versions), is made whole. The base then shows what's there without it, and the versions that only have the drop get it from a small layer of their own."
  ]
 }
