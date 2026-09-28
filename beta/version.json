@@ -1,6 +1,6 @@
 {
- "version": 76,
- "name": "1.22.0-beta.6",
+ "version": 77,
+ "name": "1.22.0-beta.7",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,7 +17,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Back to how Find variants worked in 1.22.0-beta.4, without the extra \u201cDetails\u201d layers of beta.5.",
-  "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends, and no steps inside them."
+  "Edit image \u2192 Merge: new \u201cKeep the originals\u201d switch. The merged picture becomes a new layer above them, and the original layers stay in the list, switched off, so you can go back to them. It also works with the base image."
  ]
 }
