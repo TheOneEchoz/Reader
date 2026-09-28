@@ -1,9 +1,10 @@
 {
- "version": 82,
- "name": "1.22.0-beta.12",
+ "version": 83,
+ "name": "1.22.0-beta.13",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
+  "ai",
   "apple-touch-icon.png",
   "capacitor.js",
   "icon-192.png",
@@ -17,6 +18,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants: dark shapes now keep their edges too (the previous version only managed it for light shapes). A white or a dark band now each carry their own outline, so either looks right even over a version that doesn't have it."
+  "Find variants: new experimental switch \u201cKeep whole objects together\u201d. A small AI (MobileSAM) looks at each picture to see where objects end, so an edge shared by versions goes into each object's own layer instead of becoming a separate layer you have to turn on with them.",
+  "The AI runs on this device; nothing is sent anywhere. It downloads about 33 MB the first time it's used, then works offline. It makes Find variants slower, especially on phones."
  ]
 }
