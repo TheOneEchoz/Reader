@@ -680,8 +680,8 @@ async function restoreGallery(g, snap) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 84; // replaced by the build with the release number
-const CHANGELOG = [{"v": 84, "name": "1.22.0-beta.14", "date": "2026-09-28", "beta": true, "items": ["Find variants with AI: a layer holding two different things (a collar, and a bit of hair that only comes with it) is split, so each thing is its own layer. Two of the same kind of thing (both eyes) stay together, and a shadow stays with what casts it.", "Find variants with AI: a thing with a missing piece, because most versions have just that piece (a splash whose drop is also in other versions), is made whole. The base then shows what's there without it, and the versions that only have the drop get it from a small layer of their own."]}, {"v": 83, "name": "1.22.0-beta.13", "date": "2026-09-28", "beta": true, "items": ["Find variants: new experimental switch “Keep whole objects together”. A small AI (MobileSAM) looks at each picture to see where objects end, so an edge shared by versions goes into each object's own layer instead of becoming a separate layer you have to turn on with them.", "The AI runs on this device; nothing is sent anywhere. It downloads about 33 MB the first time it's used, then works offline. It makes Find variants slower, especially on phones."]}, {"v": 82, "name": "1.22.0-beta.12", "date": "2026-09-28", "beta": true, "items": ["Find variants: dark shapes now keep their edges too (the previous version only managed it for light shapes). A white or a dark band now each carry their own outline, so either looks right even over a version that doesn't have it."]}, {"v": 81, "name": "1.22.0-beta.11", "date": "2026-09-28", "beta": true, "items": ["Find variants: things that replace each other (a white band or a dark one) now each keep their outline, so each is whole on its own and they become a one-at-a-time choice, instead of a shared “Change” layer with a dark one covering it.", "Find variants: a thing whose edge another version paints over (bare skin where a band had its black edge) now keeps a copy of that edge, so it still has it when shown over that version.", "Find variants: fixed a case where part of one version could show through in another (like pieces of an open eye on a closed one)."]}, {"v": 80, "name": "1.22.0-beta.10", "date": "2026-09-28", "beta": true, "items": ["Fixed: Find variants could stop with “Cannot read properties of undefined (reading 'chunks')” when it compared big pictures in sections."]}, {"v": 79, "name": "1.22.0-beta.9", "date": "2026-09-28", "beta": true, "items": ["Find variants now works with up to 20 images (was 12).", "When many big versions would not fit in the device's memory at once, the pictures are compared in sections from top to bottom and the results joined, so it doesn't run out of memory. The result screen says when this happened."]}, {"v": 78, "name": "1.22.0-beta.8", "date": "2026-09-28", "beta": true, "items": ["Menus keep their place: switching something, changing a setting or any other change no longer scrolls the menu back to the top. This includes menus that redraw themselves and parts that load a moment later.", "A different menu now always opens at the top, instead of sometimes where the last one was scrolled to."]}, {"v": 77, "name": "1.22.0-beta.7", "date": "2026-09-28", "beta": true, "items": ["Edit image → Merge: new “Keep the originals” switch. The merged picture becomes a new layer above them, and the original layers stay in the list, switched off, so you can go back to them. It also works with the base image."]}, {"v": 76, "name": "1.22.0-beta.6", "date": "2026-09-28", "beta": true, "items": ["Back to how Find variants worked in 1.22.0-beta.4, without the extra “Details” layers of beta.5.", "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends, and no steps inside them."]}, {"v": 74, "name": "1.22.0-beta.4", "date": "2026-09-28", "beta": true, "items": ["Split and Merge are now tools inside Edit image, next to the brush and eraser, instead of separate buttons.", "Split works on the image itself too: blue becomes a new layer on top, so a plain image can become a layered one.", "Merge can mix layers into each other, or into the image itself.", "After a split or merge the editor stays open on the result, and Undo works without leaving it.", "Fixed: undoing a change in a folder could leave its page grid out of date."]}, {"v": 73, "name": "1.22.0-beta.3", "date": "2026-09-28", "beta": true, "items": ["New “Edit image” in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.", "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.", "New “Split a layer”: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).", "Layers menu: a pencil on each layer (and on the base image) opens the editor, and “Merge layers” mixes the layers you choose into one."]}, {"v": 72, "name": "1.22.0-beta.2", "date": "2026-09-27", "beta": true, "items": ["Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.", "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.", "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no “eraser” layers."]}, {"v": 71, "name": "1.22.0-beta.1", "date": "2026-09-27", "beta": true, "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer, Find variants and Combine as layers.", "Find variants makes one layer per thing that changes (hair, hat, arm, bracelet, shadow…), shared by every version that has it, stacked in the right order (a bracelet on top of its arm, effects on top). It warns when a small change was not captured, names the result after what the file names share, and uses shorter page names.", "Layers: a warning (with a fix) when layers are on no saved page; groups can be renamed from their heading; the reader shows which saved combination you are on and the layers panel leaves the page visible; Combine as layers uses the image you tapped first as the base.", "Import: a cover.jpg next to chapter folders becomes the gallery's cover. “What's new” starts closed for new users and shows the latest versions first."]}, {"v": 70, "name": "1.21.2", "date": "2026-09-27", "items": ["New on the unlock screen: “Experimental version”. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.", "The change log of the experimental version is only shown to people using it."]}, {"v": 69, "name": "1.21.1", "date": "2026-09-27", "items": ["Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.", "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."]}, {"v": 68, "name": "1.21.0", "date": "2026-09-27", "items": ["Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.", "New switch “Understand see-through effects” (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.", "The preview marks options that became see-through."]}, {"v": 67, "name": "1.20.3", "date": "2026-09-27", "items": ["The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."]}, {"v": 66, "name": "1.20.2", "date": "2026-09-27", "items": ["Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."]}, {"v": 65, "name": "1.20.1", "date": "2026-09-27", "items": ["Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."]}, {"v": 64, "name": "1.20.0", "date": "2026-09-27", "items": ["Find variants finds what changes have in common: when one option contains another (an arm with a bracelet, and just the arm), it keeps only what it adds, so you get “arm” and “bracelet” as separate layers. The bracelet can be shown on its own, and the version with both shows the arm plus the bracelet.", "Find variants and Combine as layers now make a new image for the layered result instead of using up one of your images. The originals are kept, hidden from reading (for Find variants you can choose to remove them).", "Layer lists now go from the top layer down to the base, in the layers editor and in the switches."]}, {"v": 63, "name": "1.19.2", "date": "2026-09-27", "items": ["Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.", "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."]}, {"v": 62, "name": "1.19.1", "date": "2026-09-27", "items": ["Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.", "The base picture, the preview at the top, and images in the layer library open full size the same way."]}, {"v": 61, "name": "1.19.0", "date": "2026-09-27", "items": ["Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.", "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).", "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.", "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."]}, {"v": 60, "name": "1.18.2", "date": "2026-09-27", "items": ["Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.", "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."]}, {"v": 59, "name": "1.18.1", "date": "2026-09-27", "items": ["New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."]}, {"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 85; // replaced by the build with the release number
+const CHANGELOG = [{"v": 85, "name": "1.22.0-beta.15", "date": "2026-09-28", "beta": true, "items": ["Find variants has a new way of finding layers, “Step by step” (now the default; the old one is still there as “Classic” under Method). It first breaks the pictures into many small, exact pieces, then joins the pieces that belong to the same change by how they continue into each other.", "A see-through effect over things that are different underneath (a blush over an open eye in one version and over a closed eye in another; a bracelet's shadow over a tattoo or over bare arm) is now one see-through layer, instead of several pieces.", "Without the AI too: a part of a thing that most versions have on its own (the drop of a splash) goes back into that thing's layer when it continues it with no edge and in the same colours. The base then shows what's there without it.", "Two layers left for exactly the same versions are joined into one."]}, {"v": 84, "name": "1.22.0-beta.14", "date": "2026-09-28", "beta": true, "items": ["Find variants with AI: a layer holding two different things (a collar, and a bit of hair that only comes with it) is split, so each thing is its own layer. Two of the same kind of thing (both eyes) stay together, and a shadow stays with what casts it.", "Find variants with AI: a thing with a missing piece, because most versions have just that piece (a splash whose drop is also in other versions), is made whole. The base then shows what's there without it, and the versions that only have the drop get it from a small layer of their own."]}, {"v": 83, "name": "1.22.0-beta.13", "date": "2026-09-28", "beta": true, "items": ["Find variants: new experimental switch “Keep whole objects together”. A small AI (MobileSAM) looks at each picture to see where objects end, so an edge shared by versions goes into each object's own layer instead of becoming a separate layer you have to turn on with them.", "The AI runs on this device; nothing is sent anywhere. It downloads about 33 MB the first time it's used, then works offline. It makes Find variants slower, especially on phones."]}, {"v": 82, "name": "1.22.0-beta.12", "date": "2026-09-28", "beta": true, "items": ["Find variants: dark shapes now keep their edges too (the previous version only managed it for light shapes). A white or a dark band now each carry their own outline, so either looks right even over a version that doesn't have it."]}, {"v": 81, "name": "1.22.0-beta.11", "date": "2026-09-28", "beta": true, "items": ["Find variants: things that replace each other (a white band or a dark one) now each keep their outline, so each is whole on its own and they become a one-at-a-time choice, instead of a shared “Change” layer with a dark one covering it.", "Find variants: a thing whose edge another version paints over (bare skin where a band had its black edge) now keeps a copy of that edge, so it still has it when shown over that version.", "Find variants: fixed a case where part of one version could show through in another (like pieces of an open eye on a closed one)."]}, {"v": 80, "name": "1.22.0-beta.10", "date": "2026-09-28", "beta": true, "items": ["Fixed: Find variants could stop with “Cannot read properties of undefined (reading 'chunks')” when it compared big pictures in sections."]}, {"v": 79, "name": "1.22.0-beta.9", "date": "2026-09-28", "beta": true, "items": ["Find variants now works with up to 20 images (was 12).", "When many big versions would not fit in the device's memory at once, the pictures are compared in sections from top to bottom and the results joined, so it doesn't run out of memory. The result screen says when this happened."]}, {"v": 78, "name": "1.22.0-beta.8", "date": "2026-09-28", "beta": true, "items": ["Menus keep their place: switching something, changing a setting or any other change no longer scrolls the menu back to the top. This includes menus that redraw themselves and parts that load a moment later.", "A different menu now always opens at the top, instead of sometimes where the last one was scrolled to."]}, {"v": 77, "name": "1.22.0-beta.7", "date": "2026-09-28", "beta": true, "items": ["Edit image → Merge: new “Keep the originals” switch. The merged picture becomes a new layer above them, and the original layers stay in the list, switched off, so you can go back to them. It also works with the base image."]}, {"v": 76, "name": "1.22.0-beta.6", "date": "2026-09-28", "beta": true, "items": ["Back to how Find variants worked in 1.22.0-beta.4, without the extra “Details” layers of beta.5.", "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends, and no steps inside them."]}, {"v": 74, "name": "1.22.0-beta.4", "date": "2026-09-28", "beta": true, "items": ["Split and Merge are now tools inside Edit image, next to the brush and eraser, instead of separate buttons.", "Split works on the image itself too: blue becomes a new layer on top, so a plain image can become a layered one.", "Merge can mix layers into each other, or into the image itself.", "After a split or merge the editor stays open on the result, and Undo works without leaving it.", "Fixed: undoing a change in a folder could leave its page grid out of date."]}, {"v": 73, "name": "1.22.0-beta.3", "date": "2026-09-28", "beta": true, "items": ["New “Edit image” in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.", "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.", "New “Split a layer”: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).", "Layers menu: a pencil on each layer (and on the base image) opens the editor, and “Merge layers” mixes the layers you choose into one."]}, {"v": 72, "name": "1.22.0-beta.2", "date": "2026-09-27", "beta": true, "items": ["Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.", "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.", "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no “eraser” layers."]}, {"v": 71, "name": "1.22.0-beta.1", "date": "2026-09-27", "beta": true, "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer, Find variants and Combine as layers.", "Find variants makes one layer per thing that changes (hair, hat, arm, bracelet, shadow…), shared by every version that has it, stacked in the right order (a bracelet on top of its arm, effects on top). It warns when a small change was not captured, names the result after what the file names share, and uses shorter page names.", "Layers: a warning (with a fix) when layers are on no saved page; groups can be renamed from their heading; the reader shows which saved combination you are on and the layers panel leaves the page visible; Combine as layers uses the image you tapped first as the base.", "Import: a cover.jpg next to chapter folders becomes the gallery's cover. “What's new” starts closed for new users and shows the latest versions first."]}, {"v": 70, "name": "1.21.2", "date": "2026-09-27", "items": ["New on the unlock screen: “Experimental version”. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.", "The change log of the experimental version is only shown to people using it."]}, {"v": 69, "name": "1.21.1", "date": "2026-09-27", "items": ["Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.", "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."]}, {"v": 68, "name": "1.21.0", "date": "2026-09-27", "items": ["Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.", "New switch “Understand see-through effects” (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.", "The preview marks options that became see-through."]}, {"v": 67, "name": "1.20.3", "date": "2026-09-27", "items": ["The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."]}, {"v": 66, "name": "1.20.2", "date": "2026-09-27", "items": ["Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."]}, {"v": 65, "name": "1.20.1", "date": "2026-09-27", "items": ["Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."]}, {"v": 64, "name": "1.20.0", "date": "2026-09-27", "items": ["Find variants finds what changes have in common: when one option contains another (an arm with a bracelet, and just the arm), it keeps only what it adds, so you get “arm” and “bracelet” as separate layers. The bracelet can be shown on its own, and the version with both shows the arm plus the bracelet.", "Find variants and Combine as layers now make a new image for the layered result instead of using up one of your images. The originals are kept, hidden from reading (for Find variants you can choose to remove them).", "Layer lists now go from the top layer down to the base, in the layers editor and in the switches."]}, {"v": 63, "name": "1.19.2", "date": "2026-09-27", "items": ["Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.", "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."]}, {"v": 62, "name": "1.19.1", "date": "2026-09-27", "items": ["Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.", "The base picture, the preview at the top, and images in the layer library open full size the same way."]}, {"v": 61, "name": "1.19.0", "date": "2026-09-27", "items": ["Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.", "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).", "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.", "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."]}, {"v": 60, "name": "1.18.2", "date": "2026-09-27", "items": ["Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.", "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."]}, {"v": 59, "name": "1.18.1", "date": "2026-09-27", "items": ["New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."]}, {"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -2766,7 +2766,7 @@ const Variants = {
       }
       if (tail < 32) continue;
       const P = []; for (let j = 0; j < tail; j++) { const o = q[j] * 4; if (L[o + 3] === 255 && under[o + 3] === 255) P.push(q[j]); }
-      if (P.length < tail * .7) continue;
+      if (P.length < tail * .7) { if (window.__vdbg) console.log('merge UNMIX-P', tail, P.length); continue; }
       // candidate colours: black (shadows), white (glows), and the strongest change seen (tints)
       const strong = P.map(p => { const o = p * 4; return [Math.abs(L[o] - under[o]) + Math.abs(L[o + 1] - under[o + 1]) + Math.abs(L[o + 2] - under[o + 2]), o]; }).sort((a, b) => b[0] - a[0]).slice(0, Math.max(1, P.length / 10 | 0));
       const mean = [0, 1, 2].map(c => strong.reduce((s, [, o]) => s + L[o + c], 0) / strong.length);
@@ -2793,7 +2793,9 @@ const Variants = {
         if (!(mid / P.length > .35 && r.err <= tol * .35 && r.good >= .8)) continue;
         best = r; best.solid = 0; // soft all over: keep it as that colour, fading out
       }
-      if (!best) for (const C0 of [[0, 0, 0], [255, 255, 255], mean]) {
+      // (also: the strongest change pushed further out, for a coloured tint over things of every brightness)
+      const uc0 = [0, 1, 2].map(c => strong.reduce((s2, [, o]) => s2 + under[o + c], 0) / strong.length), far = mean.map((v, c) => Math.min(255, Math.max(0, uc0[c] + (v - uc0[c]) * 2.5)));
+      if (!best) for (const C0 of [[0, 0, 0], [255, 255, 255], mean, far]) {
         const C = [...C0], A = new Float32Array(P.length);
         for (let it = 0; it < 4; it++) {
           for (let j = 0; j < P.length; j++) {
@@ -2825,6 +2827,7 @@ const Variants = {
         if (r.err <= Math.max(best.err * 1.25, best.err + 1.5) && r.good >= .8) best = r; else break;
       }
       // only when it really behaves like a see-through overlay
+      if (window.__vdbg) console.log('merge UNMIX', tail, P.length, uRange.toFixed(1), best.err.toFixed(1), best.good.toFixed(2), best.solid.toFixed(2), best.C.map(Math.round).join(','));
       if (!(best.err <= tol * .35 && best.good >= .8 && best.solid < .5)) {
         // A solid thing with a shadow (or glow) around it: the whole area is not one overlay, but its shadow is.
         // Keep the solid part solid and turn only the shadow into see-through black (or the glow into see-through white).
@@ -3078,6 +3081,157 @@ const Variants = {
       into.pts = ptsOf(into); tops.forEach(Z => Z.above.add(into));
       if (left >= 16) { X.pts = ptsOf(X); X.above.add(into); } else F = F.filter(f => f !== X);
     }
+    return this.finish(res, F, prog);
+  },
+  /* The step-by-step way. First many small pieces, found exactly; then pieces are joined where they belong together.
+     1. At each point, the versions that look alike there form a group. The group that looks like the base needs nothing;
+        every other group needs its own look there ("a node": a point, and the versions that show that look).
+     2. Nodes next to each other, for the same versions, where the colour goes on without an edge, are one piece. With
+        pieces alone every version is rebuilt exactly: at each point it gets its look from exactly one piece.
+     3. Pieces for the same versions are joined when they are one thing: an outline or a sliver goes with the piece it runs
+        along, a piece closed in by another goes into it, and pieces that look alike (both eyes) go together.
+     4. A piece for fewer versions joins a bigger one for more versions when it continues it smoothly (the skin under a
+        bracelet continues the arm), but only when every other version still gets its own look there from a piece above
+        it (the bracelet). So every version stays exact.
+     Then the same later steps as the other way (outlines, AI, soft edges, see-through effects, order, names, choices). */
+  async parts2(res, prog) {
+    res.engine = 'new';
+    const { W, H, imgs, tol } = res, n = W * H, k = imgs.length, B = res.base.data;
+    const dd = (P, o, Q, o2) => Math.max(Math.abs(P[o] - Q[o2]), Math.abs(P[o + 1] - Q[o2 + 1]), Math.abs(P[o + 2] - Q[o2 + 2]));
+    const bits = m => { const a = []; for (let v = 0; v < k; v++) if (m & (1 << v)) a.push(v); return a; };
+    // 1. nodes
+    const start = new Int32Array(n + 1), nP = [], nM = [], nR = [], g = new Int8Array(k);
+    for (let p = 0, o = 0; p < n; p++, o += 4) {
+      start[p] = nP.length; let any = false;
+      for (let v = 0; v < k; v++) { if (this.d(imgs[v], B, o) > tol) { g[v] = -2; any = true; } else g[v] = -1; }
+      if (any) for (let v = 0; v < k; v++) {
+        if (g[v] !== -2) continue; let m = 1 << v; g[v] = v;
+        for (let u = v + 1; u < k; u++) if (g[u] === -2 && this.d(imgs[v], imgs[u], o) <= tol) { g[u] = v; m |= 1 << u; }
+        nP.push(p); nM.push(m); nR.push(v);
+      }
+      if ((p & 131071) === 0) { await sleep(0); prog(.15 * p / n); }
+    }
+    start[n] = nP.length;
+    const N = nP.length, nodeP = Int32Array.from(nP), nodeM = Int32Array.from(nM), nodeR = Uint8Array.from(nR); nP.length = nM.length = nR.length = 0;
+    const nodeAt = (q, v) => { for (let j = start[q]; j < start[q + 1]; j++) if (nodeM[j] & (1 << v)) return j; return -1; };
+    // 2. pieces: union of neighbouring nodes for the same versions without an edge between them
+    const par = new Int32Array(N); for (let i = 0; i < N; i++) par[i] = i;
+    const find = x => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+    const edge = tol * 1.5;
+    for (let i = 0; i < N; i++) {
+      const p = nodeP[i], x = p % W, m = nodeM[i], im = imgs[nodeR[i]], o = p * 4;
+      for (const q of [x < W - 1 ? p + 1 : -1, p + W < n ? p + W : -1]) {
+        if (q < 0) continue;
+        for (let j = start[q]; j < start[q + 1]; j++) if (nodeM[j] === m) { if (dd(im, o, im, q * 4) <= edge) { const a = find(i), b = find(j); if (a !== b) par[b] = a; } break; }
+      }
+      if ((i & 262143) === 0) { await sleep(0); prog(.15 + .1 * i / N); }
+    }
+    // pieces as layers (each starts as its own layer; lay = union-find over pieces)
+    const rid = new Int32Array(N), roots = new Map(), P = [];
+    for (let i = 0; i < N; i++) { const rt = find(i); let r = roots.get(rt); if (r === undefined) { r = P.length; roots.set(rt, r); P.push({ mask: nodeM[i], nodes: [] }); } rid[i] = r; P[r].nodes.push(i); }
+    const lp = new Int32Array(P.length); for (let r = 0; r < P.length; r++) lp[r] = r;
+    const top = r => { while (lp[r] !== r) { lp[r] = lp[lp[r]]; r = lp[r]; } return r; };
+    const L = P.map((pc, r) => ({ id: r, mask: pc.mask, size: pc.nodes.length, below: new Set(), regs: [r] }));
+    const nodesOf = r => { const out = []; for (const x of L[r].regs) for (const i of P[x].nodes) out.push(i); return out; }; // below: layers this one must be above
+    const layerOfNode = i => top(rid[i]);
+    // borders between layers (and each layer's whole border), counted over neighbouring points
+    const borders = () => {
+      const bm = new Map(), per = new Float64Array(P.length);
+      for (let i = 0; i < N; i++) {
+        const p = nodeP[i], x = p % W, a = layerOfNode(i), ma = nodeM[i];
+        for (const q of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p >= W ? p - W : -1, p + W < n ? p + W : -1]) {
+          if (q < 0) continue;
+          let inside = false; for (let j = start[q]; j < start[q + 1]; j++) if (layerOfNode(j) === a) { inside = true; break; }
+          if (inside) continue; per[a]++;
+          for (let j = start[q]; j < start[q + 1]; j++) {
+            const b = layerOfNode(j), key = a * 1048576 + b; let e = bm.get(key); if (!e) bm.set(key, e = { a, b, n: 0, cont: 0 });
+            e.n++;
+            // does the colour go on across (seen in a version that has both, else each in its own)?
+            const both = ma & nodeM[j], v = both ? bits(both)[0] : -1;
+            if (v >= 0 ? dd(imgs[v], p * 4, imgs[v], q * 4) <= edge : dd(imgs[nodeR[i]], p * 4, imgs[nodeR[j]], q * 4) <= edge) e.cont++;
+          }
+        }
+      }
+      return { bm, per };
+    };
+    const hist = r => { const h = new Float32Array(512); let c = 0; for (const i of nodesOf(r)) { const o = nodeP[i] * 4, im = imgs[nodeR[i]]; h[(im[o] >> 5) << 6 | (im[o + 1] >> 5) << 3 | im[o + 2] >> 5]++; c++; } for (let x = 0; x < 512; x++) h[x] /= Math.max(1, c); return h; };
+    const join = (a, b, mask) => { const ra = top(a), rb = top(b); if (ra === rb) return ra; lp[rb] = ra; L[ra].size += L[rb].size; for (const x of L[rb].regs) L[ra].regs.push(x); L[rb].regs = []; L[ra].mask = mask; L[rb].below.forEach(x => L[ra].below.add(x)); L[rb].size = 0; return ra; };
+    // the AI's opinion: are these two pieces (of the same versions) different things?
+    const seen = new Map(), look = async v => { if (!seen.has(v)) seen.set(v, await AI.see(imgs[v], W, H)); return seen.get(v); };
+    const veto = res.ai ? async (a, b) => {
+      const na = nodesOf(a), nb2 = nodesOf(b), v = nodeR[na[0]];
+      const pa = AI.points(na.map(i => nodeP[i]), W, H, 3), pb = AI.points(nb2.map(i => nodeP[i]), W, H, 3); if (!pa.length || !pb.length) return false;
+      const oa = await AI.object(await look(v), pa), ob = await AI.object(await look(v), pb);
+      let inA = 0; for (const i of nb2) if (oa[nodeP[i]]) inA++; let inB = 0; for (const i of na) if (ob[nodeP[i]]) inB++;
+      if (inA > nb2.length * .4 || inB > na.length * .4) return false; // the AI sees them as one thing
+      // a shadow a thing casts stays with it
+      let sh = 0; for (const i of nb2) { const o = nodeP[i] * 4, s = imgs[nodeR[i]], r = [0, 1, 2].map(c => (s[o + c] + 1) / (B[o + c] + 1)), lo = Math.min(...r), hi = Math.max(...r); if (hi - lo < .35 && (hi < .95 && lo > .12 || lo > 1.05 && hi < 5)) sh++; }
+      return sh < nb2.length * .6;
+    } : null;
+    // 3. join pieces of the same versions: they are one change (a bracelet, its outline and its shadow; both blushing
+    //    cheeks). With the AI, pieces it sees as different things (a collar, and a bit of hair) stay apart, unless one is
+    //    the other's shadow, they look alike (both eyes), or one is just a few points.
+    prog(.3, 'Joining pieces of the same thing');
+    {
+      const byMask = new Map(); for (const l of L) if (l.size) { if (!byMask.has(l.mask)) byMask.set(l.mask, []); byMask.get(l.mask).push(l); }
+      for (const list of byMask.values()) {
+        if (list.length < 2) continue;
+        list.sort((x, y) => y.size - x.size);
+        if (!res.ai) { for (const l of list.slice(1)) join(list[0].id, l.id, l.mask); continue; }
+        await sleep(0);
+        const heads = [list[0].id], hs = new Map([[list[0].id, hist(list[0].id)]]);
+        for (const l of list.slice(1)) {
+          if (l.size < 300) { join(heads[0], l.id, l.mask); continue; }
+          const h1 = hist(l.id); let home = null;
+          for (const hd of heads) { const h2 = hs.get(hd); let sim = 0; for (let x = 0; x < 512; x++) sim += Math.min(h1[x], h2[x]); if (sim > .5 || !(await veto(top(hd), l.id))) { home = hd; break; } }
+          if (home !== null) { join(home, l.id, l.mask); hs.set(top(home), hist(top(home))); } else { heads.push(l.id); hs.set(l.id, h1); }
+        }
+      }
+    }
+    // 4. a piece for fewer versions joins a bigger one for more versions that it continues, when every version stays exact
+    prog(.45, 'Joining hidden parts');
+    const reach = (from, to) => { const seen = new Set(), st = [from]; while (st.length) { const x = top(st.pop()); if (x === to) return true; if (seen.has(x)) continue; seen.add(x); L[x].below.forEach(y => st.push(y)); } return false; };
+    for (let pass = 0; pass < 6; pass++) {
+      await sleep(0);
+      const { bm } = borders(); let joined = 0;
+      const cands = [...bm.values()].filter(e => { const A = L[top(e.a)], Bq = L[top(e.b)]; return A !== Bq && A.mask !== Bq.mask && (A.mask & ~Bq.mask) === 0 && A.size <= Bq.size && e.n >= 8 && e.cont >= e.n * .4; }).sort((x, y) => y.cont - x.cont);
+      for (const e of cands) {
+        const a = top(e.a), b = top(e.b); if (a === b || L[a].mask === L[b].mask || (L[a].mask & ~L[b].mask) !== 0) continue;
+        const M = L[b].mask, above = new Set(), under = new Set(); let ok = true;
+        // every point of the smaller piece: versions of the bigger one that show something else there must get it from above
+        for (const i of nodesOf(a)) {
+          if (!ok) break;
+          const p = nodeP[i], wrong = M & ~nodeM[i];
+          for (let j = start[p]; j < start[p + 1]; j++) { const y = layerOfNode(j); if (y === b) { ok = false; break; } }
+          if (!ok) break;
+          for (const v of bits(wrong)) { const j = nodeAt(p, v); if (j < 0) { ok = false; break; } above.add(layerOfNode(j)); }
+          // other layers here that show these versions wrongly must stay below
+          for (let j = start[p]; j < start[p + 1]; j++) { const y = layerOfNode(j); if (y !== a && (L[y].mask & nodeM[i])) under.add(y); }
+        }
+        if (!ok) continue;
+        // no loops in "is above": the joined layer is below those above, and above those under
+        if ([...above].some(z => [...under].includes(z)) || [...above].some(z => reach(b, z) || reach(a, z))) continue;
+        const r = join(b, a, M);
+        for (const z of above) L[top(z)].below.add(r);
+        for (const y of under) if (top(y) !== r) L[r].below.add(y);
+        joined++;
+      }
+      if (!joined) break;
+    }
+    // 5. as layers
+    prog(.55, 'Making the layers');
+    const byRoot = new Map();
+    for (let i = 0; i < N; i++) { const r = layerOfNode(i); let f = byRoot.get(r); if (!f) byRoot.set(r, f = { members: bits(L[r].mask), layer: new ImageData(W, H), from: new Int8Array(n).fill(-1), above: new Set(), cover: 0, id: r }); const o = nodeP[i] * 4, im = imgs[nodeR[i]], d = f.layer.data; d[o] = im[o]; d[o + 1] = im[o + 1]; d[o + 2] = im[o + 2]; d[o + 3] = im[o + 3]; f.from[nodeP[i]] = nodeR[i]; f.cover++; }
+    let F = [...byRoot.values()].filter(f => f.cover >= 16);
+    for (const f of F) { const d = f.layer.data, pts = []; for (let p = 0; p < n; p++) if (d[p * 4 + 3]) pts.push(p); f.pts = pts; }
+    for (const f of F) for (const y of L[f.id].below) { const o = F.find(z => z.id === top(y)); if (o && o !== f) f.above.add(o); }
+    return this.finish(res, F, prog);
+  },
+  /* The steps after the layers are found, shared by both ways of finding them: outlines, the optional AI, soft edges,
+     see-through effects, order, names and choices. F: [{ members, layer, from, pts, above }] */
+  async finish(res, F, prog) {
+    const { W, H, imgs, tol } = res, n = W * H, k = imgs.length;
+    const ptsOf = f => { const out = [], d = f.layer.data; for (let p = 0; p < n; p++) if (d[p * 4 + 3]) out.push(p); return out; };
     // 3a. An outline shared by things that replace each other (a white band and a dark band, both with the same black edge)
     //     belongs to each of them: every one of them gets its own copy, so each is whole on its own.
     for (const S of [...F].sort((a, b) => a.pts.length - b.pts.length)) {
@@ -3095,6 +3249,51 @@ const Variants = {
       F.forEach(Z => { if (Z.above.has(S)) { Z.above.delete(S); alts.forEach(A => Z.above.add(A)); } });
       F = F.filter(f => f !== S);
     }
+    // A hole in a thing, where the base already shows that part of it (a splash, where one part of it is in most versions and so
+    // went into the base): the thing gets that part too, so it is whole; the base gets what the other versions show there,
+    // and those that differ get it from a layer of their own.
+    const same = (P, Q, o) => Math.max(Math.abs(P[o] - Q[o]), Math.abs(P[o + 1] - Q[o + 1]), Math.abs(P[o + 2] - Q[o + 2]));
+    const nearOf = (A, r) => this.widen(Uint8Array.from({ length: n }, (_, p) => A.layer.data[p * 4 + 3] ? 1 : 0), W, H, r);
+    const fillHole = (A, hole) => {
+      const B = res.base.data, v = A.members[0], src = imgs[v], ad = A.layer.data, others = [...Array(k).keys()].filter(m => !A.members.includes(m)), near = nearOf;
+      // first a plan for each point: which look becomes the base, and which versions then need a layer of their own
+      const plan = [];
+      for (const p of hole) {
+        const o = p * 4;
+        const groups = []; for (const m of others) { const g = groups.find(g => same(imgs[g[0]], imgs[m], o) <= tol); if (g) g.push(m); else groups.push([m]); }
+        // versions that show something else here (no splash): the most common such look becomes the base, and versions
+        // that also show the thing's look here (a drop) get it from a layer of their own
+        const diff = groups.filter(g => same(imgs[g[0]], src, o) > tol).sort((x, y) => y.length - x.length);
+        plan.push({ p, L: diff[0] || null, need: diff.length ? groups.filter(g => g !== diff[0]) : [] });
+      }
+      // a layer that would be needed only for a few scattered points is not worth it: those points keep the base as it is
+      const need = new Map(); for (const s of plan) for (const g of s.need) { const key = g.join(','); if (!need.has(key)) need.set(key, { members: g, pts: [] }); need.get(key).pts.push(s.p); }
+      const home = new Map();
+      for (const [key, { members, pts }] of need) {
+        let Z = null, bestN = 0;
+        for (const f of F.filter(f => f.members.length === members.length && f.members.every(m => members.includes(m)))) { const nr = near(f, 6); let c = 0; for (const p of pts) if (nr[p]) c++; if (c > bestN) { bestN = c; Z = f; } }
+        if (bestN < pts.length * .3) Z = null;
+        home.set(key, Z || (pts.length >= 150 ? 'new' : null));
+      }
+      let swapped = 0; const made = new Map();
+      for (const s of plan) {
+        const o = s.p * 4;
+        // the thing gets this part in any case (it is the same as the base for its versions, so nothing changes for them)
+        ad[o] = src[o]; ad[o + 1] = src[o + 1]; ad[o + 2] = src[o + 2]; ad[o + 3] = src[o + 3]; A.from[s.p] = v;
+        if (!s.L || s.need.some(g => !home.get(g.join(',')))) continue;
+        const nb = imgs[s.L[0]]; B[o] = nb[o]; B[o + 1] = nb[o + 1]; B[o + 2] = nb[o + 2]; B[o + 3] = nb[o + 3];
+        for (const Z of F) if (Z !== A && Z.members.every(m => s.L.includes(m)) && Z.layer.data[o + 3] && same(Z.layer.data, nb, o) <= tol) Z.layer.data[o + 3] = 0;
+        for (const g of s.need) {
+          const key = g.join(','); let Z = home.get(key);
+          if (Z === 'new') { Z = made.get(key); if (!Z) { Z = { members: g, layer: new ImageData(W, H), cover: 0, from: new Int8Array(n).fill(-1), above: new Set(), pts: [] }; made.set(key, Z); F.push(Z); } }
+          const zd = Z.layer.data, s2 = imgs[g[0]]; zd[o] = s2[o]; zd[o + 1] = s2[o + 1]; zd[o + 2] = s2[o + 2]; zd[o + 3] = s2[o + 3]; Z.from[s.p] = g[0];
+        }
+        swapped++;
+      }
+      A.pts = ptsOf(A); if (!swapped) return;
+      F.forEach(Z => { if (Z !== A) { Z.pts = ptsOf(Z); Z.cover = Z.pts.length; } });
+      F = F.filter(f => f.pts.length >= 16);
+    };
     // 3c. With the AI: an edge (or any bit) that several versions share, and that the AI sees as part of one of their
     //     objects (the black edge of a white band, and of the dark band), goes into that object's layer, for those versions.
     if (res.ai) {
@@ -3163,43 +3362,7 @@ const Variants = {
         const hole = []; let size = 0; for (let p = 0; p < n; p++) if (obj[p]) { size++; if (!ad[p * 4 + 3] && !busy[p] && same(src, B, p * 4) <= tol) hole.push(p); }
         // the AI's object has to be about this thing (not the whole background around a small patch)
         if (hole.length < 64 || hole.length > A.pts.length * .5 || size > A.pts.length * 1.8) continue;
-        // first a plan for each point: which look becomes the base, and which versions then need a layer of their own
-        const plan = [];
-        for (const p of hole) {
-          const o = p * 4;
-          const groups = []; for (const m of others) { const g = groups.find(g => same(imgs[g[0]], imgs[m], o) <= tol); if (g) g.push(m); else groups.push([m]); }
-          // versions that show something else here (no splash): the most common such look becomes the base, and versions
-          // that also show the thing's look here (a drop) get it from a layer of their own
-          const diff = groups.filter(g => same(imgs[g[0]], src, o) > tol).sort((x, y) => y.length - x.length);
-          plan.push({ p, L: diff[0] || null, need: diff.length ? groups.filter(g => g !== diff[0]) : [] });
-        }
-        // a layer that would be needed only for a few scattered points is not worth it: those points keep the base as it is
-        const need = new Map(); for (const s of plan) for (const g of s.need) { const key = g.join(','); if (!need.has(key)) need.set(key, { members: g, pts: [] }); need.get(key).pts.push(s.p); }
-        const home = new Map();
-        for (const [key, { members, pts }] of need) {
-          let Z = null, bestN = 0;
-          for (const f of F.filter(f => f.members.length === members.length && f.members.every(m => members.includes(m)))) { const nr = near(f, 6); let c = 0; for (const p of pts) if (nr[p]) c++; if (c > bestN) { bestN = c; Z = f; } }
-          if (bestN < pts.length * .3) Z = null;
-          home.set(key, Z || (pts.length >= 150 ? 'new' : null));
-        }
-        let swapped = 0; const made = new Map();
-        for (const s of plan) {
-          const o = s.p * 4;
-          // the thing gets this part in any case (it is the same as the base for its versions, so nothing changes for them)
-          ad[o] = src[o]; ad[o + 1] = src[o + 1]; ad[o + 2] = src[o + 2]; ad[o + 3] = src[o + 3]; A.from[s.p] = v;
-          if (!s.L || s.need.some(g => !home.get(g.join(',')))) continue;
-          const nb = imgs[s.L[0]]; B[o] = nb[o]; B[o + 1] = nb[o + 1]; B[o + 2] = nb[o + 2]; B[o + 3] = nb[o + 3];
-          for (const Z of F) if (Z !== A && Z.members.every(m => s.L.includes(m)) && Z.layer.data[o + 3] && same(Z.layer.data, nb, o) <= tol) Z.layer.data[o + 3] = 0;
-          for (const g of s.need) {
-            const key = g.join(','); let Z = home.get(key);
-            if (Z === 'new') { Z = made.get(key); if (!Z) { Z = { members: g, layer: new ImageData(W, H), cover: 0, from: new Int8Array(n).fill(-1), above: new Set(), pts: [] }; made.set(key, Z); F.push(Z); } }
-            const zd = Z.layer.data, s2 = imgs[g[0]]; zd[o] = s2[o]; zd[o + 1] = s2[o + 1]; zd[o + 2] = s2[o + 2]; zd[o + 3] = s2[o + 3]; Z.from[s.p] = g[0];
-          }
-          swapped++;
-        }
-        A.pts = ptsOf(A); if (!swapped) continue;
-        F.forEach(Z => { if (Z !== A) { Z.pts = ptsOf(Z); Z.cover = Z.pts.length; } });
-        F = F.filter(f => f.pts.length >= 16);
+        fillHole(A, hole);
       }
       for (const S of [...F].sort((a, b) => a.pts.length - b.pts.length)) {
         if (S.members.length < 2 || !F.includes(S)) continue;
@@ -3223,6 +3386,51 @@ const Variants = {
         if (S.pts.length < 16) { F.forEach(Z => Z.above.delete(S)); F = F.filter(f => f !== S); }
       }
     }
+    // 3d. The same without the AI, by continuity: next to a thing, a part that changes in some versions, that its own versions
+    //     show just like the base, and that goes on from the thing without any edge and in the same colours (the drop that
+    //     fits the splash) is part of that thing.
+    if (res.engine === 'new') {
+      const B = res.base.data, chg = new Uint8Array(n);
+      for (let p = 0, o = 0; p < n; p++, o += 4) for (let v = 0; v < k; v++) if (same(imgs[v], B, o) > tol) { chg[p] = 1; break; }
+      const hist = (src, ps) => { const hh = new Float32Array(512); for (const p of ps) { const o = p * 4; hh[(src[o] >> 5) << 6 | (src[o + 1] >> 5) << 3 | src[o + 2] >> 5]++; } for (let i = 0; i < 512; i++) hh[i] /= Math.max(1, ps.length); return hh; };
+      const step = (src, p, q) => Math.max(Math.abs(src[p * 4] - src[q * 4]), Math.abs(src[p * 4 + 1] - src[q * 4 + 1]), Math.abs(src[p * 4 + 2] - src[q * 4 + 2]));
+      for (const A of [...F].sort((a, b) => b.pts.length - a.pts.length)) {
+        if (!F.includes(A) || A.pts.length < 300 || A.members.length === k) continue;
+        await sleep(0);
+        const src = imgs[A.members[0]], ad = A.layer.data;
+        const busy = new Uint8Array(n); for (const Z of F) if (Z !== A && Z.members.some(m => A.members.includes(m))) { const d = Z.layer.data; for (let p = 0; p < n; p++) if (d[p * 4 + 3]) busy[p] = 1; }
+        const free = q => chg[q] && !ad[q * 4 + 3] && !busy[q] && A.members.every(m => same(imgs[m], B, q * 4) <= tol);
+        const seen = new Uint8Array(n), hole = [];
+        for (const p of A.pts) {
+          // (only from where the thing clearly stands out from the base, not where it fades out, like the edge of a blush)
+          const x = p % W; if (same(src, B, p * 4) <= tol * 3) continue;
+          for (const q0 of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, p - W, p + W]) {
+            if (q0 < 0 || q0 >= n || seen[q0] || !free(q0) || step(src, p, q0) > tol) continue;
+            // one piece that goes on from the thing
+            const comp = [q0]; seen[q0] = 1;
+            for (let h = 0; h < comp.length; h++) {
+              const q = comp[h], qx = q % W;
+              for (const r of [qx > 0 ? q - 1 : -1, qx < W - 1 ? q + 1 : -1, q - W, q + W]) if (r >= 0 && r < n && !seen[r] && free(r) && step(src, q, r) <= tol) { seen[r] = 1; comp.push(r); }
+            }
+            if (comp.length < 150 || comp.length > A.pts.length * .5) continue;
+            // it has to look like the thing where they meet (the same fill), not like something else next to it (hair by a collar)
+            const cm = new Uint8Array(n); for (const q of comp) cm[q] = 1; const nb = this.widen(cm, W, H, 12), mine = A.pts.filter(q => nb[q]);
+            const h1 = hist(src, comp), h2 = hist(src, mine); let sim = 0; for (let i = 0; i < 512; i++) sim += Math.min(h1[i], h2[i]);
+            // how much of its outline is on the thing: a part of it fits in against it
+            let bo = 0, bt = 0; for (const q of comp) { const qx = q % W; for (const r of [qx > 0 ? q - 1 : -1, qx < W - 1 ? q + 1 : -1, q - W, q + W]) if (r >= 0 && r < n && !cm[r]) { bt++; if (ad[r * 4 + 3]) bo++; } }
+            // what the other versions show there instead is clearly something else (the plain background where there is no drop),
+            // not the same look tinted a little (a blush fading over it)
+            const ds = []; for (const q of comp) { const o = q * 4; let m = 0; for (let v = 0; v < k; v++) if (!A.members.includes(v)) m = Math.max(m, same(imgs[v], src, o)); ds.push(m); } ds.sort((x, y) => x - y);
+            const md = ds[ds.length >> 1];
+            if (window.__vdbg) console.log('HOLE?', A.members.join('/'), comp.length, 'sim', sim.toFixed(2), 'border', bo, bt, 'diff', md, 'tol', tol);
+            if (md < tol * 3) continue;
+            if (sim < .5) continue;
+            for (const q of comp) hole.push(q);
+          }
+        }
+        if (hole.length >= 64 && hole.length <= A.pts.length * .5) fillHole(A, hole);
+      }
+    }
     // 3b. soft edges: each layer follows its change out until it really fades away
     for (const f of F) { f.core = f.pts; f.coreMask = new Uint8Array(n); for (const p of f.pts) f.coreMask[p] = 1; } // (what counts for choices)
     for (const f of [...F].sort((a, b) => b.pts.length - a.pts.length)) { await sleep(0); this.soften(f, F, res); }
@@ -3231,13 +3439,76 @@ const Variants = {
     const order0 = [...F].sort((a, b) => b.pts.length - a.pts.length);
     for (let changed = true, guard = 0; changed && guard < 50; guard++) { changed = false; for (let i = 0; i < order0.length; i++) for (const below of order0[i].above) { const j = order0.indexOf(below); if (j > i) { order0.splice(j, 1); order0.splice(i, 0, below); changed = true; } } }
     if (res.seeThrough) {
+      // (each layer's own look, kept as it was, to try pieces together as one see-through effect below)
+      if (res.engine === 'new') for (const f of F) { const d = f.layer.data, r = f.raw = new Uint8ClampedArray(f.pts.length * 4); f.rawPts = f.pts; f.pts.forEach((p, j) => { r.set(d.subarray(p * 4, p * 4 + 4), j * 4); }); }
       for (const [i, f] of order0.entries()) {
         await sleep(0);
         // what lies under each point, in the version that point was taken from
         const stack = {}; for (const v of f.members) { const u = stack[v] = new Uint8ClampedArray(res.base.data); for (const lo of order0.slice(0, i)) if (lo.members.includes(v)) { const d = lo.layer.data; for (let o = 0; o < d.length; o += 4) if (d[o + 3]) this.over(u, d, o); } }
         const under = new Uint8ClampedArray(res.base.data), fr = f.from;
         for (let p = 0; p < n; p++) { const v = fr[p]; const u = stack[v >= 0 && stack[v] ? v : f.members[0]], o = p * 4; under[o] = u[o]; under[o + 1] = u[o + 1]; under[o + 2] = u[o + 2]; under[o + 3] = u[o + 3]; }
-        f.see = this.unmix(f.layer, under, W, H, tol);
+        f.see = this.unmix(f.layer, under, W, H, tol); if (window.__vdbg) console.log('merge SEE', f.members.join('/'), f.pts.length, f.see, 'below', [...f.above].map(z => z.members.join('/')).join(' '));
+      }
+      // One see-through effect over things that are different underneath (a blush over an open eye in one version and over
+      // a closed eye in another) was found as separate pieces, none of which looks see-through alone. Together they are one
+      // overlay: when the pieces, taken as one layer, are one see-through effect that gives every one of its versions, they
+      // are one layer.
+      if (res.engine === 'new') for (const Y of [...F].sort((a, b) => b.pts.length - a.pts.length)) {
+        if (!F.includes(Y) || Y.members.length < 2 || !Y.raw) continue;
+        const ny = nearOf(Y, 2);
+        const Xs = F.filter(X => X !== Y && X.raw && X.members.length < Y.members.length && X.members.every(v => Y.members.includes(v)) && X.pts.filter(p => ny[p]).length >= 20);
+        if (!Xs.length) continue;
+        await sleep(0);
+        const group = [Y, ...Xs], top = Math.max(...group.map(f => order0.indexOf(f)));
+        const U = new ImageData(W, H), ud = U.data, fr = new Int8Array(n).fill(-1);
+        for (const X of group) X.rawPts.forEach((p, j) => { const o = p * 4; if (ud[o + 3]) return; ud.set(X.raw.subarray(j * 4, j * 4 + 4), o); fr[p] = X.from[p]; });
+        // what lies under it in each of its versions
+        // A piece for fewer versions (a blush over the closed eye, in one version) can have a partner: the same thing without the
+        // effect, in other versions (the closed eye without the blush). That is what lies under it; the partner then
+        // becomes part of those versions too.
+        const partner = new Map();
+        for (const X of Xs) {
+          const xm = new Uint8Array(n); for (const p of X.pts) xm[p] = 1; let best = null, bn = 0;
+          for (const Z of F) { if (group.includes(Z) || Z.members.some(v => Y.members.includes(v))) continue; let c = 0; for (const p of Z.pts) if (xm[p]) c++; if (c > bn) { bn = c; best = Z; } }
+          if (best && bn >= X.pts.length * .6) partner.set(X, best);
+        }
+        const stack = {}; for (const v of Y.members) { const u = stack[v] = new Uint8ClampedArray(res.base.data); for (const lo of order0.slice(0, top)) if (!group.includes(lo) && F.includes(lo) && (lo.members.includes(v) || [...partner].some(([X, Z]) => Z === lo && X.members.includes(v)))) { const d = lo.layer.data; for (let o = 0; o < d.length; o += 4) if (d[o + 3]) this.over(u, d, o); } }
+        const under = new Uint8ClampedArray(res.base.data);
+        for (let p = 0; p < n; p++) { const v = fr[p]; if (v < 0 || !stack[v]) continue; const u = stack[v], o = p * 4; under[o] = u[o]; under[o + 1] = u[o + 1]; under[o + 2] = u[o + 2]; under[o + 3] = u[o + 3]; }
+        const cnt = ptsOf({ layer: U }).length, see = this.unmix(U, under, W, H, tol);
+        if (window.__vdbg) console.log('merge GROUP', Y.members.join('/'), Xs.map(X => X.members.join('/') + ' ' + X.pts.length).join(', '), 'see', see, 'of', cnt);
+        // the pieces must have become see-through (the thing itself may stay solid: a bracelet, with its shadow)
+        let xs = 0, xn = 0; for (const X of Xs) for (const p of X.rawPts) { xn++; const a = ud[p * 4 + 3]; if (a && a < 255) xs++; }
+        if (window.__vdbg) console.log('merge GROUP pieces', xs, xn);
+        if (xs < xn * .6) continue;
+        // every version of it must come out right everywhere the pieces were
+        let bad = 0, all = 0; const t = new Uint8ClampedArray(4);
+        for (const v of Y.members) { const u = stack[v], img = imgs[v]; for (const f of group) for (const p of f.rawPts) { const o = p * 4; if (!ud[o + 3]) continue; t[0] = u[o]; t[1] = u[o + 1]; t[2] = u[o + 2]; t[3] = 255; this.over(t, ud.subarray(o, o + 4), 0); all++; if (Math.max(Math.abs(t[0] - img[o]), Math.abs(t[1] - img[o + 1]), Math.abs(t[2] - img[o + 2])) > tol * 1.2) bad++; } }
+        if (window.__vdbg) console.log('merge GROUP check', bad, all);
+        if (bad > all * .1) continue;
+        for (const [X, Z] of partner) { Z.members = [...new Set([...Z.members, ...X.members])].sort((a, b) => a - b); Y.above.add(Z); }
+        Y.layer = U; Y.from = fr; Y.pts = ptsOf(Y); Y.see = see; delete Y.raw; Y.core = Y.pts; Y.coreMask = new Uint8Array(n); for (const p of Y.pts) Y.coreMask[p] = 1;
+        for (const X of Xs) { X.above.forEach(b => b !== Y && Y.above.add(b)); F.forEach(Z => { if (Z.above.has(X)) { Z.above.delete(X); if (Z !== Y) Z.above.add(Y); } }); }
+        Y.above.forEach(b => { if (Xs.includes(b)) Y.above.delete(b); });
+        F = F.filter(f => !Xs.includes(f)); order0.splice(0, order0.length, ...order0.filter(f => !Xs.includes(f)));
+      }
+      F.forEach(f => { delete f.raw; delete f.rawPts; });
+      // two layers left for exactly the same versions (the closed eye, and the closed eye where the blush was) are one
+      if (res.engine === 'new') for (const Y of [...F].sort((a, b) => b.pts.length - a.pts.length)) {
+        if (!F.includes(Y)) continue;
+        const under = f => { const seen = new Set(), st = [f]; while (st.length) for (const b of st.pop().above) if (!seen.has(b)) { seen.add(b); st.push(b); } return seen; };
+        for (const Z of F.filter(Z => Z !== Y && Z.members.join() === Y.members.join())) {
+          const yd = Y.layer.data, zd = Z.layer.data; let over = 0; for (const p of Z.pts) if (yd[p * 4 + 3]) over++;
+          if (over > Z.pts.length * .05) continue;
+          const uy = under(Y), uz = under(Z); // nothing may have to be both above one and below the other
+          if ([...uy].some(b => b !== Z && under(b).has(Z)) || [...uz].some(b => b !== Y && under(b).has(Y))) continue;
+          if (F.some(A => A !== Y && A !== Z && (uy.has(A) && under(A).has(Z) || uz.has(A) && under(A).has(Y)))) continue;
+          for (const p of Z.pts) { const o = p * 4; if (yd[o + 3]) continue; yd[o] = zd[o]; yd[o + 1] = zd[o + 1]; yd[o + 2] = zd[o + 2]; yd[o + 3] = zd[o + 3]; Y.from[p] = Z.from[p]; }
+          Y.see = (Y.see || 0) + (Z.see || 0); Z.above.forEach(b => b !== Y && Y.above.add(b)); Y.above.delete(Z);
+          F.forEach(A => { if (A.above.has(Z)) { A.above.delete(Z); if (A !== Y) A.above.add(Y); } });
+          Y.pts = ptsOf(Y); Y.core = Y.pts; Y.coreMask = new Uint8Array(n); for (const p of Y.pts) Y.coreMask[p] = 1;
+          F = F.filter(f => f !== Z); const zi = order0.indexOf(Z); if (zi >= 0) order0.splice(zi, 1);
+        }
       }
       // A shadow over a tattoo and the same shadow over bare skin are one see-through shadow: once they are see-through,
       // a patch that is the same as a thing shown in more versions is part of it.
@@ -3325,6 +3596,7 @@ const Variants = {
     parts.layersInOrder = F;
     return { parts, match, missed };
   },
+
   /* names for layers: the words the versions with it share in their names, and the others do not have ("black", "bracelet") */
   nameAll(F, variants) {
     const k = variants.length, words = variants.map(v => new Set(v.name.toLowerCase().split(/[\s_\-.,()]+/).filter(Boolean)));
@@ -3339,17 +3611,17 @@ const Variants = {
   /* How much memory the job may use. Many versions of big pages would not fit, so then the picture is compared in
      sections (bands from top to bottom, overlapping a little), and the results are joined. */
   budget() { if (window.__varBudget) return window.__varBudget; const dm = navigator.deviceMemory || 4; return (dm >= 8 ? 700 : dm >= 4 ? 380 : 220) * 1e6; },
-  async findAll(items, baseMode, sens, prog, seeThrough, split, ai) {
+  async findAll(items, baseMode, sens, prog, seeThrough, split, ai, engine) {
     const [W, H] = await (async () => { const im = await decodeImg(items[0].blob); const r = [im.width, im.height]; if (im.close) im.close(); return r; })();
     const k = items.length, whole = split !== 'parts', perPx = k * (whole ? 12 : 6) + (whole ? 8 : 70 + 10 * k), need = W * H * perPx, budget = this.budget();
-    const one = async () => { const res = await this.find(items, baseMode, sens, f => prog(whole ? f : f * .6), seeThrough && whole, { whole, size: [W, H] }); res.seeThrough = seeThrough; res.ai = ai; let pr = null; if (!whole) { prog(.6, 'Finding the parts and what looks the same'); pr = await this.parts(res, f => prog(.6 + .4 * f)); } return { res, pr }; };
+    const one = async () => { const res = await this.find(items, baseMode, sens, f => prog(whole ? f : f * .6), seeThrough && whole, { whole, size: [W, H] }); res.seeThrough = seeThrough; res.ai = ai; res.engine = engine; let pr = null; if (!whole) { prog(.6, 'Finding the parts and what looks the same'); pr = await (engine === 'new' ? this.parts2 : this.parts).call(this, res, (f, t) => prog(.6 + .4 * f, t)); } return { res, pr }; };
     if (need <= budget) return one();
     const M = 180, bandH = Math.max(256, Math.floor(budget / (W * perPx)) - 2 * M), bands = [];
     for (let y = 0; y < H; y += bandH) bands.push([y, Math.min(H, y + bandH)]);
     if (bands.length < 2) return one();
-    return this.stitch(items, baseMode, sens, prog, seeThrough, whole, W, H, bands, M, ai);
+    return this.stitch(items, baseMode, sens, prog, seeThrough, whole, W, H, bands, M, ai, engine);
   },
-  async stitch(items, baseMode, sens, prog, seeThrough, whole, W, H, bands, M, ai) {
+  async stitch(items, baseMode, sens, prog, seeThrough, whole, W, H, bands, M, ai, engine) {
     const k = items.length, n = W * H, base = new ImageData(W, H), tol = this.tol[sens] || 24, S4 = 4, lw = Math.ceil(W / S4), lh = Math.ceil(H / S4);
     const feats = new Map(), orders = [], cover = new Float64Array(k), matchN = new Float64Array(k), missed = new Float64Array(k), see = new Float64Array(k), vch = items.map(() => []);
     let baseIdx = -1;
@@ -3357,7 +3629,7 @@ const Variants = {
       const e0 = Math.max(0, y0 - M), e1 = Math.min(H, y1 + M), bh = e1 - e0, off = y0 - e0, rows = y1 - y0;
       const P = (f, t) => prog((b + f) / bands.length, `Section ${b + 1} of ${bands.length}${t ? ': ' + t.toLowerCase() : ''}`);
       const res = await this.find(items, baseMode, sens, f => P(whole ? f : f * .6, 'Finding what is different'), seeThrough && whole, { whole, size: [W, H], band: [e0, bh] });
-      res.seeThrough = seeThrough; res.ai = ai; baseIdx = res.baseIdx;
+      res.seeThrough = seeThrough; res.ai = ai; res.engine = engine; baseIdx = res.baseIdx;
       base.data.set(res.base.data.subarray(off * W * 4, (off + rows) * W * 4), y0 * W * 4);
       // a piece of a layer: only the rows this section is responsible for, cut to where it has something
       const chunk = data => {
@@ -3371,7 +3643,7 @@ const Variants = {
       if (whole) {
         res.variants.forEach((v, i) => { cover[i] += v.cover * rows; matchN[i] += v.match * rows; see[i] += v.see || 0; if (v.layer) { const c = chunk(v.layer.data); if (c) vch[i].push(c); } });
       } else {
-        const pr = await this.parts(res, f => P(.6 + .4 * f, 'Finding the parts'));
+        const pr = await (engine === 'new' ? this.parts2 : this.parts).call(this, res, f => P(.6 + .4 * f, 'Finding the parts'));
         const F = pr.parts.layersInOrder; orders.push(F.map(f => f.members.join(',')));
         res.variants.forEach((v, i) => { cover[i] += v.cover * rows; matchN[i] += pr.match[i] * rows; missed[i] += pr.missed[i]; });
         for (const f of F) {
@@ -3535,7 +3807,7 @@ const AI = {
 /* The "Find variants" sheet for pages selected in a folder. */
 async function openVariantSheet(g, pages, done) {
   const items = pages.map(id => ({ id, name: Lay.nameOf(g, id) }));
-  let baseMode = pages.length >= 3 ? 'common' : '0', sens = 'normal', keep = true, res = null, split = 'parts', pr = null, seeThrough = true, useAI = !!UI.varAI;
+  let baseMode = pages.length >= 3 ? 'common' : '0', sens = 'normal', keep = true, res = null, split = 'parts', pr = null, seeThrough = true, useAI = !!UI.varAI, engine = UI.varEngine || 'new';
   const box = h('div', { class: 'stack' });
   const stage1 = () => {
     const seg = (opts, cur, set) => h('div', { class: 'seg', role: 'group' }, opts.map(([v, l]) => h('button', { 'aria-pressed': String(cur === v), onclick: () => { set(v); stage1(); } }, l)));
@@ -3552,6 +3824,9 @@ async function openVariantSheet(g, pages, done) {
           : 'One layer per version with everything that is different about it.')),
       h('div', { class: 'setrow inline' }, h('div', {}, h('div', { class: 'lab' }, 'Understand see-through effects'), h('div', { class: 'hint' }, 'Shadows, blush, glows and tints become see-through layers, so they also look right over other layers. Solid additions stay solid.')),
         h('button', { class: 'switch', role: 'switch', id: 'var-see', 'aria-label': 'Understand see-through effects', 'aria-checked': String(seeThrough), onclick: e => { seeThrough = !seeThrough; e.currentTarget.setAttribute('aria-checked', String(seeThrough)); } })),
+      split === 'parts' ? h('div', { class: 'setrow' }, h('div', { class: 'lab' }, 'Method'),
+        seg([['new', 'Step by step (new)'], ['classic', 'Classic']], engine, v => { engine = v; UI.varEngine = v; saveMeta(); }),
+        h('p', { class: 'hint', style: 'margin:0' }, engine === 'new' ? 'Finds many small exact pieces first, then joins the ones that belong to the same thing.' : 'The way it worked before, to compare.')) : null,
       split === 'parts' ? h('div', { class: 'setrow inline' }, h('div', {}, h('div', { class: 'lab' }, h('span', { class: 'betachip', style: 'margin-right:6px' }, 'AI'), 'Keep whole objects together'), h('div', { class: 'hint' }, `Experimental. A small AI looks at each picture to see where objects end, so a shape keeps its own outline instead of the outline becoming a separate layer. It runs on this device; the first time it downloads about ${AI.mb} MB. Slower, especially on phones.`)),
         h('button', { class: 'switch', role: 'switch', id: 'var-ai', 'aria-label': 'Keep whole objects together with AI', 'aria-checked': String(useAI), onclick: e => { useAI = !useAI; UI.varAI = useAI; saveMeta(); e.currentTarget.setAttribute('aria-checked', String(useAI)); } })) : null,
       h('div', { class: 'setrow' }, h('div', { class: 'lab' }, 'How small a change to catch'),
@@ -3569,7 +3844,7 @@ async function openVariantSheet(g, pages, done) {
       const P = (f, t) => { bar.firstChild.style.width = (100 * f).toFixed(0) + '%'; if (t) lbl.textContent = t; };
       const ai = useAI && split === 'parts';
       if (ai) { lbl.textContent = (await AI.stored()) ? 'Starting the AI' : `Downloading the AI (about ${AI.mb} MB, only the first time)`; await AI.load(f => P(f * .3)); }
-      ({ res, pr } = await Variants.findAll(withBlobs, baseMode, sens, ai ? (f, t) => P(.3 + f * .7, t) : P, seeThrough, split, ai));
+      ({ res, pr } = await Variants.findAll(withBlobs, baseMode, sens, ai ? (f, t) => P(.3 + f * .7, t) : P, seeThrough, split, ai, engine));
       stage2();
     } catch (e) { console.error(e); toast('Could not compare them: ' + (e.message || e), 4500); stage1(); }
     finally { busy = Math.max(0, busy - 1); }

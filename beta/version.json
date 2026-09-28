@@ -1,6 +1,6 @@
 {
- "version": 84,
- "name": "1.22.0-beta.14",
+ "version": 85,
+ "name": "1.22.0-beta.15",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,7 +17,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants with AI: a layer holding two different things (a collar, and a bit of hair that only comes with it) is split, so each thing is its own layer. Two of the same kind of thing (both eyes) stay together, and a shadow stays with what casts it.",
-  "Find variants with AI: a thing with a missing piece, because most versions have just that piece (a splash whose drop is also in other versions), is made whole. The base then shows what's there without it, and the versions that only have the drop get it from a small layer of their own."
+  "Find variants has a new way of finding layers, \u201cStep by step\u201d (now the default; the old one is still there as \u201cClassic\u201d under Method). It first breaks the pictures into many small, exact pieces, then joins the pieces that belong to the same change by how they continue into each other.",
+  "A see-through effect over things that are different underneath (a blush over an open eye in one version and over a closed eye in another; a bracelet's shadow over a tattoo or over bare arm) is now one see-through layer, instead of several pieces.",
+  "Without the AI too: a part of a thing that most versions have on its own (the drop of a splash) goes back into that thing's layer when it continues it with no edge and in the same colours. The base then shows what's there without it.",
+  "Two layers left for exactly the same versions are joined into one."
  ]
 }
