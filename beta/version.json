@@ -1,6 +1,6 @@
 {
- "version": 89,
- "name": "1.22.0-beta.19",
+ "version": 90,
+ "name": "1.22.0-beta.20",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,7 +17,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants can now be done by hand: choose \u201cBy hand\u201d, pick the base, and each other version is compared with it in turn. What is different shows in orange and is already chosen (green); paint to add or take away, then make a layer. One version can give several layers (a hat, then a scarf).",
-  "A layer made from one version is also put in every other version that shows the same thing (a hat in two versions); each layer has a switch for the version you are looking at. \u201cBase\u201d and \u201cRebuilt\u201d let you check the result, and \u201cMake the layered image\u201d saves it with each version as a saved combination."
+  "Find variants by hand: a layer can now be see-through (for a shadow, a blush or a glow). Choose \u201cSee-through\u201d before making it: it becomes one colour laid over what is under it, as strong at each point as the version shows, so it also looks right over other things (a shadow over a hat it never fell on in that version). Soft edges are followed until they fade out.",
+  "Each layer can be switched between solid and see-through afterwards; for see-through layers the colour is found for you, and can be changed (with how well it fits shown).",
+  "Layers that only fit together (a hat with a shadow over it) are now found in a version together."
  ]
 }
