@@ -1,6 +1,6 @@
 {
- "version": 74,
- "name": "1.22.0-beta.4",
+ "version": 75,
+ "name": "1.22.0-beta.5",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,10 +17,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Split and Merge are now tools inside Edit image, next to the brush and eraser, instead of separate buttons.",
-  "Split works on the image itself too: blue becomes a new layer on top, so a plain image can become a layered one.",
-  "Merge can mix layers into each other, or into the image itself.",
-  "After a split or merge the editor stays open on the result, and Undo works without leaving it.",
-  "Fixed: undoing a change in a folder could leave its page grid out of date."
+  "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends. Their see-through colour also follows the drawing, so there are no steps inside them.",
+  "Find variants: fixed bits of one version showing through in another (like part of an open eye on the closed one). Every version is now checked against its original at the end, and anything that doesn't match is put back.",
+  "Find variants: colours that only happen to look similar (a pale iris and skin) are no longer treated as the same thing, and the base no longer picks up the faint edge of an effect from another version.",
+  "Small fixes the final check needs go in a group called Details, which each saved page already shows."
  ]
 }
