@@ -1,6 +1,6 @@
 {
- "version": 78,
- "name": "1.22.0-beta.8",
+ "version": 79,
+ "name": "1.22.0-beta.9",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,7 +17,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Menus keep their place: switching something, changing a setting or any other change no longer scrolls the menu back to the top. This includes menus that redraw themselves and parts that load a moment later.",
-  "A different menu now always opens at the top, instead of sometimes where the last one was scrolled to."
+  "Find variants now works with up to 20 images (was 12).",
+  "When many big versions would not fit in the device's memory at once, the pictures are compared in sections from top to bottom and the results joined, so it doesn't run out of memory. The result screen says when this happened."
  ]
 }
