@@ -1,6 +1,6 @@
 {
- "version": 87,
- "name": "1.22.0-beta.17",
+ "version": 88,
+ "name": "1.22.0-beta.18",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,10 +17,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants: new choice under Method, \u201cLayer stack (new)\u201d, next to the current way (which stays the default). It is experimental, to compare the two on your pages.",
-  "The base is put together from what most versions show at each place (three versions with black hair and two with blond: black hair), so no version has to be a clean base. When every version has something the others don't (a hat, glasses, a scarf), the base comes out without any of them.",
-  "Each thing is found by where it goes on without an edge, and its layer is whole even where something covers it in some versions. A splash keeps its drop.",
-  "See-through effects (a blush, a shadow) are found first and taken out, so what is under them comes out as one layer, and the effect is one see-through layer over everything it covers (a blush over an open eye and over a closed one).",
-  "Things that always come together but are different things stay separate layers: they turn on together in each version's combination, and each can still be turned on or off by itself. It takes about as long as the current way."
+  "Find variants is back to how it was in 1.22.0-beta.10: the experimental \u201cLayer stack\u201d method is removed."
  ]
 }
