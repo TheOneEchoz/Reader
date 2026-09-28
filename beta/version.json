@@ -1,6 +1,6 @@
 {
- "version": 79,
- "name": "1.22.0-beta.9",
+ "version": 80,
+ "name": "1.22.0-beta.10",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,7 +17,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants now works with up to 20 images (was 12).",
-  "When many big versions would not fit in the device's memory at once, the pictures are compared in sections from top to bottom and the results joined, so it doesn't run out of memory. The result screen says when this happened."
+  "Fixed: Find variants could stop with \u201cCannot read properties of undefined (reading 'chunks')\u201d when it compared big pictures in sections."
  ]
 }
