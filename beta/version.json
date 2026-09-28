@@ -1,6 +1,6 @@
 {
- "version": 75,
- "name": "1.22.0-beta.5",
+ "version": 76,
+ "name": "1.22.0-beta.6",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,9 +17,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends. Their see-through colour also follows the drawing, so there are no steps inside them.",
-  "Find variants: fixed bits of one version showing through in another (like part of an open eye on the closed one). Every version is now checked against its original at the end, and anything that doesn't match is put back.",
-  "Find variants: colours that only happen to look similar (a pale iris and skin) are no longer treated as the same thing, and the base no longer picks up the faint edge of an effect from another version.",
-  "Small fixes the final check needs go in a group called Details, which each saved page already shows."
+  "Back to how Find variants worked in 1.22.0-beta.4, without the extra \u201cDetails\u201d layers of beta.5.",
+  "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends, and no steps inside them."
  ]
 }
