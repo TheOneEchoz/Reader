@@ -1,6 +1,6 @@
 {
- "version": 80,
- "name": "1.22.0-beta.10",
+ "version": 81,
+ "name": "1.22.0-beta.11",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,6 +17,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixed: Find variants could stop with \u201cCannot read properties of undefined (reading 'chunks')\u201d when it compared big pictures in sections."
+  "Find variants: things that replace each other (a white band or a dark one) now each keep their outline, so each is whole on its own and they become a one-at-a-time choice, instead of a shared \u201cChange\u201d layer with a dark one covering it.",
+  "Find variants: a thing whose edge another version paints over (bare skin where a band had its black edge) now keeps a copy of that edge, so it still has it when shown over that version.",
+  "Find variants: fixed a case where part of one version could show through in another (like pieces of an open eye on a closed one)."
  ]
 }
