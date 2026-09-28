@@ -1,6 +1,6 @@
 {
- "version": 77,
- "name": "1.22.0-beta.7",
+ "version": 78,
+ "name": "1.22.0-beta.8",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,6 +17,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Edit image \u2192 Merge: new \u201cKeep the originals\u201d switch. The merged picture becomes a new layer above them, and the original layers stay in the list, switched off, so you can go back to them. It also works with the base image."
+  "Menus keep their place: switching something, changing a setting or any other change no longer scrolls the menu back to the top. This includes menus that redraw themselves and parts that load a moment later.",
+  "A different menu now always opens at the top, instead of sometimes where the last one was scrolled to."
  ]
 }
