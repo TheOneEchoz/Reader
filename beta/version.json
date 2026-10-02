@@ -1,6 +1,6 @@
 {
- "version": 93,
- "name": "1.22.0-beta.23",
+ "version": 94,
+ "name": "1.22.0-beta.24",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,9 +17,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants by hand: choosing \u201cBy hand\u201d no longer asks for the base picture or how small a change to catch; both are set inside (the first image is the base to start with, and \u201cUse all of it as the base\u201d in \u201cBuild the base\u201d makes any version the base).",
-  "The two pictures being compared are now chosen side by side, at the top of the panel (\u201cCompare\u201d and \u201cWith\u201d).",
-  "Making a layer keeps what you chose with the brushes, instead of starting the choice over.",
-  "The \u201cTake away\u201d brush now shows where it paints (in red) while you paint."
+  "Find variants by hand: a see-through layer now gives back its own version as it was. Where the effect is not just one colour laid over (more than one colour, or more than a tint), it takes whatever colour and strength give what the version shows, instead of forcing one colour.",
+  "For a tint whose colour changes (a coloured gradient), a see-through layer can use \u201cSame strength\u201d: one strength everywhere (with a slider), and the colour is found at each point. Look at \u201cRebuilt\u201d on another version that has it to set the strength."
  ]
 }
