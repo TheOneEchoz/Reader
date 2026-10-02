@@ -1,6 +1,6 @@
 {
- "version": 92,
- "name": "1.22.0-beta.22",
+ "version": 93,
+ "name": "1.22.0-beta.23",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,8 +17,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants by hand: \u201cInvert the choice\u201d swaps what goes into the layer and what does not.",
-  "A new \u201cOnly what changed\u201d switch (on to start with): the brush, the colour tool and Invert then only choose points that are different. Turn it off to choose anything.",
-  "A colour tool: tap a colour in the picture to choose (or take away) every point of that colour, with a colour range, and optionally only where it is joined to where you tapped."
+  "Find variants by hand: choosing \u201cBy hand\u201d no longer asks for the base picture or how small a change to catch; both are set inside (the first image is the base to start with, and \u201cUse all of it as the base\u201d in \u201cBuild the base\u201d makes any version the base).",
+  "The two pictures being compared are now chosen side by side, at the top of the panel (\u201cCompare\u201d and \u201cWith\u201d).",
+  "Making a layer keeps what you chose with the brushes, instead of starting the choice over.",
+  "The \u201cTake away\u201d brush now shows where it paints (in red) while you paint."
  ]
 }
