@@ -1,6 +1,6 @@
 {
- "version": 94,
- "name": "1.22.0-beta.24",
+ "version": 95,
+ "name": "1.22.0-beta.25",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -9,15 +9,19 @@
   "icon-192.png",
   "icon-512.png",
   "index.html",
+  "jbig2.wasm",
   "jsQR.js",
   "jszip.min.js",
   "manifest.webmanifest",
   "maskable-512.png",
+  "openjpeg.wasm",
   "p2p.js",
+  "pdf.min.js",
+  "pdf.worker.min.js",
+  "qcms_bg.wasm",
   "qrcode.js"
  ],
  "notes": [
-  "Find variants by hand: a see-through layer now gives back its own version as it was. Where the effect is not just one colour laid over (more than one colour, or more than a tint), it takes whatever colour and strength give what the version shows, instead of forcing one colour.",
-  "For a tint whose colour changes (a coloured gradient), a see-through layer can use \u201cSame strength\u201d: one strength everywhere (with a slider), and the colour is found at each point. Look at \u201cRebuilt\u201d on another version that has it to set the strength."
+  "PDF files can now be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in \u201cChoose ZIP, CBZ or PDF files\u201d, drop them on the window, share them to the app, or put them in a folder you add. The PDF reader is only loaded when a PDF is opened, and works offline."
  ]
 }
