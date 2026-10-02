@@ -1,6 +1,6 @@
 {
- "version": 91,
- "name": "1.22.0-beta.21",
+ "version": 92,
+ "name": "1.22.0-beta.22",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -17,8 +17,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants by hand: a \u201cDifference\u201d slider sets how different a point must be to count (from 2 to 100; 24 is Normal). The orange area follows it as you move it.",
-  "Any two versions can be compared with each other (\u201cCompared with\u201d), not only a version with the base.",
-  "The base can be put together by hand (\u201cBuild the base\u201d), for when every version has something of its own: choose a version and paint with \u201cTake\u201d to bring in what it shows there; \u201cPut back\u201d brings back the original. Orange shows where that version differs from the base as it is now. The layers are then made over the new base, and the version the base started from is compared too."
+  "Find variants by hand: \u201cInvert the choice\u201d swaps what goes into the layer and what does not.",
+  "A new \u201cOnly what changed\u201d switch (on to start with): the brush, the colour tool and Invert then only choose points that are different. Turn it off to choose anything.",
+  "A colour tool: tap a colour in the picture to choose (or take away) every point of that colour, with a colour range, and optionally only where it is joined to where you tapped."
  ]
 }
