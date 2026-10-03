@@ -1,6 +1,6 @@
 {
- "version": 96,
- "name": "1.22.0-beta.26",
+ "version": 97,
+ "name": "1.22.0-beta.27",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants by hand has a tidier panel: what is being compared stays at the top (with arrows to go to the previous or next version), with a line saying how much differs. Below it, tabs: Choose (choosing what goes into a layer, and the brush or colour tool settings), New layer, Layers, View (what to show and how different a point must be) and Base. The tools stay at the bottom, and the tab content scrolls on its own."
+  "Find variants by hand: the slider is now \u201cSensitivity\u201d, in the Choose tab, and starts at 100%: every point that differs at all shows. Lower it to ignore faint differences, like the noise in JPEG pictures. (Working out which versions have a layer, and how well a see-through colour fits, still allows for that noise.)"
  ]
 }
