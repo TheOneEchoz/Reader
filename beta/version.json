@@ -1,6 +1,6 @@
 {
- "version": 95,
- "name": "1.22.0-beta.25",
+ "version": 96,
+ "name": "1.22.0-beta.26",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "PDF files can now be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in \u201cChoose ZIP, CBZ or PDF files\u201d, drop them on the window, share them to the app, or put them in a folder you add. The PDF reader is only loaded when a PDF is opened, and works offline."
+  "Find variants by hand has a tidier panel: what is being compared stays at the top (with arrows to go to the previous or next version), with a line saying how much differs. Below it, tabs: Choose (choosing what goes into a layer, and the brush or colour tool settings), New layer, Layers, View (what to show and how different a point must be) and Base. The tools stay at the bottom, and the tab content scrolls on its own."
  ]
 }
