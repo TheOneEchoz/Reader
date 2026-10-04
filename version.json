@@ -1,6 +1,6 @@
 {
- "version": 70,
- "name": "1.21.2",
+ "version": 98,
+ "name": "1.22.0",
  "channel": "stable",
  "files": [
   "Sortable.min.js",
@@ -9,15 +9,26 @@
   "icon-192.png",
   "icon-512.png",
   "index.html",
+  "jbig2.wasm",
   "jsQR.js",
   "jszip.min.js",
   "manifest.webmanifest",
   "maskable-512.png",
+  "openjpeg.wasm",
   "p2p.js",
+  "pdf.min.js",
+  "pdf.worker.min.js",
+  "qcms_bg.wasm",
   "qrcode.js"
  ],
  "notes": [
-  "New on the unlock screen: \u201cExperimental version\u201d. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.",
-  "The change log of the experimental version is only shown to people using it."
+  "Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs \u201cerase everything\u201d typed.",
+  "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.",
+  "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; \u201cShift pairs\u201d for two-page spreads; an end card with \u201cRead next\u201d; dark panels while reading; the tap map only shows the first few times.",
+  "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.",
+  "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, \u201cSelect all\u201d stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer and Combine as layers, which uses the image you tapped first as the base.",
+  "Import: PDF files can be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in \u201cChoose ZIP, CBZ or PDF files\u201d, drop them on the window, share them to the app, or put them in a folder you add. It works offline. A cover.jpg next to chapter folders (in a folder, ZIP or CBZ) becomes the gallery's cover.",
+  "Menus keep their place: switching something or changing a setting no longer scrolls the menu back to the top, and a different menu always opens at the top. \u201cWhat's new\u201d starts closed for new users and shows the latest versions first.",
+  "Still in the experimental version only, while they are tested: Edit image, the new Find variants (including by hand), and the new layer menu changes."
  ]
 }

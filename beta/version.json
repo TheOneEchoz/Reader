@@ -1,6 +1,6 @@
 {
- "version": 97,
- "name": "1.22.0-beta.27",
+ "version": 99,
+ "name": "1.23.0-beta.1",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Find variants by hand: the slider is now \u201cSensitivity\u201d, in the Choose tab, and starts at 100%: every point that differs at all shows. Lower it to ignore faint differences, like the noise in JPEG pictures. (Working out which versions have a layer, and how well a see-through colour fits, still allows for that noise.)"
+  "Everything from 1.22.0 is now in the normal version too. Still only here, while it is tested: Edit image (and the pencils in the Layers menu), the new Find variants (up to 20 images, and by hand), and the Layers menu changes (the warning about layers on no saved page, renaming groups from their heading, the combination's name in the reader, and the half-height Layers panel while reading).",
+  "Fixed: after tagging several galleries at once, searching the library for the new tag found nothing until the library was opened again.",
+  "A cover.jpg next to chapter folders now also becomes the cover when a ZIP or CBZ is shared to the app or dropped on the window."
  ]
 }

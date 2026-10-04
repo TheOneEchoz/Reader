@@ -1,5 +1,5 @@
 // Tankōbon Reader service worker: keeps the app working offline.
-const CACHE = 'tankobon-beta-v97';
+const CACHE = 'tankobon-beta-v99';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './capacitor.js', './jszip.min.js', './Sortable.min.js', './p2p.js', './qrcode.js', './jsQR.js',
   './icon-192.png', './icon-512.png', './maskable-512.png', './apple-touch-icon.png',
   './pdf.min.js', './pdf.worker.min.js', './openjpeg.wasm', './jbig2.wasm', './qcms_bg.wasm'];
