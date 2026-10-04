@@ -3,7 +3,7 @@ name: Android app
 on:
   push:
     branches: [main]
-    paths: ['android-app/**', '.github/workflows/android.yml']
+    paths: ['android-app/**', '.github/workflows/android.yml', 'version.json']
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
           cd android-app
           npm ci
           rm -rf www && mkdir www
-          cp ../index.html ../*.js ../*.png ../manifest.webmanifest ../version.json www/
+          cp ../index.html ../*.js ../*.wasm ../*.png ../manifest.webmanifest ../version.json www/
           rm -f www/sw.js
           npx cap sync android
 
