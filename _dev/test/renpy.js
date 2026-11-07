@@ -133,7 +133,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const realSave = sv.files.some(f => /1-1.*\.save$/.test(f));
   ok('saves are kept encrypted', sv.enc);
   // leave (the button asks), then play again: the save must be there
-  await p.click('#gamebox .gameexit'); await p.waitForSelector('.askyes'); await p.click('.askyes button:has-text("Leave")');
+  await p.click('#gamebox .gameexit'); await p.waitForFunction(() => !document.getElementById('gamebox'), null, { timeout: 15000 }).catch(() => { });
   await p.waitForFunction(() => !document.getElementById('gamebox'), null, { timeout: 10000 }).catch(() => { });
   ok('leaving closes the player', !(await p.$('#gamebox')));
   await p.waitForTimeout(800);

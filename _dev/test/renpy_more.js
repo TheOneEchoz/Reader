@@ -89,7 +89,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('music from the archive is decoded and plays', aud.dec > 0 && aud.start > 0 && aud.state === 'running', JSON.stringify(aud));
   await p.screenshot({ path: SHOT('story') });
   console.log('COVER@beforeleave', JSON.stringify(await p.evaluate(async id => { const g = await S.gal(id); return [g.game.coverBy, Object.values(g.meta)[0][2]]; }, gid)));
-  await p.click('#gamebox .gameexit'); await p.waitForSelector('.askyes'); await p.click('.askyes button:has-text("Leave")'); await p.waitForTimeout(1200);
+  await p.click('#gamebox .gameexit'); await p.waitForFunction(() => !document.getElementById('gamebox'), null, { timeout: 15000 }).catch(() => { }); await p.waitForTimeout(1200);
   console.log('COVER@afterleave', JSON.stringify(await p.evaluate(async id => { const g = await S.gal(id); return [g.game.coverBy, Object.values(g.meta)[0][2]]; }, gid)));
   // one picture selected: it can be the cover
   await p.click('#game-assets'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 60000 }); await p.waitForTimeout(800);
@@ -154,6 +154,8 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.waitForSelector('#game-add', { timeout: 60000 });
   const seg = await p.$eval('#sheetBody .seg', e => e.innerText.replace(/\s+/g, ' ')).catch(() => '');
   ok('dropping a game on an open folder offers that folder', /In “/.test(seg) && /on its own/.test(seg), seg);
+  // (the same game is in the library already: it offers to update it; here it is added again)
+  if (await p.$('#game-upd-0')) await p.click('#game-upd-0 button:has-text("Add as another game")');
   await p.click('#game-add'); await p.waitForSelector('.askyes', { timeout: 120000 }); await p.click('.askyes button:has-text("Cancel")'); await p.waitForTimeout(1500);
   const n = await p.evaluate(async pl => { const sm = await S.gal(pl.sample); return sm.chapters.find(c => c.id === pl.ch).games.length; }, placed);
   ok('the dropped game went into the folder', n === 2, n);

@@ -1,0 +1,77 @@
+// Pictures on screen: while playing, a button lists the pictures the game is showing right now (also from archives),
+// with a preview; one can become the cover, or several go into a gallery, and the game keeps running.
+const { chromium } = require('/home/claude/tankobon/test/node_modules/playwright');
+const fs = require('fs'), path = require('path');
+const GAMEDIR = '/tmp/claude-0/games/a8.5.3/the_question-7.0-pc', RT = '/home/claude/reader/renpy/';
+let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + n + (x ? ' :: ' + x : '')); };
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+  await ctx.route('**/fonts.g*/**', r => r.abort());
+  await ctx.route('https://theoneechoz.github.io/Reader/renpy/**', r => { const f = path.join(RT, decodeURIComponent(new URL(r.request().url()).pathname.replace('/Reader/renpy/', ''))); fs.existsSync(f) ? r.fulfill({ status: 200, body: fs.readFileSync(f) }) : r.fulfill({ status: 404 }); });
+  const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+  await p.goto('http://localhost:8768/?stay'); await p.waitForSelector('#user1');
+  await p.waitForFunction(() => document.activeElement && document.activeElement.id === 'user1').catch(() => { });
+  await p.fill('#user1', 'onscr'); await p.fill('#pw1', 'onscpass12'); await p.fill('#pw2', 'onscpass12'); await p.click('#v-lock button[type=submit]');
+  await p.waitForSelector('#v-library:not([hidden])', { timeout: 30000 }); await p.waitForTimeout(1500);
+  await p.click('#v-library button:has-text("Add")'); await p.waitForSelector('#add-game');
+  const [ch] = await Promise.all([p.waitForEvent('filechooser'), p.click('#add-game')]); await ch.setFiles(GAMEDIR);
+  await p.waitForSelector('#game-add', { timeout: 60000 }); await p.click('#game-add');
+  await p.waitForSelector('.askyes', { timeout: 120000 }); await p.click('.askyes button:has-text("Download")');
+  for (let k = 0; k < 120; k++) { await p.waitForTimeout(1000); if (await p.evaluate(async () => { const g = (await S.gals()).find(x => x.game); return g && await RPY.has(g.game.rt); })) break; }
+  await p.waitForTimeout(1500);
+  const gid = await p.evaluate(async () => (await S.gals()).find(x => x.game).id);
+    const start = async () => {
+    for (let k = 0; k < 120 && !(await p.evaluate(() => GAME.loaded)); k++) await p.waitForTimeout(1000);
+    const fr = p.frames().find(f => f !== p.mainFrame());
+    for (let k = 0; k < 40; k++) { await p.waitForTimeout(2000); if (await fr.evaluate(() => { const pre = document.getElementById('presplash'); return !pre || !pre.isConnected || pre.style.display === 'none'; }).catch(() => false)) break; }
+    await p.waitForTimeout(2500); return fr;
+  };
+  await p.click('#game-play'); let fr = await start();
+  const box = await (await p.$('#gamebox iframe')).boundingBox();
+  await p.mouse.click(box.x + box.width * 0.057, box.y + box.height * 0.40); await p.waitForTimeout(3000); // Start
+  for (let k = 0; k < 2; k++) { await p.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6); await p.waitForTimeout(1200); }
+  const showing = await fr.evaluate(() => window.renpy_exec('result = [" ".join(t) for t in renpy.get_showing_tags("master", True)] if hasattr(renpy, "get_showing_tags") else []')).catch(e => String(e));
+  await p.click('#gamebox .gamepics');
+  await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  const names = await p.$$eval('#sheetBody .btile.asset', a => a.map(e => e.title));
+  console.log('SHOWING', JSON.stringify(showing), 'PICKED', JSON.stringify(names));
+  ok('the button lists the pictures on screen (from the archive)', names.some(n => /bg /.test(n)), names.join(', '));
+  ok('only what is on screen, not every picture', names.length > 0 && names.length < 30, names.length + ' pictures');
+  const z = await p.evaluate(() => [getComputedStyle($('#sheet')).zIndex, getComputedStyle($('#gamebox')).zIndex]);
+  ok('the sheet shows above the game', +z[0] > +z[1], z.join(' > '));
+  // preview
+  await p.click('#sheetBody .btile.asset'); // select first
+  const viewB = await p.$('#sheetBody button:has-text("View")');
+  if (viewB) { await viewB.click(); await p.waitForTimeout(1200); ok('preview opens', await p.evaluate(() => !!document.querySelector('#viewer:not([hidden]), .viewer, #v-viewer:not([hidden])'))); await p.keyboard.press('Escape'); await p.waitForTimeout(800); }
+  else ok('preview opens', false, 'no View button');
+  // use it as cover: the game keeps running
+  await p.evaluate(() => { const b = document.querySelector('#sheetBody .btile.asset.sel, #sheetBody .btile.asset[aria-pressed="true"]'); if (!b) document.querySelector('#sheetBody .btile.asset').click(); });
+  const coverOk = await p.$('#sheetBody button:has-text("cover"):not([disabled]), #sheetBody button:has-text("Cover"):not([disabled])');
+  if (coverOk) {
+    await coverOk.click(); await p.waitForTimeout(1500);
+    const cropDone = await p.$('#sheetBody button:has-text("Use"), #sheetBody button:has-text("Done"), #sheetBody button:has-text("Save")');
+    if (cropDone) { await cropDone.click(); await p.waitForTimeout(2000); }
+  }
+  const after = await p.evaluate(async id => ({ by: (await S.gal(id)).game.coverBy, view: CUR.view, box: !!document.getElementById('gamebox'), loaded: GAME.loaded }), gid);
+  ok('choosing the cover from the game keeps the game running', after.view === 'game' && after.box && after.loaded, JSON.stringify(after));
+  ok('and the cover changed', after.by === 'user', JSON.stringify(after));
+  // add to a gallery: make one first, then add the on-screen pictures to it
+  await p.evaluate(async () => { const g = newGallery('Scenes'); Tree.ensureRoot(g); await S.putGal ? 0 : 0; const mk = () => new Promise(r => { const c = document.createElement('canvas'); c.width = 50; c.height = 50; c.toBlob(bl => r({ name: 'x.png', get: async () => new File([bl], 'x.png', { type: 'image/png' }) })); }); await importInto(g, [{ title: 'Scenes', chId: g.chapters[0].id, items: [await mk()] }], () => { }, () => false); });
+  await p.evaluate(() => closeSheet()); await p.waitForTimeout(800);
+  await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  await p.click('#sheetBody button:has-text("Select all")');
+  await p.click('#asset-addto'); await p.waitForSelector('#asset-where');
+  await p.evaluate(() => { const s = $('#asset-where'); s.value = [...s.options].find(o => /^Scenes/.test(o.textContent)).value; });
+  await p.click('#sheetBody button:has-text("Add them")');
+  for (let k = 0; k < 30 && await p.$('#sheet.open, #sheet:not([hidden]) #asset-where'); k++) await p.waitForTimeout(500);
+  await p.waitForTimeout(1000);
+  console.log('TOAST', await p.evaluate(() => [...document.querySelectorAll('.toast, #toast')].map(e => e.innerText).join(' | ')));
+  const gal = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.title === 'Scenes'); return { n: g.chapters.reduce((a, c) => a + c.pages.length, 0), view: CUR.view, loaded: GAME.loaded }; });
+  ok('Add to a gallery puts them in, and the game keeps running', gal.n >= 1 + names.length && gal.view === 'game' && gal.loaded, JSON.stringify(gal));
+  await p.screenshot({ path: '/tmp/claude-0/shots/onscreen.png' });
+  errs.splice(0, errs.length, ...errs.filter(e => !/serviceWorker/.test(e)));
+  ok('no errors', errs.length === 0, errs.slice(0, 3).join(' | '));
+  console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
+  await b.close(); process.exit(fails ? 1 : 0);
+})();

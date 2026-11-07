@@ -29,7 +29,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.waitForTimeout(3000);
   await fr.evaluate(() => window.renpy_exec('renpy.save("1-1", "Chapter one")'));
   await p.waitForTimeout(4000);
-  await p.click('#gamebox .gameexit'); await p.waitForSelector('.askyes'); await p.click('.askyes button:has-text("Leave")'); await p.waitForTimeout(1500);
+  await p.click('#gamebox .gameexit'); await p.waitForFunction(() => !document.getElementById('gamebox'), null, { timeout: 15000 }).catch(() => { }); await p.waitForTimeout(1500);
   // the list
   await p.click('#game-show-saves'); await p.waitForSelector('#game-saves-list .saverow', { timeout: 10000 }); await p.waitForTimeout(1500);
   const row = await p.evaluate(() => { const r = document.querySelector('#game-saves-list .saverow'); return { text: r.innerText.replace(/\s+/g, ' '), pic: !!r.querySelector('img').src && r.querySelector('img').naturalWidth > 0, n: document.querySelectorAll('#game-saves-list .saverow').length }; });

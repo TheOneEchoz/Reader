@@ -34,7 +34,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
     for (let k = 0; k < 40; k++) { await p.waitForTimeout(2000); if (await fr.evaluate(() => { const pre = document.getElementById('presplash'); return !pre || !pre.isConnected || pre.style.display === 'none'; }).catch(() => false)) break; }
     await p.waitForTimeout(2000);
     const v = await fr.evaluate(() => window.renpy_exec('result = [getattr(store, "tkb_mod", "off"), getattr(store, "tkb_mod2", "no")]')).catch(e => 'error ' + e);
-    await p.click('#gamebox .gameexit'); await p.waitForSelector('.askyes'); await p.click('.askyes button:has-text("Leave")'); await p.waitForTimeout(1500);
+    await p.click('#gamebox .gameexit'); await p.waitForFunction(() => !document.getElementById('gamebox'), null, { timeout: 15000 }).catch(() => { }); await p.waitForTimeout(1500);
     return JSON.stringify(v);
   };
   const v1 = await modValue();

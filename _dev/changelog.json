@@ -1,5 +1,21 @@
 [
  {
+  "v": 107,
+  "name": "1.23.0-beta.9",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "Ren'Py games: Continue on a game's page starts straight in your newest save.",
+   "Leaving a game with ×, locking it with the new lock button, or switching away from or closing the app now saves to the game's newest auto-save first, so nothing is lost.",
+   "While playing, the new pictures button shows the pictures on screen right now (backgrounds, characters, interface), with a preview. Pick one as the cover, make a gallery from them, or add them to a gallery you have. The game keeps running.",
+   "Game updates: Update the game on a game's page (or dropping a newer copy on it, or adding a game with the same name) replaces its files and keeps its saves, mods, cover, name and folder. A mod still inside the new folder is not added twice.",
+   "Game saves are shared with your other devices that have the same game, when sync is on (Settings → Sync can switch this off). The newer save wins; a deleted save stays deleted; the games themselves stay on each device.",
+   "Backup (Settings → Backup): save your whole library — galleries, pages, tags and, if you like, games — as a file that stays encrypted with your password. Restore adds back what is missing and keeps what you have; a backup made with another password can be restored with that password. Big libraries are split into several files.",
+   "A folder or gallery holding games can take its cover from any of those games' pictures (Edit → From a game's pictures).",
+   "Fixed: renaming a tag now updates the library's tag search; the library's Tags box counts tags added to several galleries at once; full screen in the browser is no longer taken for the installed app; edits to a page show up right away."
+  ]
+ },
+ {
   "v": 106,
   "name": "1.23.0-beta.8",
   "date": "2026-11-07",
