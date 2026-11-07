@@ -1,6 +1,6 @@
 {
- "version": 102,
- "name": "1.23.0-beta.4",
+ "version": 103,
+ "name": "1.23.0-beta.5",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,10 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: “See the game's pictures” at the bottom of a game's page shows every picture in the game, including those in its archives. Select any number to make a gallery of them; with one selected you can also make it the cover.",
-  "Go through the game's pictures like a gallery: tap the corner button of a picture, or View, then use the arrows, the arrow keys or swipe. You can select pictures and set the cover from there too.",
-  "Choosing a cover lets you choose what part of the picture it shows: drag it and zoom it in the cover's frame. “Adjust the cover” frames it again later, starting from the whole picture.",
-  "Import saves from before the game was in the app: on Windows they are in %APPDATA%\\RenPy. Pick the game's folder there, or the whole RenPy folder; the app finds this game's saves, and brings the computer's save keys so Ren'Py does not ask whether to trust them.",
-  "The pictures list no longer jumps while pictures are loading."
+  "Ren'Py games, Windows app: the app looks for the game's saves in Ren'Py's save folder (%APPDATA%\\RenPy) by itself, after adding a game and on the game's page, and asks whether to import them. It reads the folder name the game itself uses, even from its compiled scripts. “Not now” stops it asking until new saves appear there. (Needs the new Windows app, build 8 or newer.)",
+  "Saves in the game's own folder (game/saves) are now shown when adding the game, with a switch to include them or leave them out.",
+  "Imported saves are copies, kept encrypted in the app; the originals are left untouched."
  ]
 }

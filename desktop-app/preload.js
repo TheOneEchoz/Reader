@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('TkbDesktop', {
   writeInfo: obj => ipcRenderer.invoke('info:write', obj),
   pickFolder: () => ipcRenderer.invoke('pick:folder'),
   readPicked: abs => ipcRenderer.invoke('pick:read', abs),
+  renpySaves: () => ipcRenderer.invoke('renpy:saves'),
+  renpyRead: (dir, name) => ipcRenderer.invoke('renpy:read', dir, name),
   saveFile: (name, data) => ipcRenderer.invoke('save:file', name, data),
   setSecure: on => ipcRenderer.invoke('sec:set', on),
   fetchJSON: url => ipcRenderer.invoke('net:json', url),

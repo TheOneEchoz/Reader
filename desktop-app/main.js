@@ -98,6 +98,30 @@ app.whenReady().then(async () => {
 
 /* ---------- library files (paths relative to Documents\Tankobon) ---------- */
 ipcMain.handle('lib:info', async () => ({ root: LIB }));
+/* ---------- Ren'Py's own save folder (read only), to offer importing saves made before a game was added ---------- */
+const RENPY_SAVES = process.platform === 'win32' ? path.join(app.getPath('appData'), 'RenPy')
+  : process.platform === 'darwin' ? path.join(app.getPath('home'), 'Library', 'RenPy') : path.join(app.getPath('home'), '.renpy');
+const plainName = n => typeof n === 'string' && n && n !== '.' && n !== '..' && !/[\\/]/.test(n);
+ipcMain.handle('renpy:saves', async () => {
+  const dirs = [];
+  let ents = []; try { ents = await fsp.readdir(RENPY_SAVES, { withFileTypes: true }); } catch (e) { return { root: RENPY_SAVES, dirs }; }
+  for (const d of ents) {
+    if (!d.isDirectory()) continue;
+    const files = [];
+    try {
+      for (const f of await fsp.readdir(path.join(RENPY_SAVES, d.name), { withFileTypes: true })) {
+        if (!f.isFile()) continue;
+        const st = await fsp.stat(path.join(RENPY_SAVES, d.name, f.name)); files.push({ name: f.name, size: st.size, mtime: st.mtimeMs });
+      }
+    } catch (e) { }
+    dirs.push({ dir: d.name, files });
+  }
+  return { root: RENPY_SAVES, dirs };
+});
+ipcMain.handle('renpy:read', async (e, dir, name) => {
+  if (!plainName(dir) || !plainName(name)) throw new Error('Not a save file name.');
+  return fsp.readFile(path.join(RENPY_SAVES, dir, name));
+});
 ipcMain.handle('lib:write', async (e, rel, data) => {
   const f = inside(LIB, rel);
   await fsp.mkdir(path.dirname(f), { recursive: true });
