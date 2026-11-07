@@ -3003,13 +3003,39 @@ function htmlBoot(ITEMS, CSS) {
     } }); }
   { const ae = Element.prototype.setAttribute; Element.prototype.setAttribute = function (n, v) { if (/^src$/i.test(n) && (this instanceof HTMLImageElement || this instanceof HTMLMediaElement || this instanceof HTMLScriptElement || this instanceof HTMLSourceElement)) { this.src = v; return; } return ae.call(this, n, v); }; }
   if (window.FontFace) { const RF = window.FontFace; window.FontFace = function (family, source, desc) { if (typeof source === 'string') source = source.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (m, q, u) => { const p = pathOf(u); return p != null && urls.has(p) ? `url("${urls.get(p)}")` : m; }); return new RF(family, source, desc); }; window.FontFace.prototype = RF.prototype; }
+  /* workers (RPG Maker MZ decodes its music in one): started from the file's copy, and what they load is answered the same way */
+  const RealWorker = window.Worker;
+  if (RealWorker) {
+    const workerShim = (MAP, BASE, MAIN) => {
+      const ORIGIN = 'https://game.invalid/', known = new Set(Object.values(MAP));
+      const pathOf = u => { try { const x = new URL(String(u), BASE); if (x.origin + '/' !== ORIGIN) return null; return decodeURIComponent(x.pathname.slice(1)).toLowerCase(); } catch (e) { return null; } };
+      const map = u => {
+        const p = pathOf(u); if (p != null && MAP[p]) return MAP[p];
+        if (/^blob:/.test(String(u)) && !known.has(String(u))) { const n = '/' + String(u).split('/').pop().toLowerCase(); const k = Object.keys(MAP).find(x => ('/' + x).endsWith(n)); if (k) return MAP[k]; } // (a file named next to the worker itself)
+        return u;
+      };
+      const oi = self.importScripts.bind(self); self.importScripts = (...a) => oi(...a.map(map));
+      if (self.fetch) { const of = self.fetch.bind(self); self.fetch = (i, o) => of(typeof i === 'string' || i instanceof URL ? map(String(i)) : i, o); }
+      if (self.XMLHttpRequest) { const ox = XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open = function (m, u, ...r) { return ox.call(this, m, map(u), ...r); }; }
+      oi(MAP[MAIN]);
+    };
+    window.Worker = function (url, opts) {
+      const p = pathOf(url);
+      if (p == null || !urls.has(p)) return new RealWorker(url, opts);
+      const map = {}; for (const [k, u] of urls) map[k] = u;
+      const code = `(${workerShim.toString()})(${JSON.stringify(map)}, ${JSON.stringify(new URL(String(url), document.baseURI).href)}, ${JSON.stringify(p)});`;
+      const o = Object.assign({}, opts || {}); delete o.type; // (classic: the shim uses importScripts)
+      return new RealWorker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), o);
+    };
+    window.Worker.prototype = RealWorker.prototype;
+  }
   // the game may only show its own page: no leaving, no new windows
   window.open = () => null;
   try { Object.defineProperty(window, 'require', { configurable: true, value: undefined }); } catch (e) { }
   /* start: get the file list and saves, load scripts, style sheets and fonts first (they are needed at once), then run the page's scripts in order */
   async function start(m) {
     FILES = new Map(m.files); BASE = m.base || ''; Object.assign(STORE, m.store || {});
-    const early = [...FILES.keys()].filter(p => /\.(js|mjs|css|ttf|otf|woff2?)$/i.test(p) && p.startsWith(BASE.toLowerCase()));
+    const early = [...FILES.keys()].filter(p => /\.(js|mjs|css|ttf|otf|woff2?|wasm)$/i.test(p) && p.startsWith(BASE.toLowerCase()));
     let n = 0; const total = early.length;
     for (let i = 0; i < early.length; i += 8) { await Promise.all(early.slice(i, i + 8).map(p => isForageLib(p) ? null : blobURL(p))); n = Math.min(total, i + 8); post({ t: 'progress', done: n, total }); }
     // style sheets, with the files they point to
@@ -3034,6 +3060,8 @@ function htmlBoot(ITEMS, CSS) {
     }
     // scripts the page's scripts added themselves (RPG Maker's plugins) run before the page counts as loaded, as in a browser
     for (let k = 0; k < 300 && PENDING > 0; k++) await new Promise(r => setTimeout(r, 50));
+    // and the files they asked for have arrived (RPG Maker MZ checks a request it made before it starts, when the page loads)
+    for (let k = 0; k < 200 && waiting.size > 0; k++) await new Promise(r => setTimeout(r, 25));
     post({ t: 'loaded' });
     // the page "finished loading" now, for games that wait for it
     try { document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true })); } catch (e) { }

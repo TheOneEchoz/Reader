@@ -1,6 +1,6 @@
 {
- "version": 114,
- "name": "1.23.0-beta.16",
+ "version": 115,
+ "name": "1.23.0-beta.17",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Sounds for a page: each sound has its own loudness slider. It is kept with the gallery, so the sound plays at that level on every page that has it; the overall volume still sets how loud everything is."
+  "RPG Maker MZ games: fixed “SecurityError: Failed to construct 'Worker'” when starting (MZ decodes its music in a background worker). Workers now start from the game's own files, and the files they load are answered by the app too.",
+  "HTML games wait for the files their scripts asked for before the page counts as loaded, as RPG Maker MZ expects."
  ]
 }

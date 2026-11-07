@@ -1,5 +1,15 @@
 [
  {
+  "v": 115,
+  "name": "1.23.0-beta.17",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "RPG Maker MZ games: fixed “SecurityError: Failed to construct 'Worker'” when starting (MZ decodes its music in a background worker). Workers now start from the game's own files, and the files they load are answered by the app too.",
+   "HTML games wait for the files their scripts asked for before the page counts as loaded, as RPG Maker MZ expects."
+  ]
+ },
+ {
   "v": 114,
   "name": "1.23.0-beta.16",
   "date": "2026-11-07",
