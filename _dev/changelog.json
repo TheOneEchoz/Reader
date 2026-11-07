@@ -1,5 +1,14 @@
 [
  {
+  "v": 110,
+  "name": "1.23.0-beta.12",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "Ren'Py games: opening a game shows only the app's own loading screen (the game's cover, its name and the app's progress bar) until the game's first screen appears. Ren'Py's own blue loading bar is no longer shown; its steps (unpacking the engine, loading the story) appear in the app's loading screen instead."
+  ]
+ },
+ {
   "v": 109,
   "name": "1.23.0-beta.11",
   "date": "2026-11-07",

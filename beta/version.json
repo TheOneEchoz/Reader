@@ -1,6 +1,6 @@
 {
- "version": 109,
- "name": "1.23.0-beta.11",
+ "version": 110,
+ "name": "1.23.0-beta.12",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,9 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Pictures on screen: the pictures you select are now put together into one picture, drawn as they are in the game (each in its place, in front of or behind the others). Make a gallery, Add to a gallery and Use as the cover use that one picture; View shows it first. “Each on its own” keeps them separate.",
-  "The camera button is gone: Pictures on screen does that job.",
-  "RPG Maker MV and MZ games (and other games made as a web page) can be added like a Ren'Py game: drop the game's folder or ZIP, or use Add → Add a game. They play sealed inside the app with nothing to download; the Windows player that comes with them is left out.",
-  "Their saves are kept encrypted with the game (and shared with your other devices when sync is on). Saves from playing on a computer (the save folder) are picked up when adding the game, or with Import saves on its page."
+  "Ren'Py games: opening a game shows only the app's own loading screen (the game's cover, its name and the app's progress bar) until the game's first screen appears. Ren'Py's own blue loading bar is no longer shown; its steps (unpacking the engine, loading the story) appear in the app's loading screen instead."
  ]
 }

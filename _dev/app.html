@@ -86,6 +86,8 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .card .meta{font-size:12px;color:var(--muted);margin:0}
 .bar{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent)}
+.progress.busy .bar i{width:35%!important;animation:barbusy 1.3s ease-in-out infinite;border-radius:2px}
+@keyframes barbusy{0%{transform:translateX(-100%)}100%{transform:translateX(290%)}}
 .empty{border:2px dashed var(--line);border-radius:14px;padding:32px 20px;text-align:center;display:grid;gap:12px;justify-items:center}
 .empty h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0}
 .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.28);min-height:54px;padding:0 22px;font-size:15px}
@@ -2322,7 +2324,7 @@ function rpyDoc(html, loader) {
   html = html.replace(/<link\b[^>]*>/gi, '').replace(/navigator\.serviceWorker/g, '(void 0)').replace(/<img\b[^>]*\bid=["']?presplash\b[^>]*>/i, '<img id="presplash" alt="">');
   const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; connect-src blob: data:; img-src blob: data:; media-src blob: data:; style-src 'unsafe-inline'; font-src blob: data:; worker-src blob:; form-action 'none'";
   html = html.replace(/<head>/i, `<head><meta http-equiv="Content-Security-Policy" content="${csp}"><script>try{Object.defineProperty(Navigator.prototype,'serviceWorker',{get:function(){return undefined},configurable:true})}catch(e){}<\/script>`);
-  html = html.replace(/<\/head>/i, '<style>#ContextContainer{display:none!important}html,body{background:#000}</style></head>');
+  html = html.replace(/<\/head>/i, '<style>#ContextContainer,#statusDiv,#statusbar_container,#presplash{display:none!important}html,body{background:#000}</style></head>');
   html = html.replace(/<\/body>(?![\s\S]*<\/body>)/i, `<script>(${rpyBoot.toString()})(${JSON.stringify(scripts)}, ${JSON.stringify(loader)});<\/script></body>`);
   return html;
 }
@@ -2440,6 +2442,19 @@ function rpyBoot(SCRIPTS, LOADER) {
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
   });
   window.addEventListener('error', e => fail(e.message));
+  /* Ren'Py's own loading steps go to the app's loading screen; it is ready when its stand-in picture (presplash) goes */
+  { let seen = false, sent = false, last = '';
+    const ready = () => { if (!sent) { sent = true; post({ t: 'ready' }); } };
+    const mo = new MutationObserver(() => {
+      const pre = document.getElementById('presplash'); if (pre) seen = true; else if (seen) ready();
+      const st = document.getElementById('statusTextDiv') || document.getElementById('status');
+      const t = st ? (st.innerText || st.textContent || '').trim().split('\n').filter(Boolean).pop() || '' : '';
+      if (t && t !== last) { last = t; post({ t: 'status', text: t }); }
+    });
+    const go = () => mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+    if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+    window.addEventListener('message', e => { if (e.source === P && e.data && e.data.t === 'boot') setTimeout(ready, 90000); }); // (never stuck behind it)
+  }
   window.addEventListener('keydown', e => {
     const t = e.target;
     if (e.key === 'Enter' && !e.isComposing && t && t.id === 'inputText') { e.preventDefault(); const f = document.getElementById('inputForm'); if (f) f.dispatchEvent(new Event('submit', { cancelable: true })); }
@@ -2719,8 +2734,14 @@ async function openGame(id, cont) {
       } else if (m.t === 'progress') {
         lbl.textContent = `Opening the game · ${mb(m.done)} of ${mb(m.total)}`; bar.firstChild.style.width = (100 * m.done / Math.max(1, m.total)) + '%';
       } else if (m.t === 'loaded') {
-        GAME.loaded = true; load.hidden = true; frame.focus();
+        // the files are in; Ren'Py now starts (its own steps are shown here, in the app's style, until its first screen)
+        GAME.loaded = true; lbl.textContent = 'Starting the game…'; bar.parentNode.classList.add('busy');
         if (!['user', 'menu'].includes(g.game.coverBy)) menuCover();
+      } else if (m.t === 'status') {
+        // (only Ren'Py's known steps, in the app's words)
+        if (!load.hidden && GAME.loaded) { const t = String(m.text || ''); const w = /script|story/i.test(t) && !/extract/i.test(t) ? 'Loading the story…' : /unpack|extract/i.test(t) ? 'Unpacking the engine…' : null; if (w) lbl.textContent = w; }
+      } else if (m.t === 'ready') {
+        load.hidden = true; frame.focus();
       } else if (m.t === 'onscreenres') {
         if (GAME.onScreen) GAME.onScreen(m.ents);
       } else if (m.t === 'composeres') {
@@ -2735,7 +2756,7 @@ async function openGame(id, cont) {
         setTimeout(() => back('detail', { id }), 300);
       } else if (m.t === 'error') {
         console.warn('game:', m.msg);
-        if (!GAME.loaded) lbl.textContent = 'The game could not start: ' + m.msg;
+        if (!load.hidden) { bar.parentNode.classList.remove('busy'); lbl.textContent = 'The game could not start: ' + m.msg; }
       }
     } catch (x) { console.error(x); }
   };
