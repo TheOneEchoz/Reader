@@ -1,0 +1,46 @@
+// The game's pictures in different orders: name, file size, picture size, and similar ones together.
+const { chromium } = require('/home/claude/tankobon/test/node_modules/playwright');
+const GAMEDIR = '/tmp/claude-0/games/a8.5.3/the_question-7.0-pc';
+let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + n + (x ? ' :: ' + x : '')); };
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+  await ctx.route('**/fonts.g*/**', r => r.abort()); await ctx.route('https://theoneechoz.github.io/**', r => r.abort());
+  const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+  await p.goto('http://localhost:8768/?stay'); await p.waitForSelector('#user1');
+  await p.waitForFunction(() => document.activeElement && document.activeElement.id === 'user1').catch(() => { });
+  await p.fill('#user1', 'sorter'); await p.fill('#pw1', 'sortpass12'); await p.fill('#pw2', 'sortpass12'); await p.click('#v-lock button[type=submit]');
+  await p.waitForSelector('#v-library:not([hidden])', { timeout: 30000 }); await p.waitForTimeout(1500);
+  await p.click('#v-library button:has-text("Add")'); await p.waitForSelector('#add-game');
+  const [ch] = await Promise.all([p.waitForEvent('filechooser'), p.click('#add-game')]); await ch.setFiles(GAMEDIR);
+  await p.waitForSelector('#game-add', { timeout: 60000 }); await p.click('#game-add');
+  await p.waitForSelector('.askyes', { timeout: 120000 }); await p.click('.askyes button:has-text("Cancel")'); await p.waitForTimeout(1500);
+  const names = () => p.$$eval('#sheetBody .btile.asset', a => a.map(e => e.title));
+  await p.click('#game-assets'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 60000 });
+  await p.click('#asset-sort button:has-text("Name")'); await p.waitForTimeout(500);
+  const byName = await names(); const sorted = [...byName].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  ok('Name: A to Z by folder and name', JSON.stringify(byName) === JSON.stringify(sorted), byName.slice(0, 4).join(', '));
+  await p.click('#asset-sort button:has-text("File size")'); await p.waitForTimeout(500);
+  const sizes = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.game); const pics = await rpyPictures((await rpyGetJSON(g.game.list)) || []); const m = Object.fromEntries(pics.map(x => [x.name, x.size])); return [...document.querySelectorAll('#sheetBody .btile.asset')].map(e => m[e.title]); });
+  ok('File size: biggest first', sizes.every((s, i) => i === 0 || s <= sizes[i - 1]), sizes.slice(0, 5).join(', '));
+  const t0 = Date.now();
+  await p.click('#asset-sort button:has-text("Picture size")');
+  await p.waitForFunction(() => !document.querySelector('#asset-sort.busy'), null, { timeout: 120000 });
+  const tMeasure = ((Date.now() - t0) / 1000).toFixed(1);
+  const areas = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.game); const a = await rpyGetJSON(g.game.ana); const pics = await rpyPictures((await rpyGetJSON(g.game.list)) || []); const m = Object.fromEntries(pics.map(x => [x.name, a[x.name + '|' + x.size]])); return [...document.querySelectorAll('#sheetBody .btile.asset')].map(e => m[e.title] ? m[e.title][0] * m[e.title][1] : 0); });
+  ok('Picture size: biggest first (measured once)', areas.length > 50 && areas.every((s, i) => i === 0 || s <= areas[i - 1]), `${tMeasure}s; ${areas.slice(0, 4).join(', ')}`);
+  await p.click('#asset-sort button:has-text("Similar")'); await p.waitForTimeout(800);
+  const sim = await p.evaluate(() => { const out = []; let cur = []; for (const el of document.querySelectorAll('#sheetBody .bgrid > *')) { if (el.classList.contains('agap')) { out.push(cur); cur = el.classList.contains('others') ? ['--OTHERS--'] : []; } else cur.push(el.querySelector('.btile').title.split('/').pop()); } out.push(cur); return out; });
+  const sylvieRuns = (() => { let runs = 0, prev = false; for (const gr of sim) for (const n of gr) { const s = /sylvie/.test(n); if (s && !prev) runs++; prev = s; } return runs; })();
+  const bgGroups = sim.filter(gr => gr.some(n => /^bg /.test(n)));
+  console.log('GROUPS:', sim.map(gr => '[' + gr.join(', ') + ']').join(' | ').slice(0, 1500));
+  ok('Similar: the character pictures are kept together', sylvieRuns <= 2, `${sylvieRuns} runs`);
+  ok('Similar: different backgrounds are not lumped with the character', bgGroups.every(gr => !gr.some(n => /sylvie/.test(n))));
+  // measured once: opening again needs no measuring
+  await p.evaluate(() => closeSheet()); await p.click('#game-assets'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 60000 });
+  const quick = await p.evaluate(() => !/Measuring/.test(document.querySelector('#sheetBody').innerText));
+  ok('opening again uses the stored measurements (and keeps the order)', quick && await p.evaluate(() => $('#asset-sort button[aria-pressed="true"]').textContent === 'Similar'));
+  ok('no errors', errs.length === 0, errs.slice(0, 3).join(' | '));
+  console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
+  await b.close(); process.exit(fails ? 1 : 0);
+})();
