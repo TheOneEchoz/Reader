@@ -1,6 +1,6 @@
 {
- "version": 104,
- "name": "1.23.0-beta.6",
+ "version": 105,
+ "name": "1.23.0-beta.7",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: “Show the saves” on a game's page lists its saves, each with its picture, name and date. Delete one with the bin button; Undo brings it back.",
-  "Importing saves can be undone: the message after an import has Undo, which puts the saves back as they were.",
-  "“Export saves” gives a ZIP of the game's saves laid out like Ren'Py's own save folder, to keep as a copy or put back on a computer. The app's save keys are left out of it, so they can never replace a computer's own."
+  "Ren'Py games: the game's pictures can be put in different orders: Suggested, Name, File size, Picture size, and Similar, which puts look-alike pictures together (the same character in different poses or outfits, the same scene with small changes), with the ones like no other at the end.",
+  "Picture size and Similar look at every picture once; the result is kept, encrypted, with the game, so it is instant afterwards. The order you chose is remembered while the app is open."
  ]
 }
