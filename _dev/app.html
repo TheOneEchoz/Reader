@@ -7857,6 +7857,10 @@ const Snd = {
     g.meta[id] = [0, 0, name, 'a', size]; return id;
   },
   playing() { return [...this.on.values()].filter(x => !x.leaving).length; },
+  /* how loud a sound plays: the overall volume times that sound's own level in its gallery (the same on every page with it) */
+  level(g, aid) { const l = g && g.sndVol && g.sndVol[aid]; return l == null ? 1 : l; },
+  target(aid) { return this.muted ? 0 : Math.min(1, this.vol * this.level(R.g, aid)); },
+  setLevel(g, aid, v) { g.sndVol = g.sndVol || {}; if (v === 1) delete g.sndVol[aid]; else g.sndVol[aid] = v; const x = this.on.get(aid); if (x && !x.leaving && R.g && R.g.id === g.id) { clearInterval(x.fi); x.el.volume = this.target(aid); } },
   /* what should be playing now: the sounds of the page(s) on screen */
   follow(now) {
     clearTimeout(this.t);
@@ -7871,21 +7875,21 @@ const Snd = {
     x.fi = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); x.el.volume = Math.max(0, Math.min(1, from + (to - from) * k)); if (k >= 1) { clearInterval(x.fi); if (then) then(); } }, 30);
   },
   async want(aids) {
-    const tok = ++this.tok, want = new Set(aids), target = this.muted ? 0 : this.vol;
+    const tok = ++this.tok, want = new Set(aids);
     for (const [aid, x] of this.on) if (!want.has(aid) && !x.leaving) { x.leaving = true; this.fade(x, 0, 900, () => { x.el.pause(); URL.revokeObjectURL(x.url); if (this.on.get(aid) === x) this.on.delete(aid); }); }
     for (const aid of want) {
       const cur = this.on.get(aid);
-      if (cur) { if (cur.leaving) { cur.leaving = false; this.fade(cur, target, 600); } continue; } // the same sound on the next page: it just goes on
+      if (cur) { if (cur.leaving) { cur.leaving = false; this.fade(cur, this.target(aid), 600); } continue; } // the same sound on the next page: it just goes on
       let blob; try { blob = await S.blob('images', aid); } catch (e) { blob = null; }
       if (tok !== this.tok || !blob || this.on.has(aid)) continue;
       const url = URL.createObjectURL(blob), el = new Audio(url); el.loop = true; el.volume = 0;
       const x = { el, url, leaving: false }; this.on.set(aid, x);
-      el.play().then(() => this.fade(x, target, 900)).catch(() => { });
+      el.play().then(() => this.fade(x, this.target(aid), 900)).catch(() => { });
     }
     if (CUR.view === 'reader') $('#rSound').classList.toggle('on', this.playing() > 0);
   },
-  setVol(v) { UI.sndVol = v; saveMeta(); for (const x of this.on.values()) if (!x.leaving) { clearInterval(x.fi); x.el.volume = this.muted ? 0 : v; } },
-  setMute(m) { UI.sndMute = m; saveMeta(); for (const x of this.on.values()) if (!x.leaving) { clearInterval(x.fi); x.el.volume = m ? 0 : this.vol; } },
+  setVol(v) { UI.sndVol = v; saveMeta(); for (const [a, x] of this.on) if (!x.leaving) { clearInterval(x.fi); x.el.volume = this.target(a); } },
+  setMute(m) { UI.sndMute = m; saveMeta(); for (const [a, x] of this.on) if (!x.leaving) { clearInterval(x.fi); x.el.volume = this.target(a); } },
   stop() { this.tok++; clearTimeout(this.t); for (const x of this.on.values()) { clearInterval(x.fi); x.el.pause(); URL.revokeObjectURL(x.url); } this.on.clear(); },
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const x of Snd.on.values()) x.el.pause(); } else if (CUR.view === 'reader') { for (const x of Snd.on.values()) if (!x.leaving) x.el.play().catch(() => { }); Snd.follow(); } });
@@ -7901,14 +7905,19 @@ function soundSheet(g, pageIds, onDone, inReader) {
     let prev = null;
     const listen = a => async e => {
       if (prev) { prev.pause(); URL.revokeObjectURL(prev.src); const was = prev.__a; prev = null; if (was === a) return e.currentTarget.lastChild.textContent = 'Listen'; }
-      const b = await S.blob('images', a); if (!b) return; prev = new Audio(URL.createObjectURL(b)); prev.__a = a; prev.volume = Snd.vol; prev.play().catch(() => { }); e.currentTarget.lastChild.textContent = 'Stop';
+      const b = await S.blob('images', a); if (!b) return; prev = new Audio(URL.createObjectURL(b)); prev.__a = a; prev.volume = Math.min(1, Snd.vol * Snd.level(g, a)); prev.play().catch(() => { }); e.currentTarget.lastChild.textContent = 'Stop';
     };
-    const rows = [...on.keys()].map(a => h('div', { class: 'row sndrow', style: 'justify-content:space-between;gap:8px' },
+    let lvlT = 0;
+    const level = a => h('div', { class: 'row sndlevel', style: 'gap:8px;padding-left:24px' }, h('small', { class: 'hint', style: 'flex:none' }, 'Loudness'),
+      h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(Snd.level(g, a)), 'aria-label': `How loud ${name(a)} plays`, style: 'flex:1',
+        oninput: e => { const v = +e.target.value; Snd.setLevel(g, a, v); if (prev && prev.__a === a) prev.volume = Math.min(1, Snd.vol * v); e.target.nextSibling.textContent = Math.round(v * 100) + '%'; clearTimeout(lvlT); lvlT = setTimeout(() => saveGallery(g), 400); } }),
+      h('small', { class: 'num hint', style: 'flex:none;width:3.2em;text-align:right' }, Math.round(Snd.level(g, a) * 100) + '%'));
+    const rows = [...on.keys()].flatMap(a => [h('div', { class: 'row sndrow', style: 'justify-content:space-between;gap:8px' },
       h('span', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis' }, icon('music'), ' ', h('b', {}, name(a)), pageIds.length > 1 && on.get(a) < pageIds.length ? h('small', { class: 'hint' }, ` · on ${on.get(a)} of ${pageIds.length}`) : null),
       h('div', { class: 'row', style: 'gap:6px;flex:none' },
         h('button', { class: 'btn ghost small', onclick: listen(a) }, icon('play'), h('span', {}, 'Listen')),
         pageIds.length > 1 && on.get(a) < pageIds.length ? h('button', { class: 'btn ghost small', onclick: () => setOn(a, true) }, 'On all') : null,
-        h('button', { class: 'btn ghost small', 'aria-label': `Take off ${name(a)}`, onclick: () => setOn(a, false) }, icon('x')))));
+        h('button', { class: 'btn ghost small', 'aria-label': `Take off ${name(a)}`, onclick: () => setOn(a, false) }, icon('x')))), level(a)]);
     const others = all.filter(([a]) => !on.has(a));
     const pick = others.length ? h('select', { class: 'text', id: 'snd-pick', 'aria-label': 'A sound this gallery has', onchange: e => { if (e.target.value) setOn(e.target.value, true); } },
       h('option', { value: '' }, `Add a sound this gallery has (${others.length})…`), others.map(([a, m]) => h('option', { value: a }, m[2]))) : null;
@@ -7927,7 +7936,8 @@ function soundSheet(g, pageIds, onDone, inReader) {
     openSheet(pageIds.length === 1 ? 'Sounds for this page' : `Sounds for ${plural(pageIds.length, 'page')}`, h('div', { class: 'stack', id: 'snd-sheet' },
       rows.length ? h('div', { class: 'stack', style: 'gap:6px' }, rows) : h('p', { class: 'hint' }, pageIds.length === 1 ? 'This page has no sound yet.' : 'These pages have no sound yet.'),
       h('div', { class: 'row', style: 'flex-wrap:wrap' }, addB, searchB, pick),
-      inReader ? h('div', { class: 'row' }, muteB, vol) : null,
+      inReader ? h('div', { class: 'row' }, muteB, h('small', { class: 'hint', style: 'flex:none' }, 'All sounds'), vol) : null,
+      rows.length ? h('p', { class: 'hint', style: 'margin:0' }, 'Each sound\'s loudness is the same on every page that has it.') : null,
       h('p', { class: 'hint' }, 'While reading, a page\'s sounds loop for as long as you are on it. If the next page has the same sound, it keeps playing; otherwise one fades into the other. To put a sound on many pages at once, select them in Edit and tap Sound.')),
       () => { if (prev) { prev.pause(); prev = null; } });
   };

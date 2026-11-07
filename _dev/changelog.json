@@ -1,5 +1,14 @@
 [
  {
+  "v": 114,
+  "name": "1.23.0-beta.16",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "Sounds for a page: each sound has its own loudness slider. It is kept with the gallery, so the sound plays at that level on every page that has it; the overall volume still sets how loud everything is."
+  ]
+ },
+ {
   "v": 113,
   "name": "1.23.0-beta.15",
   "date": "2026-11-07",

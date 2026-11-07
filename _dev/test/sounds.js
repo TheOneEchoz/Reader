@@ -56,6 +56,18 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.selectOption('#snd-pick', { label: 'theme.mp3' }); await p.waitForTimeout(1500);
   const s4 = await snap();
   ok('one page can have several sounds', s4.on.filter(x => !x[1]).map(x => x[0]).sort().join() === 'rain.ogg,theme.mp3', JSON.stringify(s4));
+  // each sound's own loudness: set once, it holds on every page with that sound
+  await p.$eval('#snd-sheet input[aria-label="How loud rain.ogg plays"]', el => { el.value = '0.25'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await p.waitForTimeout(800);
+  const lv = await snap();
+  const rain = lv.on.find(x => x[0] === 'rain.ogg'), theme = lv.on.find(x => x[0] === 'theme.mp3');
+  ok('a sound\'s loudness changes it at once (others stay)', rain && Math.abs(rain[2] - 0.2) < 0.03 && theme && Math.abs(theme[2] - 0.8) < 0.03, JSON.stringify(lv));
+  await p.evaluate(() => { closeSheet(); goToIdx(0); }); await p.waitForTimeout(1800);
+  const back1 = await snap();
+  const saved = await p.evaluate(async id => { const g = await S.gal(id); return g.sndVol; }, gid);
+  ok('and it is the same on another page with that sound (kept with the gallery)', back1.on.length === 1 && Math.abs(back1.on[0][2] - 0.2) < 0.03 && Object.values(saved || {})[0] === 0.25, JSON.stringify([back1, saved]));
+  await p.evaluate(() => goToIdx(3)); await p.waitForTimeout(500);
+  await p.evaluate(() => $('#rSound').click()); await p.waitForSelector('#snd-sheet');
   // volume and mute
   await p.evaluate(() => Snd.setMute(true)); const m = await snap(); await p.evaluate(() => Snd.setMute(false));
   ok('mute silences them', m.on.every(x => x[2] === 0));

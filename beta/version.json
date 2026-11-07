@@ -1,6 +1,6 @@
 {
- "version": 113,
- "name": "1.23.0-beta.15",
+ "version": 114,
+ "name": "1.23.0-beta.16",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Sounds for a page: “Search all sounds” lists every sound in your account — the ones on pages of any gallery, and the music and sounds inside your games (also inside their archives). Search by name, game or gallery, listen to any of them, and add one: it is copied into this gallery and put on the page(s)."
+  "Sounds for a page: each sound has its own loudness slider. It is kept with the gallery, so the sound plays at that level on every page that has it; the overall volume still sets how loud everything is."
  ]
 }
