@@ -68,11 +68,15 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   };
   const scenes = () => p.evaluate(async () => { const g = (await S.gals()).find(x => x.title === 'Scenes'); const pages = g.chapters.flatMap(c => c.pages); const last = pages[pages.length - 1]; const bm = await createImageBitmap(await S.blob('images', last)); return { n: pages.length, w: bm.width, h: bm.height, view: CUR.view, loaded: GAME.loaded }; });
   await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  const playingNow = await p.$eval('#asset-sounds', e => e.innerText.replace(/\s+/g, ' ')).catch(() => '');
+  ok('the sheet lists the music playing now', /Playing now/i.test(playingNow) && /\.(ogg|opus|mp3)/.test(playingNow), playingNow);
   ok('the sheet offers Together (chosen) or Each on its own', await p.$eval('#asset-together button[aria-pressed="true"]', b => /Together/.test(b.innerText)));
   // the background and the text box: one picture of the screen's size
   await p.$$eval('#sheetBody .btile.asset', a => a.filter(e => /bg |textbox/.test(e.title)).forEach(e => e.click()));
   await pickAdd();
   const one = await scenes();
+  const snd = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.title === 'Scenes'); const pages = g.chapters.flatMap(c => c.pages); const last = pages[pages.length - 1]; return (g.audio && g.audio[last] || []).map(a => g.meta[a][2]); });
+  ok('the music playing in the game goes with the picture', snd.length >= 1, JSON.stringify(snd));
   ok('the selected pictures become one picture, the size of the screen', one.n === 2 && one.w === 1280 && one.h === 720 && one.view === 'game' && one.loaded, JSON.stringify(one));
   // Each on its own: one picture per file again
   await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });

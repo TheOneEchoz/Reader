@@ -532,6 +532,10 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gamelock{left:48px}
 #gamebox .gamepics{left:88px}
 #gamebox .gamemods{left:128px}
+.sndmark{position:absolute;right:4px;bottom:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center}
+.sndmark svg{width:13px;height:13px}
+#rSound.on{color:var(--accent)}
+.sndrow svg{width:16px;height:16px;vertical-align:-3px}
 body.gaming #sheet{z-index:95}
 body.gaming{overflow:hidden}
 </style>
@@ -558,6 +562,7 @@ body.gaming{overflow:hidden}
     <button class="iconbtn" id="rBack" aria-label="Close reader"></button>
     <div class="tt"><b id="rTitle"></b><span id="rChap"></span></div>
     <button class="iconbtn" id="rLayers" aria-label="Layers" hidden></button>
+    <button class="iconbtn" id="rSound" aria-label="Sounds for this page" hidden></button>
     <button class="iconbtn" id="rChapters" aria-label="Chapters"></button>
     <button class="iconbtn" id="rFull" aria-label="Full screen"></button>
     <button class="iconbtn" id="rLock" aria-label="Lock"></button>
@@ -675,6 +680,9 @@ const ICONS = {
   tools: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   variants: '<rect x="3" y="3" width="11" height="14" rx="1.5"/><rect x="10" y="7" width="11" height="14" rx="1.5"/><path d="M13 12h5M15.5 9.5v5"/>',
   bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
+  music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  volume: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
+  mute: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>',
   tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>',
   undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/>', redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/>',
@@ -1470,6 +1478,7 @@ async function importInto(g, groups, onProgress, cancelled) {
           const blob = await e.get(); const t = await makeThumb(blob); const id = uid();
           await S.putBlob('images', id, blob); await S.putBlob('thumbs', id, t.thumb);
           g.meta[id] = [t.w, t.h, e.name]; results[i] = id;
+          if (e.sounds && e.sounds.length) { const aids = []; for (const sd of e.sounds) { try { aids.push(await Snd.add(g, sd.name, await sd.get())); } catch (x) { } } if (aids.length) { g.audio = g.audio || {}; g.audio[id] = [...new Set(aids)]; } }
         } catch (err) { skipped++; }
         done++; onProgress(done, total);
       }
@@ -2492,8 +2501,20 @@ function rpyBoot(SCRIPTS, LOADER) {
       '        if _fs:',
       '            _tkb.append([_l, _i, _fs])',
       'result = _tkb'].join('\n');
+    const pyA = [
+      '_tka = []',
+      'for _c in getattr(renpy.audio.audio, "all_channels", []):',
+      '    try:',
+      '        _p = _c.get_playing()',
+      '    except Exception:',
+      '        _p = None',
+      '    if _p:',
+      '        _tka.append([_c.name, _p])',
+      'result = _tka'].join('\n');
+    let playing = [];
     try { if (window.renpy_exec) ents = await window.renpy_exec(py); } catch (e) { ents = null; }
-    post({ t: 'onscreenres', ents });
+    try { if (window.renpy_exec) playing = (await window.renpy_exec(pyA)) || []; } catch (e) { playing = []; }
+    post({ t: 'onscreenres', ents, playing });
   }
   /* some of the things on screen drawn together into one picture, each where and as it is shown (picks: [[layer, index]]) */
   async function compose(picks) {
@@ -2666,7 +2687,8 @@ async function openGame(id, cont) {
   const lockB = h('button', { class: 'gameexit gamelock', 'aria-label': 'Lock the app (the game is saved to the auto-save first)', title: 'Lock (saved to the auto-save)', onclick: async () => { lockB.disabled = true; if (GAME.loaded) await gameAutosave(); lockNow(); } }, icon('lock'));
   const picsB = h('button', { class: 'gameexit gamepics', 'aria-label': 'Pictures on screen', title: 'Pictures on screen', onclick: async () => {
     if (!GAME.loaded) return;
-    const ents = await new Promise(res => { GAME.onScreen = l => { GAME.onScreen = null; res(l); }; frame.contentWindow.postMessage({ t: 'onscreen' }, '*'); setTimeout(() => { if (GAME.onScreen) { GAME.onScreen = null; res(null); } }, 8000); });
+    let playing = [];
+    const ents = await new Promise(res => { GAME.onScreen = (l, pl) => { GAME.onScreen = null; playing = pl || []; res(l); }; frame.contentWindow.postMessage({ t: 'onscreen' }, '*'); setTimeout(() => { if (GAME.onScreen) { GAME.onScreen = null; res(null); } }, 8000); });
     if (!ents) return toast('The game could not say what is on screen.');
     // the scene first (backgrounds and characters), then the rest (the interface)
     const order = [...ents.filter(e => e[0] === 'master'), ...ents.filter(e => e[0] !== 'master')];
@@ -2678,7 +2700,9 @@ async function openGame(id, cont) {
       GAME.onCompose = b => { GAME.onCompose = null; b ? res(new Uint8Array(b)) : rej(new Error('The game could not draw them.')); };
       frame.contentWindow.postMessage({ t: 'compose', picks }, '*'); setTimeout(() => { if (GAME.onCompose) { GAME.onCompose = null; rej(new Error('The game did not answer.')); } }, 10000);
     });
-    openAssets(id, { only: names, inGame: true, title: 'Pictures on screen', compose });
+    // the music and sounds playing now ("<loop 2.0>music.ogg" -> music.ogg), to go with the pictures
+    const sounds = [...new Map(playing.map(([ch, f]) => [String(f).replace(/^<[^>]*>/, ''), ch])).entries()].map(([name, ch]) => ({ name, ch }));
+    openAssets(id, { only: names, inGame: true, title: 'Pictures on screen', compose, sounds });
   } }, icon('image'));
   const modsB = (g.game.mods || []).length ? h('button', { class: 'gameexit gamemods', 'aria-label': 'Mods', title: 'Mods', onclick: () => GAME.loaded && liveMods(id) }, icon('layers')) : null;
   const box = h('div', { id: 'gamebox' }, load, exit, lockB, picsB, modsB);
@@ -2743,7 +2767,7 @@ async function openGame(id, cont) {
       } else if (m.t === 'ready') {
         load.hidden = true; frame.focus();
       } else if (m.t === 'onscreenres') {
-        if (GAME.onScreen) GAME.onScreen(m.ents);
+        if (GAME.onScreen) GAME.onScreen(m.ents, m.playing);
       } else if (m.t === 'composeres') {
         if (GAME.onCompose) GAME.onCompose(m.buf);
       } else if (m.t === 'autosaved') {
@@ -3196,6 +3220,12 @@ async function rpyLazyPlan(g, list, onProg = () => { }) {
 }
 const RPY_PIC = /\.(png|jpe?g|webp|avif|gif|bmp)$/i;
 /* every picture of a game: loose ones and the ones in its archives. [{name, size, read()}] */
+async function gameFileReader(list, name) {
+  const want = String(name).replace(/^\/+/, '').toLowerCase();
+  const f = list.find(x => x.p.toLowerCase() === 'game/' + want); if (f) return () => rpyRange(f, 0, f.s);
+  for (const a of list) { if (!/\.rpa$/i.test(a.p)) continue; const idx = await rpaIndex(a).catch(() => null); if (!idx) continue; for (const [n, m] of idx) if (n.toLowerCase() === want) return () => rpaRead(a, m); }
+  return null;
+}
 async function rpyPictures(list) {
   const out = [];
   for (const f of list) {
@@ -3262,6 +3292,14 @@ async function openAssets(gid, opts = {}) {
   // more pictures are added as you scroll down; nothing already shown moves
   const more = new IntersectionObserver(ents => { if (ents.some(e => e.isIntersecting)) addPage(); }, { root: $('#sheetBody'), rootMargin: '600px' });
   let together = !!opts.compose;
+  // music and sounds playing in the game now: switched on, they go with the picture(s) made here
+  const sndOn = new Set((opts.sounds || []).filter(x => x.ch !== 'voice').map(x => x.name));
+  const sndBox = opts.sounds && opts.sounds.length ? h('div', { class: 'panel stack', id: 'asset-sounds', style: 'gap:6px' }, h('div', { class: 'label' }, 'Playing now'),
+    opts.sounds.map(x => h('div', { class: 'row', style: 'justify-content:space-between;gap:8px' }, h('span', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis' }, h('b', {}, x.name.split('/').pop()), /^\d+$/.test(String(x.ch)) ? null : h('small', { class: 'hint' }, ` · ${x.ch}`)),
+      h('button', { class: 'switch', role: 'switch', 'aria-checked': String(sndOn.has(x.name)), 'aria-label': `Add ${x.name.split('/').pop()} to the picture`, onclick: e => { if (sndOn.has(x.name)) sndOn.delete(x.name); else sndOn.add(x.name); e.currentTarget.setAttribute('aria-checked', String(sndOn.has(x.name))); } }))),
+    h('p', { class: 'hint', style: 'margin:0' }, 'Switched on, they go with the picture(s) you make or add: they play while you look at them in the gallery.')) : null;
+  let gameFiles = null;
+  const soundsFor = () => [...sndOn].map(n => ({ name: n.split('/').pop(), get: async () => { gameFiles = gameFiles || await gameFileList(g0, 'on'); const r = await gameFileReader(gameFiles, n); if (!r) throw new Error('missing'); return new Blob([await r()]); } }));
   // what the actions use: the selected pictures, or (on screen, together) one picture of them drawn as they are in the game
   const chosenPics = () => { const c = pics.filter(p => sel.has(p)); if (!(together && c.length)) return c; const names = c.map(p => p.name); let got = null; return [{ name: 'scene.png', size: 0, together: true, read: () => (got = got || opts.compose(names)) }]; };
   const count = h('b', { class: 'num' }), coverB = h('button', { class: 'btn small', id: 'asset-cover', onclick: () => useCover() }, icon('image'), 'Use as the cover');
@@ -3374,8 +3412,8 @@ async function openAssets(gid, opts = {}) {
       go1.disabled = true; prog.hidden = false; busy++;
       try {
         const [galId, chId] = where.value.split('|'), dest = await S.gal(galId);
-        const chosen = chosenPics();
-        const items = chosen.map(p => { const n = p.name.split('/').pop(); return { name: n, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
+        const chosen = chosenPics(), snds = soundsFor();
+        const items = chosen.map(p => { const n = p.name.split('/').pop(); return { name: n, sounds: snds, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
         const r = await importInto(dest, [{ title: g0.title, chId, items }], (d, t) => { lbl.textContent = `Adding picture ${d.toLocaleString()} of ${t.toLocaleString()}`; barI.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
         closeSheet(); toast(`${plural(r.done - r.skipped, 'picture')} added to “${dest.title}”.`, 3000);
       } catch (e) { toast('Could not add them: ' + (e.message || e), 4000); go1.disabled = false; }
@@ -3395,7 +3433,8 @@ async function openAssets(gid, opts = {}) {
         // folders of the game become chapters (the folder they all share is left out)
         const dirs = chosen.map(p => p.name.split('/').slice(0, -1));
         let common = dirs[0] || []; for (const d of dirs) { let k = 0; while (k < common.length && d[k] === common[k]) k++; common = common.slice(0, k); }
-        const entries = chosen.map(p => { const parts = p.name.split('/'), n = parts.pop(); return { dir: parts.slice(common.length).join('/'), name: n, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
+        const snds = soundsFor();
+        const entries = chosen.map(p => { const parts = p.name.split('/'), n = parts.pop(); return { dir: parts.slice(common.length).join('/'), name: n, sounds: snds, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
         const g = newGallery(name.value.trim() || `${g0.title} pictures`); await saveGallery(g);
         const r = await importInto(g, groupChapters(entries, g.title), (d, t) => { lbl.textContent = `Adding picture ${d.toLocaleString()} of ${t.toLocaleString()}`; barI.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
         if (!g.chapters.some(c => c.pages.length)) { await ST.del('galleries', g.id); closeSheet(); return toast('No pictures could be added.'); }
@@ -3410,7 +3449,7 @@ async function openAssets(gid, opts = {}) {
   }
   openSheet(opts.title || 'The game\'s pictures', h('div', { class: 'stack' },
     opts.only ? null : h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: async () => { const g = await S.gal(gid); g.game.coverBy = 'auto'; await saveGallery(g); closeSheet(); toast('The main menu will be the cover after you play next time.', 3500); } }, icon('image'), 'Use the main menu as the cover'),
-    opts.only ? null : find, opts.only ? null : sortSeg, togetherSeg, note, grid, sentinel, barEl), () => { cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
+    opts.only ? null : find, opts.only ? null : sortSeg, togetherSeg, note, grid, sndBox, sentinel, barEl), () => { cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
   $('#sheetBody').style.overflowAnchor = 'none'; // pictures arriving must not move the place you scrolled to
   bar(); more.observe(sentinel);
   try {
@@ -4826,6 +4865,19 @@ async function moveToGallery(src, keys, dst) {
     if (src.cover === id) src.cover = null;
   };
   moved.forEach(carry);
+  if (src.audio) {
+    const still = new Set(Object.entries(src.audio).filter(([pid]) => !moved.has(pid)).flatMap(([, a]) => a)), copies = {};
+    for (const pid of moved) {
+      const a = src.audio[pid]; if (!a) continue; delete src.audio[pid];
+      const out = [];
+      for (const aid of a) {
+        if (!still.has(aid)) { if (src.meta[aid]) { dst.meta[aid] = src.meta[aid]; delete src.meta[aid]; } out.push(aid); continue; }
+        if (!copies[aid]) { const r = await ST.get('images', aid); if (r) { copies[aid] = uid(); await ST.put('images', { ...r, id: copies[aid] }); dst.meta[copies[aid]] = src.meta[aid]; } }
+        if (copies[aid]) out.push(copies[aid]);
+      }
+      dst.audio = dst.audio || {}; dst.audio[pid] = out;
+    }
+  }
   Tree.fixAt(chs, moved);
   chs.forEach(c => { c.pages = c.pages.filter(p => !pageIds.includes(p)); if (c.cover && moved.has(c.cover) && !blocks.some(b => b.includes(c))) c.cover = null; });
   dst.chapters[0].pages.push(...pageIds);
@@ -7400,7 +7452,7 @@ async function renderPages(id, chId, host, gIn) {
       const pid = it.id, num = ++n, k = 'p:' + pid, off = !!(g.hid && g.hid[pid]);
       return h('div', { class: 'pcell' + (sel.has(k) ? ' sel' : '') + (off ? ' off' : ''), 'data-id': pid, role: 'button', tabindex: 0, 'aria-label': `Page ${num}, ${(g.meta[pid] || [])[2] || ''}${off ? ', hidden from reading' : ''}`, 'aria-pressed': String(sel.has(k)),
         onclick: e => toggle(k, e.currentTarget, e) },
-        lazyThumb(pid), tagMark(tagsOf(g, k)), layMark(g, pid), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, (ch.root ? g.cover : ch.cover) === pid ? h('span', { class: 'cv' }, 'COVER') : null);
+        lazyThumb(pid), tagMark(tagsOf(g, k)), layMark(g, pid), h('span', { class: 'no' }, num), off ? h('span', { class: 'offmark' }, icon('eyeoff')) : null, (ch.root ? g.cover : ch.cover) === pid ? h('span', { class: 'cv' }, 'COVER') : null, g.audio && g.audio[pid] && g.audio[pid].length ? h('span', { class: 'sndmark', title: 'Has sound' }, icon('music')) : null);
     }));
     drawSel();
   };
@@ -7505,6 +7557,7 @@ async function renderPages(id, chId, host, gIn) {
         } }, icon(allOff ? 'eye' : 'eyeoff'), allOff ? 'Show in reading' : 'Hide from reading');
       })(),
       h('button', { class: 'btn', onclick: () => openTools() }, icon('tools'), 'Editing tools'),
+      EXP && pages.length ? h('button', { class: 'btn', id: 'ed-sound', onclick: () => soundSheet(g, pages, draw) }, icon('music'), 'Sound') : null,
       sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => {
         if (ch.root) { await dropCustomCover(g); g.cover = pages[0]; } else { await dropFolderCover(g, ch); ch.cover = pages[0]; }
         await saveGallery(g); sel.clear(); draw(); window.__drawCover && window.__drawCover(); toast(ch.root ? 'Gallery cover updated' : 'Folder cover updated');
@@ -7760,6 +7813,100 @@ function buildPages() {
   R.chStart = R.chPages.map(l => l.length ? l[0] : -1);
   R.runs = []; R.pages.forEach((pg, k) => { if (!k || R.pages[k - 1].ch !== pg.ch) R.runs.push(k); });
 }
+/* ================= sounds on pages =================
+   A gallery's sounds are kept like its pictures (encrypted, in the same store, listed in g.meta as [0, 0, name, 'a', size]),
+   and g.audio says which page has which: { pageId: [soundId, …] }. While reading, the sounds of the page(s) on screen loop;
+   a sound the next page also has keeps playing without a break; others fade out while the new ones fade in. */
+const isSoundId = (g, id) => !!(g.meta && g.meta[id] && g.meta[id][3] === 'a');
+const AUDIO_EXT = /\.(ogg|opus|mp3|wav|flac|m4a|aac|oga|weba|webm)$/i;
+const Snd = {
+  on: new Map(), tok: 0, t: 0,
+  get vol() { return UI.sndVol ?? 0.8; }, get muted() { return !!UI.sndMute; },
+  /* keep a sound in the gallery (the same file twice is kept once) */
+  adding: new WeakMap(),
+  add(g, name, blob) { // (one at a time per gallery, so the same file added by several pictures at once is kept once)
+    const prev = this.adding.get(g) || Promise.resolve(), next = prev.then(() => this.add1(g, name, blob), () => this.add1(g, name, blob));
+    this.adding.set(g, next.catch(() => { })); return next;
+  },
+  async add1(g, name, blob) {
+    const size = blob.size, same = Object.entries(g.meta || {}).find(([id, m]) => m[3] === 'a' && m[2] === name && m[4] === size);
+    if (same) return same[0];
+    const id = uid(); await ST.put('images', { id, t: blob.type || ({ ogg: 'audio/ogg', opus: 'audio/ogg', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac', webm: 'audio/webm' })[(name.split('.').pop() || '').toLowerCase()] || 'audio/mpeg', e: await Crypt.enc(await blob.arrayBuffer()) });
+    g.meta[id] = [0, 0, name, 'a', size]; return id;
+  },
+  playing() { return [...this.on.values()].filter(x => !x.leaving).length; },
+  /* what should be playing now: the sounds of the page(s) on screen */
+  follow(now) {
+    clearTimeout(this.t);
+    this.t = setTimeout(() => {
+      if (CUR.view !== 'reader' || !R.g || document.hidden) return this.want([]);
+      const ids = currentIdx().map(i => R.pages[i] && R.pages[i].id).filter(Boolean), A = R.g.audio || {};
+      this.want([...new Set(ids.flatMap(id => A[id] || []))].filter(a => isSoundId(R.g, a)));
+    }, now ? 0 : 150);
+  },
+  fade(x, to, ms, then) {
+    clearInterval(x.fi); const from = x.el.volume, t0 = performance.now();
+    x.fi = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); x.el.volume = Math.max(0, Math.min(1, from + (to - from) * k)); if (k >= 1) { clearInterval(x.fi); if (then) then(); } }, 30);
+  },
+  async want(aids) {
+    const tok = ++this.tok, want = new Set(aids), target = this.muted ? 0 : this.vol;
+    for (const [aid, x] of this.on) if (!want.has(aid) && !x.leaving) { x.leaving = true; this.fade(x, 0, 900, () => { x.el.pause(); URL.revokeObjectURL(x.url); if (this.on.get(aid) === x) this.on.delete(aid); }); }
+    for (const aid of want) {
+      const cur = this.on.get(aid);
+      if (cur) { if (cur.leaving) { cur.leaving = false; this.fade(cur, target, 600); } continue; } // the same sound on the next page: it just goes on
+      let blob; try { blob = await S.blob('images', aid); } catch (e) { blob = null; }
+      if (tok !== this.tok || !blob || this.on.has(aid)) continue;
+      const url = URL.createObjectURL(blob), el = new Audio(url); el.loop = true; el.volume = 0;
+      const x = { el, url, leaving: false }; this.on.set(aid, x);
+      el.play().then(() => this.fade(x, target, 900)).catch(() => { });
+    }
+    if (CUR.view === 'reader') $('#rSound').classList.toggle('on', this.playing() > 0);
+  },
+  setVol(v) { UI.sndVol = v; saveMeta(); for (const x of this.on.values()) if (!x.leaving) { clearInterval(x.fi); x.el.volume = this.muted ? 0 : v; } },
+  setMute(m) { UI.sndMute = m; saveMeta(); for (const x of this.on.values()) if (!x.leaving) { clearInterval(x.fi); x.el.volume = m ? 0 : this.vol; } },
+  stop() { this.tok++; clearTimeout(this.t); for (const x of this.on.values()) { clearInterval(x.fi); x.el.pause(); URL.revokeObjectURL(x.url); } this.on.clear(); },
+};
+document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const x of Snd.on.values()) x.el.pause(); } else if (CUR.view === 'reader') { for (const x of Snd.on.values()) if (!x.leaving) x.el.play().catch(() => { }); Snd.follow(); } });
+/* the sounds of some pages: add (files, or ones this gallery has), take off, listen, volume */
+function soundSheet(g, pageIds, onDone, inReader) {
+  const A = () => (g.audio = g.audio || {});
+  const draw = () => {
+    const all = Object.entries(g.meta || {}).filter(([, m]) => m[3] === 'a');
+    const on = new Map(); for (const pid of pageIds) for (const a of A()[pid] || []) on.set(a, (on.get(a) || 0) + 1);
+    const name = a => (g.meta[a] || [])[2] || 'Sound';
+    const save = async () => { await saveGallery(g); if (onDone) onDone(); draw(); };
+    const setOn = async (a, yes) => { for (const pid of pageIds) { const cur = A()[pid] || []; A()[pid] = yes ? [...new Set([...cur, a])] : cur.filter(x => x !== a); if (!A()[pid].length) delete A()[pid]; } await save(); };
+    let prev = null;
+    const listen = a => async e => {
+      if (prev) { prev.pause(); URL.revokeObjectURL(prev.src); const was = prev.__a; prev = null; if (was === a) return e.currentTarget.lastChild.textContent = 'Listen'; }
+      const b = await S.blob('images', a); if (!b) return; prev = new Audio(URL.createObjectURL(b)); prev.__a = a; prev.volume = Snd.vol; prev.play().catch(() => { }); e.currentTarget.lastChild.textContent = 'Stop';
+    };
+    const rows = [...on.keys()].map(a => h('div', { class: 'row sndrow', style: 'justify-content:space-between;gap:8px' },
+      h('span', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis' }, icon('music'), ' ', h('b', {}, name(a)), pageIds.length > 1 && on.get(a) < pageIds.length ? h('small', { class: 'hint' }, ` · on ${on.get(a)} of ${pageIds.length}`) : null),
+      h('div', { class: 'row', style: 'gap:6px;flex:none' },
+        h('button', { class: 'btn ghost small', onclick: listen(a) }, icon('play'), h('span', {}, 'Listen')),
+        pageIds.length > 1 && on.get(a) < pageIds.length ? h('button', { class: 'btn ghost small', onclick: () => setOn(a, true) }, 'On all') : null,
+        h('button', { class: 'btn ghost small', 'aria-label': `Take off ${name(a)}`, onclick: () => setOn(a, false) }, icon('x')))));
+    const others = all.filter(([a]) => !on.has(a));
+    const pick = others.length ? h('select', { class: 'text', id: 'snd-pick', 'aria-label': 'A sound this gallery has', onchange: e => { if (e.target.value) setOn(e.target.value, true); } },
+      h('option', { value: '' }, `Add a sound this gallery has (${others.length})…`), others.map(([a, m]) => h('option', { value: a }, m[2]))) : null;
+    const addB = h('button', { class: 'btn small primary', id: 'snd-add', onclick: async () => {
+      const files = (await pickFiles({ accept: 'audio/*,.ogg,.opus,.mp3,.wav,.flac,.m4a,.aac' })).filter(f => AUDIO_EXT.test(f.name) || /^audio\//.test(f.type));
+      if (!files.length) return;
+      for (const f of files) { const a = await Snd.add(g, f.name, f); for (const pid of pageIds) A()[pid] = [...new Set([...(A()[pid] || []), a])]; }
+      await save(); toast(`${plural(files.length, 'sound')} added.`);
+    } }, icon('plus'), 'Add sound files');
+    const vol = h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(Snd.vol), 'aria-label': 'Volume', style: 'flex:1', oninput: e => Snd.setVol(+e.target.value) });
+    const muteB = h('button', { class: 'iconbtn', 'aria-label': Snd.muted ? 'Sound on' : 'Mute', onclick: () => { Snd.setMute(!Snd.muted); draw(); } }, icon(Snd.muted ? 'mute' : 'volume'));
+    openSheet(pageIds.length === 1 ? 'Sounds for this page' : `Sounds for ${plural(pageIds.length, 'page')}`, h('div', { class: 'stack', id: 'snd-sheet' },
+      rows.length ? h('div', { class: 'stack', style: 'gap:6px' }, rows) : h('p', { class: 'hint' }, pageIds.length === 1 ? 'This page has no sound yet.' : 'These pages have no sound yet.'),
+      h('div', { class: 'row', style: 'flex-wrap:wrap' }, addB, pick),
+      inReader ? h('div', { class: 'row' }, muteB, vol) : null,
+      h('p', { class: 'hint' }, 'While reading, a page\'s sounds loop for as long as you are on it. If the next page has the same sound, it keeps playing; otherwise one fades into the other. To put a sound on many pages at once, select them in Edit and tap Sound.')),
+      () => { if (prev) { prev.pause(); prev = null; } });
+  };
+  draw();
+}
 async function openReader(id, ch, page, start, scope, only, tq) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
@@ -7785,9 +7932,10 @@ async function openReader(id, ch, page, start, scope, only, tq) {
   R.nums = Tree.nums(g.chapters);
   if (R.tq) rToast(tagLabel(R.tq), `${plural(R.pages.length, 'page')} · not counted as reading progress`);
   else if (R.extra) rToast('Extras', 'Not counted as reading progress'); else chapToast(c.ch);
-  wakeOn();  showTapGuide();
+  wakeOn();  showTapGuide(); Snd.follow();
 }
 function leaveReader() {
+  Snd.stop();
   $('#warmN').replaceChildren(); $('#warmP').replaceChildren();
   PRE.clear(); READY.clear(); PIN.clear();
   for (const [k, u] of [...URLS]) if (k[0] === 'i') { URLS.delete(k); URL.revokeObjectURL(u); }
@@ -7977,7 +8125,7 @@ function posChanged() {
   if (!R.noProgress && (paged(R.p.mode) ? lastShown === lastOfCh : R.pos === lastOfCh)) {
     R.g.read = R.g.read || []; if (!R.g.read.includes(chp.id)) R.g.read.push(chp.id);
   }
-  updateUI(); saveProgress();
+  updateUI(); saveProgress(); Snd.follow();
 }
 let saveT;
 function saveProgress(now) {
@@ -8025,7 +8173,7 @@ function readerRedraw(id) {
   else $$('.pg', strip).forEach(el => { if (R.pages[+el.dataset.i].id === id && el._want) { el.replaceChildren(); loadPg(el); } });
 }
 function updateUI() {
-  const g = R.g; $('#rLayers').hidden = !shownLayered(); $('#rTitle').textContent = R.tq ? `${g.title} · ${tagLabel(R.tq)}` : R.extra ? `${g.title} · extras` : g.title;
+  const g = R.g; $('#rLayers').hidden = !shownLayered(); $('#rSound').hidden = !EXP; $('#rSound').classList.toggle('on', Snd.playing() > 0); $('#rTitle').textContent = R.tq ? `${g.title} · ${tagLabel(R.tq)}` : R.extra ? `${g.title} · extras` : g.title;
   const c = R.pages[R.pos];
   if (!c) { $('#rChap').textContent = ''; $('#rLabel').textContent = ''; $('#pnum').hidden = true; return; }
   const list = R.chPages[c.ch], n = list.length, posIn = k => list.indexOf(k) + 1;
@@ -8457,6 +8605,7 @@ $('#rZoomLbl').addEventListener('click', () => zoomCenter(1)); $('#rZoomOpts').a
 $('#rLayers').append(icon('layers'));
 stage.addEventListener('scroll', () => { if (CUR.view === 'reader' && paged(R.p.mode) && !R.noProgress) saveProgress(); }, { passive: true });
 $('#rLock').append(icon('lock')); $('#rLock').addEventListener('click', lockNow);
+$('#rSound').append(icon('music')); $('#rSound').addEventListener('click', () => { const ids = [...new Set(currentIdx().map(i => R.pages[i] && R.pages[i].id).filter(Boolean))]; if (ids.length) soundSheet(R.g, ids, () => { Snd.follow(true); updateUI(); }, true); });
 $('#rLayers').addEventListener('click', () => {
   const pg = shownLayered(); if (!pg) return;
   const id = pg.id;
