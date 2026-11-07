@@ -51,7 +51,12 @@ jobs:
                           if f.endswith('.' + tag + '.pyc'):
                               z.write(src, rel.replace('__pycache__/', '').replace('.' + tag + '.pyc', '.pyc'))
                           continue
-                      if f.endswith(('.py', '.pyc', '.pyo')): continue
+                      if f.endswith('.py'):
+                          # no compiled file for this runtime's Python (8.1's SDK used another Python): keep the source
+                          cached = os.path.join(root, '__pycache__', f[:-3] + '.' + tag + '.pyc')
+                          if not os.path.exists(cached): z.write(src, rel)
+                          continue
+                      if f.endswith(('.pyc', '.pyo')): continue
                   else:
                       if '__pycache__' in rel or f.endswith('.pyc'): continue
                   z.write(src, rel)
