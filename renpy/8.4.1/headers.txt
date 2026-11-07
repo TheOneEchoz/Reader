@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+Date: Sat, 07 Nov 2026 15:46:02 GMT
+Content-Type: application/zip
+Content-Length: 13172873
+Last-Modified: Thu, 24 Jul 2025 05:56:06 GMT
+Connection: keep-alive
+ETag: "6881caf6-c90089"
+Cache-Control: max-age=3600
+Accept-Ranges: bytes
+

@@ -1,0 +1,16 @@
+Archive:  /tmp/w.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  2025-03-17 14:17   web/
+       64  2025-03-17 14:17   web/hash.txt
+      735  2025-03-17 14:17   web/htaccess.txt
+    26042  2025-03-17 14:17   web/index.html
+   336245  2025-03-17 14:17   web/index.js
+ 13875234  2025-03-17 14:17   web/index.wasm
+    46925  2025-03-17 14:17   web/pyapp-data.js
+  1982255  2025-03-17 14:17   web/pyapp.data
+    26576  2025-03-17 14:17   web/pythonhome-data.js
+  1493625  2025-03-17 14:17   web/pythonhome.data
+       21  2025-03-17 14:17   web/renpyweb-version.txt
+---------                     -------
+ 17787722                     11 files

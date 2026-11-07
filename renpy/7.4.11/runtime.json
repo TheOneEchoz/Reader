@@ -1,0 +1,58 @@
+{
+ "version": "7.4.11",
+ "files": [
+  {
+   "path": "headers.txt",
+   "size": 289
+  },
+  {
+   "path": "listing.txt",
+   "size": 677
+  },
+  {
+   "path": "too-big.txt",
+   "size": 0
+  },
+  {
+   "path": "web/hash.txt",
+   "size": 64
+  },
+  {
+   "path": "web/htaccess.txt",
+   "size": 735
+  },
+  {
+   "path": "web/index.html",
+   "size": 16061
+  },
+  {
+   "path": "web/index.js",
+   "size": 335693
+  },
+  {
+   "path": "web/index.wasm",
+   "size": 12439220
+  },
+  {
+   "path": "web/pyapp-data.js",
+   "size": 43056
+  },
+  {
+   "path": "web/pyapp.data",
+   "size": 1459190
+  },
+  {
+   "path": "web/pythonhome-data.js",
+   "size": 26576
+  },
+  {
+   "path": "web/pythonhome.data",
+   "size": 1493625
+  },
+  {
+   "path": "web/renpyweb-version.txt",
+   "size": 18
+  }
+ ],
+ "total": 15815204
+}

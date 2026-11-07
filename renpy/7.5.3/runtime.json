@@ -1,0 +1,58 @@
+{
+ "version": "7.5.3",
+ "files": [
+  {
+   "path": "headers.txt",
+   "size": 289
+  },
+  {
+   "path": "listing.txt",
+   "size": 677
+  },
+  {
+   "path": "too-big.txt",
+   "size": 0
+  },
+  {
+   "path": "web/hash.txt",
+   "size": 64
+  },
+  {
+   "path": "web/htaccess.txt",
+   "size": 735
+  },
+  {
+   "path": "web/index.html",
+   "size": 22035
+  },
+  {
+   "path": "web/index.js",
+   "size": 335693
+  },
+  {
+   "path": "web/index.wasm",
+   "size": 12488492
+  },
+  {
+   "path": "web/pyapp-data.js",
+   "size": 43794
+  },
+  {
+   "path": "web/pyapp.data",
+   "size": 1544524
+  },
+  {
+   "path": "web/pythonhome-data.js",
+   "size": 26576
+  },
+  {
+   "path": "web/pythonhome.data",
+   "size": 1493625
+  },
+  {
+   "path": "web/renpyweb-version.txt",
+   "size": 21
+  }
+ ],
+ "total": 15956525
+}

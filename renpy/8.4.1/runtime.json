@@ -1,0 +1,62 @@
+{
+ "version": "8.4.1",
+ "files": [
+  {
+   "path": "headers.txt",
+   "size": 290
+  },
+  {
+   "path": "listing.txt",
+   "size": 723
+  },
+  {
+   "path": "too-big.txt",
+   "size": 0
+  },
+  {
+   "path": "web/hash.txt",
+   "size": 64
+  },
+  {
+   "path": "web/index.html",
+   "size": 6080
+  },
+  {
+   "path": "web/index.html.symbols",
+   "size": 1619199
+  },
+  {
+   "path": "web/manifest.json",
+   "size": 2640
+  },
+  {
+   "path": "web/renpy-pre.js",
+   "size": 29381
+  },
+  {
+   "path": "web/renpy.data",
+   "size": 15220369
+  },
+  {
+   "path": "web/renpy.js",
+   "size": 389499
+  },
+  {
+   "path": "web/renpy.wasm",
+   "size": 22000087
+  },
+  {
+   "path": "web/service-worker.js",
+   "size": 2573
+  },
+  {
+   "path": "web/web-icon.png",
+   "size": 51505
+  },
+  {
+   "path": "web/web-presplash.jpg",
+   "size": 1144617
+  }
+ ],
+ "total": 40467027
+}

@@ -1,0 +1,17 @@
+Archive:  /tmp/w.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  2026-05-16 01:29   web/
+       64  2026-05-16 01:29   web/hash.txt
+     6080  2026-05-16 01:29   web/index.html
+  1636914  2026-05-16 01:29   web/index.html.symbols
+     2640  2026-05-16 01:29   web/manifest.json
+    29575  2026-05-16 01:29   web/renpy-pre.js
+ 15057379  2026-05-16 01:29   web/renpy.data
+   396152  2026-05-16 01:29   web/renpy.js
+ 21586559  2026-05-16 01:29   web/renpy.wasm
+     2573  2026-05-16 01:29   web/service-worker.js
+    51505  2026-05-16 01:29   web/web-icon.png
+  1144617  2026-05-16 01:29   web/web-presplash.jpg
+---------                     -------
+ 39914058                     12 files
