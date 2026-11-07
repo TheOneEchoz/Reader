@@ -1,5 +1,18 @@
 [
  {
+  "v": 118,
+  "name": "1.23.0-beta.20",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Ren'Py games: fixing a game's own mistakes. When an error is skipped, Details (or the new error button in the player's corner) has a Fix button. For a misspelt name it lists the names the game really has, closest spelling first, and shows the broken line before and after; missing scenes and pictures are offered the closest ones too.",
+   "Try it starts the game again with the fix, goes back to where you were and plays that scene again; then Keep the fix or Undo. Fixes go into one mod, “Fixes” (or another one you choose or make), so the game's own files are never changed and the mod can be switched off any time. When the game includes its script, the fix is a corrected copy of that script file.",
+   "Games kept in a gallery's folders show in Edit with the pictures, and move like them: Select, then Move into another folder or to another gallery.",
+   "Encrypted copy: one game (with its saves and mods) or one gallery as an encrypted file, to move it to another device or account; restore it from Settings → Backup.",
+   "Settings → Storage → See what takes space: every gallery, game and downloaded Ren'Py, biggest first, with what each is made of (pages, sounds, files, mods, saves); open or delete from there."
+  ]
+ },
+ {
   "v": 117,
   "name": "1.23.0-beta.19",
   "date": "2026-11-08",

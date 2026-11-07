@@ -1,0 +1,45 @@
+// One game (or gallery) as an encrypted file, restored on another device/account with Settings → Backup.
+const { chromium } = require('/home/claude/tankobon/test/node_modules/playwright');
+const fs = require('fs');
+const GAMEDIR = '/tmp/claude-0/games/a8.5.3/the_question-7.0-pc';
+let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + n + (x ? ' :: ' + x : '')); };
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const errs = [];
+  const device = async (user, pw) => {
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block', acceptDownloads: true });
+    await ctx.route('**/fonts.g*/**', r => r.abort()); await ctx.route('https://theoneechoz.github.io/**', r => r.abort());
+    const p = await ctx.newPage(); p.on('pageerror', e => errs.push(user + ': ' + e.message));
+    await p.goto('http://localhost:8768/?stay'); await p.waitForSelector('#user1');
+    await p.waitForFunction(() => document.activeElement && document.activeElement.id === 'user1').catch(() => { });
+    await p.fill('#user1', user); await p.fill('#pw1', pw); await p.fill('#pw2', pw); await p.click('#v-lock button[type=submit]');
+    await p.waitForSelector('#v-library:not([hidden])', { timeout: 30000 }); await p.waitForTimeout(1200);
+    await p.evaluate(() => { window.showSaveFilePicker = undefined; });
+    return p;
+  };
+  const A = await device('exporter', 'exportpw12');
+  await A.click('#v-library button:has-text("Add")'); await A.waitForSelector('#add-game');
+  const [ch] = await Promise.all([A.waitForEvent('filechooser'), A.click('#add-game')]); await ch.setFiles(GAMEDIR);
+  await A.waitForSelector('#game-add', { timeout: 60000 }); await A.click('#game-add');
+  await A.waitForSelector('.askyes', { timeout: 120000 }); await A.click('.askyes button:has-text("Cancel")'); await A.waitForTimeout(1200);
+  await A.evaluate(async () => { const mk = () => new Promise(r => { const c = document.createElement('canvas'); c.width = 50; c.height = 50; c.toBlob(bl => r({ name: 'x.png', get: async () => new File([bl], 'x.png', { type: 'image/png' }) })); }); const g = newGallery('Not this one'); Tree.ensureRoot(g); await importInto(g, [{ title: 'x', chId: g.chapters[0].id, items: [await mk()] }], () => { }, () => false); });
+  const gid = await A.evaluate(async () => (await S.gals()).find(x => x.game).id);
+  await A.evaluate(id => go('detail', { id }), gid); await A.waitForTimeout(1000);
+  await A.click('#export-one'); await A.waitForSelector('.askyes');
+  const [dl] = await Promise.all([A.waitForEvent('download', { timeout: 120000 }), A.click('.askyes button:has-text("Save")')]);
+  const file = '/tmp/claude-0/' + dl.suggestedFilename(); await dl.saveAs(file);
+  ok('a file named after the game is saved', /the question \(Tankobon\) \d{4}-\d\d-\d\d\.tkb$/.test(file), file);
+  const B = await device('importer', 'otherpw123');
+  await B.evaluate(() => openBackup()); await B.waitForSelector('#bk-restore');
+  const [fc] = await Promise.all([B.waitForEvent('filechooser'), B.click('#bk-restore')]); await fc.setFiles(file);
+  await B.waitForSelector('#bk-pw'); await B.fill('#bk-pw', 'exportpw12'); await B.press('#bk-pw', 'Enter');
+  for (let k = 0; k < 120 && !(await B.evaluate(() => [...document.querySelectorAll('.toast, #toast')].some(t => /Restored|could not/.test(t.innerText)))); k++) await B.waitForTimeout(500);
+  const t = await B.evaluate(() => [...document.querySelectorAll('.toast, #toast')].map(t => t.innerText).join(' | '));
+  const lib = await B.evaluate(async () => (await S.gals()).filter(g => !g.sample).map(g => g.title + (g.game ? ':game' : '')));
+  ok('restored on another account: just that game', JSON.stringify(lib) === '["the question:game"]' && /1 game added/.test(t), JSON.stringify([lib, t]));
+  const okFiles = await B.evaluate(async () => { const g = (await S.gals()).find(x => x.game); const list = await rpyGetJSON(g.game.list); const f = list.find(x => /script\.rpy$/.test(x.p)); return /label start/.test(new TextDecoder().decode(await rpyRead(f.c, f.s))); });
+  ok('its files read correctly', okFiles);
+  ok('no errors', errs.filter(e => !/serviceWorker/.test(e)).length === 0, errs.slice(0, 3).join(' | '));
+  console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
+  await b.close(); process.exit(fails ? 1 : 0);
+})();

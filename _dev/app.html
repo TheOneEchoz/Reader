@@ -535,6 +535,14 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gamequick{left:168px}
 #gamebox .gamemods{left:208px}
 #gamebox .gamequick[hidden]+.gamemods{left:168px}
+#gamebox .gameexit[hidden]{display:none}
+#gamebox .gameerr{left:auto;right:8px;color:#ffb648;opacity:.9}
+#gamebox .gameerr::after{content:attr(data-n);position:absolute;top:2px;right:2px;font-size:10px;font-weight:700;background:#c0392b;color:#fff;border-radius:8px;padding:0 4px;line-height:14px}
+.pcell.game .gamebadge{position:absolute;left:6px;top:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center}
+.pcell.game .gamebadge svg{width:13px;height:13px}
+.storerow{display:grid;gap:6px;padding:8px 10px;border-radius:12px;background:var(--surface2)}
+.storerow .bar{height:4px}
+.fixbar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px 10px 8px 14px;border-radius:14px;background:rgba(20,20,24,.92);color:#fff;z-index:3;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .errlog{white-space:pre-wrap;font-size:12px;max-height:40vh;overflow:auto;background:var(--surface2);padding:10px;border-radius:10px;margin:0}
 .savegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .savecard{display:grid;gap:3px;text-align:left;padding:6px;border-radius:12px;background:var(--surface2);color:inherit;border:0;cursor:pointer}
@@ -2248,6 +2256,7 @@ async function renderHtmlGameDetail(v, g) {
       h('div', { class: 'row', style: 'flex-wrap:wrap' },
         h('button', { class: 'btn', id: 'game-assets', style: 'flex:1', onclick: () => openAssets(id) }, icon('image'), 'See the game\'s pictures'),
         h('button', { class: 'btn ghost', id: 'game-adjust', onclick: () => adjustCover(id) }, icon('edit'), 'Adjust the cover'),
+        EXP ? h('button', { class: 'btn ghost', id: 'export-one', onclick: async () => exportOne(await S.gal(id)) }, icon('lock'), 'Encrypted copy') : null,
         EXP ? h('button', { class: 'btn ghost', id: 'game-update', onclick: async () => {
           const files = await pickFiles({ folder: true }); if (!files.length) return;
           const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
@@ -2322,6 +2331,7 @@ async function renderGameDetail(v, g) {
       h('div', { class: 'row', style: 'flex-wrap:wrap' },
         h('button', { class: 'btn', id: 'game-assets', style: 'flex:1', onclick: () => openAssets(id) }, icon('image'), 'See the game\'s pictures'),
         h('button', { class: 'btn ghost', id: 'game-adjust', onclick: () => adjustCover(id) }, icon('edit'), 'Adjust the cover'),
+        EXP ? h('button', { class: 'btn ghost', id: 'export-one', onclick: async () => exportOne(await S.gal(id)) }, icon('lock'), 'Encrypted copy') : null,
         EXP ? h('button', { class: 'btn ghost', id: 'game-update', onclick: async () => {
           const files = await pickFiles({ folder: true }); if (!files.length) return;
           const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
@@ -2469,6 +2479,7 @@ function rpyBoot(SCRIPTS, LOADER) {
     else if (m.t === 'autosave') autosave();
     else if (m.t === 'onscreen') onscreen();
     else if (m.t === 'compose') compose(m.picks || []);
+    else if (m.t === 'pyq') { (async () => { let result = null, err = null; try { result = window.renpy_exec ? await window.renpy_exec(m.code) : null; } catch (e) { err = String(e); } post({ t: 'pyres', q: m.q, result, err }); })(); }
     else if (m.t === 'rpycmd') { try { window.renpy_exec && window.renpy_exec('store._tkb_cmd = ' + JSON.stringify(m.cmd).replace(/^\[/, '(').replace(/\]$/, ',)') + '\nresult = True'); } catch (e) { } }
     else if (m.t === 'gamesound') { for (const c of ACTX) { try { m.on ? c.resume() : c.suspend(); } catch (e) { } } for (const el of mediaEls()) { try { if (m.on) { if (el.__tkbPaused) { el.__tkbPaused = false; el.play(); } } else if (!el.paused) { el.__tkbPaused = true; el.pause(); } } catch (e) { } } }
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
@@ -2630,6 +2641,9 @@ const RPY_HOOKS = [
   '                renpy.notify(c[3])',
   '            except Exception:',
   '                renpy.notify("The game could not be saved here.")',
+  '        elif c[0] == "jump":',
+  '            if renpy.has_label(c[1]):',
+  '                renpy.jump(c[1])',
   '        elif c[0] == "load":',
   '            if renpy.can_load(c[1]):',
   '                renpy.load(c[1])',
@@ -2645,11 +2659,144 @@ const RPY_HOOKS = [
   '            _tkb_periodic()',
   '        config.periodic_callback = _tkb_periodic2',
   ''].join('\n');
+/* ask the running Ren'Py game something (Python; the answer is what it puts in `result`) */
+function gamePy(code, ms = 8000) {
+  return new Promise(res => {
+    if (!GAME.frame || !GAME.loaded) return res(null);
+    GAME.pyq = GAME.pyq || new Map(); const q = Math.random().toString(36).slice(2);
+    const t = setTimeout(() => { GAME.pyq.delete(q); res(null); }, ms);
+    GAME.pyq.set(q, m => { clearTimeout(t); res(m.err ? null : m.result); });
+    GAME.frame.contentWindow.postMessage({ t: 'pyq', q, code }, '*');
+  });
+}
+const gameCmd = cmd => { try { GAME.frame && GAME.frame.contentWindow.postMessage({ t: 'rpycmd', cmd }, '*'); } catch (e) { } };
+/* what an error is about: a misspelt name, a missing scene (label) or picture, and where (file and line) */
+function parseGameError(e) {
+  const t = (e.full || e.short || ''), sh = e.short || t;
+  let m, kind = null, name = null;
+  if ((m = sh.match(/NameError: (?:global )?name '([^']+)' is not defined/))) { kind = 'name'; name = m[1]; }
+  else if ((m = sh.match(/could not find label '([^']+)'/i))) { kind = 'label'; name = m[1]; }
+  else if ((m = sh.match(/Image '([^']+)' not found/i)) || (m = sh.match(/image '([^']+)' (?:is not defined|not found)/i))) { kind = 'image'; name = m[1]; }
+  else if ((m = sh.match(/AttributeError: .* has no attribute '([^']+)'/))) { kind = 'attr'; name = m[1]; }
+  const where = [...(sh.match(/File "([^"]+)", line (\d+)/g) || [])].map(x => x.match(/File "([^"]+)", line (\d+)/)).filter(x => !/^renpy\//.test(x[1]) && !/zzzz_tankobon/.test(x[1]))[0];
+  return { kind, name, file: where ? where[1].replace(/^\/+/, '').replace(/^game\//, 'game/') : null, line: where ? +where[2] : null };
+}
+/* how alike two names are (0..1): typing distance, with a bonus for the same start */
+function nameLikeness(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase(); if (a === b) return 1;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) { d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); }
+  let pre = 0; while (pre < Math.min(a.length, b.length) && a[pre] === b[pre]) pre++;
+  return Math.max(0, 1 - d[a.length][b.length] / Math.max(a.length, b.length)) * 0.85 + Math.min(1, pre / 4) * 0.15;
+}
+/* the game's "Fixes" mod: files that take the place of the game's own (a corrected script), or a file of small fixes */
+async function setFixFile(gid, path, text, modId) {
+  const g = await S.gal(gid); if (!isGame(g)) return null;
+  // all fixes go into the same mod ("Fixes"), unless another (or a new one, modId 'new:Name') is chosen
+  let mod = modId && !String(modId).startsWith('new:') ? (g.game.mods || []).find(m => m.id === modId) : !modId ? (g.game.mods || []).find(m => m.fixes) : null;
+  const list = mod ? ((await rpyGetJSON(mod.list)) || []) : [];
+  const i = list.findIndex(f => f.p.toLowerCase() === path.toLowerCase()), before = i >= 0 ? new TextDecoder().decode(await rpyRead(list[i].c, list[i].s)) : null;
+  if (i >= 0) { await ST.delMany('images', list[i].c).catch(() => { }); list.splice(i, 1); }
+  if (text != null) { const buf = Crypt.te.encode(text).buffer, id = await rpyPut(buf); list.push({ p: path, s: buf.byteLength, c: [id], t: Date.now() }); }
+  if (!mod) { mod = { id: uid(), name: String(modId || '').startsWith('new:') ? modId.slice(4) || 'Fixes' : 'Fixes', fixes: true, on: true, list: await rpyPutJSON(list), files: 0, size: 0, addedAt: Date.now() }; g.game.mods = [...(g.game.mods || []), mod]; }
+  else await rpyPutJSON(list, mod.list);
+  mod.files = list.length; mod.size = list.reduce((n, f) => n + f.s, 0); mod.on = true;
+  await saveGallery(g); return { before, modId: mod.id };
+}
+const FIXES_FILE = 'game/zzzz_tankobon_fixes.rpy';
+async function addFixBlock(gid, key, block, modId) { // the file of small fixes: one block per fix, found again by its key
+  const g = await S.gal(gid), mod = modId && !String(modId).startsWith('new:') ? (g.game.mods || []).find(m => m.id === modId) : !modId ? (g.game.mods || []).find(m => m.fixes) : null, list = mod ? ((await rpyGetJSON(mod.list)) || []) : [], f = list.find(x => x.p === FIXES_FILE);
+  let text = f ? new TextDecoder().decode(await rpyRead(f.c, f.s)) : '# Fixes made in Tankobon. Each block fixes one mistake in the game.\n';
+  const re = new RegExp(`\\n# fix: ${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n[\\s\\S]*?(?=\\n# fix: |$)`); text = text.replace(re, '');
+  const r = await setFixFile(gid, FIXES_FILE, text.replace(/\s*$/, '\n') + `\n# fix: ${key}\n${block.replace(/\s*$/, '\n')}`, modId);
+  return { path: FIXES_FILE, before: r.before, modId: r.modId };
+}
+/* fix one error: the right name (from the running game's own names, closest spelling first), the line it is on, and the fix,
+   which goes into the game's "Fixes" mod; "Try it" plays the scene again with the fix */
+async function fixSheet(gid, err) {
+  const g = await S.gal(gid), P = parseGameError(err);
+  if (!P.kind) return toast('This kind of error cannot be fixed here yet. Copy the details to send them to the game\'s maker.', 4500);
+  const codes = {
+    name: 'result = sorted(set(k for k, v in renpy.store.__dict__.items() if not k.startswith("_") and type(v).__name__ not in ("module", "function", "builtin_function_or_method", "type", "classobj", "instancemethod", "method")))',
+    attr: 'result = sorted(set(k for k, v in renpy.store.__dict__.items() if not k.startswith("_")))',
+    label: 'result = sorted(str(l) for l in renpy.get_all_labels() if not str(l).startswith("_"))',
+    image: 'result = sorted(set(" ".join(t) if isinstance(t, tuple) else str(t) for t in renpy.list_images()))' };
+  const all = (await gamePy(codes[P.kind])) || [];
+  const ranked = all.filter(x => x !== P.name).map(x => [x, nameLikeness(P.name, x)]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0.45).slice(0, 8).map(x => x[0]);
+  // the script line, when the game has its script (.rpy)
+  const files = await gameFileList(g, 'on');
+  const srcPath = P.file ? P.file.replace(/\.rpyc$/i, '.rpy') : null, src = srcPath ? files.find(f => f.p.toLowerCase() === srcPath.toLowerCase()) : null;
+  const text = src ? new TextDecoder().decode(await rpyRead(src.c, src.s)) : null, lines = text ? text.split('\n') : null;
+  const word = new RegExp(`(?<![A-Za-z0-9_])${P.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_])`, 'g');
+  let choice = ranked[0] || '', everywhere = false;
+  const custom = h('input', { class: 'text', id: 'fix-custom', autocomplete: 'off', placeholder: 'Or type the right name', oninput: e => { choice = e.target.value.trim(); $$('input[name=fixpick]').forEach(r => r.checked = false); paint(); } });
+  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), h('code', {}, x))) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
+  const preview = h('pre', { class: 'errlog', id: 'fix-preview' });
+  const others = lines ? lines.reduce((n, l, i) => n + (i !== P.line - 1 ? (l.match(word) || []).length : 0), 0) : 0;
+  const evB = others ? h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'checkbox', onchange: e => { everywhere = e.target.checked; paint(); } }), `Also the ${plural(others, 'other place')} in this file`) : null;
+  const how = h('p', { class: 'hint', style: 'margin:0' });
+  const plan = () => {
+    if (!choice) return null;
+    if (P.kind === 'label') return { block: `label ${P.name}:\n    jump ${choice}`, key: 'label ' + P.name, label: `The scene “${P.name}” does not exist; going there will go to “${choice}”.` };
+    if (P.kind === 'image') return { block: `image ${P.name} = ${JSON.stringify(choice)}`, key: 'image ' + P.name, label: `The picture “${P.name}” will show “${choice}”.` };
+    if (lines && P.line) {
+      const out = lines.map((l, i) => (i === P.line - 1 || everywhere) ? l.replace(word, choice) : l);
+      if (out.join('\n') !== text) return { file: src.p, text: out.join('\n'), lines: out, label: `A corrected copy of ${src.p.slice(5)} (only while the Fixes mod is on; the game's own file is not changed).` };
+    }
+    if (P.kind === 'name') return { block: [`default ${P.name} = ${choice}`, 'init 1999 python:', `    def _tkbfix_${P.name}():`, `        s = renpy.store`, `        if getattr(s, "_tkbfix_${P.name}_last", None) is not getattr(s, "${P.name}", None):`, `            setattr(s, "${choice}", getattr(s, "${P.name}"))`, `        setattr(s, "${P.name}", getattr(s, "${choice}", None))`, `        setattr(s, "_tkbfix_${P.name}_last", getattr(s, "${P.name}"))`, `    config.start_interact_callbacks.append(_tkbfix_${P.name})`].join('\n'), key: 'name ' + P.name, label: `“${P.name}” will be the same as “${choice}” (the game's script is not included, so the misspelt name is linked to the right one).` };
+    return null;
+  };
+  const paint = () => {
+    const pl = plan(); how.textContent = pl ? pl.label : 'Choose the right name.';
+    if (lines && P.line) {
+      const a = Math.max(0, P.line - 3), z = Math.min(lines.length, P.line + 2), out = pl && pl.lines;
+      preview.textContent = lines.slice(a, z).map((l, i) => { const n = a + i + 1; return n === P.line && out ? `${String(n).padStart(4)} - ${l}\n${String(n).padStart(4)} + ${out[n - 1]}` : `${String(n).padStart(4)}   ${l}`; }).join('\n');
+    } else preview.textContent = pl && pl.block ? pl.block : '';
+    tryB.disabled = saveB.disabled = !pl;
+  };
+  const fixMods = (g.game.mods || []).filter(m => m.fixes);
+  const newName = h('input', { class: 'text', id: 'fix-newmod', hidden: true, autocomplete: 'off', placeholder: 'Name of the new mod', value: 'More fixes' });
+  const into = h('select', { class: 'text', id: 'fix-into', 'aria-label': 'Put the fix in', onchange: () => { newName.hidden = into.value !== 'new'; if (!newName.hidden) newName.focus(); } },
+    fixMods.length ? fixMods.map(m => h('option', { value: m.id }, `The mod “${m.name}”`)) : h('option', { value: '' }, 'The mod “Fixes” (made now)'), h('option', { value: 'new' }, 'A new mod…'));
+  const modArg = () => into.value === 'new' ? 'new:' + (newName.value.trim() || 'More fixes') : into.value || null;
+  const apply = async () => { const pl = plan(); if (!pl) return null; if (pl.file) { const r = await setFixFile(gid, pl.file, pl.text, modArg()); return { path: pl.file, before: r.before, modId: r.modId }; } return addFixBlock(gid, pl.key, pl.block, modArg()); };
+  const tryB = h('button', { class: 'btn primary', id: 'fix-try', onclick: async () => {
+    tryB.disabled = true;
+    // the scene to play again: the label the broken line is in
+    const scene = P.file && P.line ? await gamePy(`_f = ${JSON.stringify(P.file.split('/').pop().replace(/\.rpyc$/i, ''))}\nresult = max([(n.linenumber, str(k)) for k, n in renpy.game.script.namemap.items() if isinstance(k, str) and not k.startswith("_") and n.filename.replace("\\\\", "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P.line}] or [(0, None)])[1]`) : null;
+    const done = await apply(); closeSheet();
+    await gameTrial(gid, done, scene);
+  } }, icon('play'), 'Try it');
+  const saveB = h('button', { class: 'btn', id: 'fix-save', onclick: async () => { await apply(); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
+  openSheet(P.kind === 'label' ? 'Fix a missing scene' : P.kind === 'image' ? 'Fix a missing picture' : 'Fix a misspelt name', h('div', { class: 'stack', id: 'fix-sheet' },
+    h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
+    picks, custom, evB, preview, how,
+    h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, saveB),
+    h('p', { class: 'hint' }, 'All fixes go into the same mod (“Fixes”), unless you choose another. It is on the game\'s page with the other mods: switch it off any time to play the game as it was.')));
+  paint();
+}
+/* trying a fix: the game starts again with it, goes back to where it was and plays the scene again; then Keep or Undo */
+async function gameTrial(gid, done, scene) {
+  await gameAutosave();
+  closeGame();
+  GAME.afterReady = async () => {
+    for (let k = 0; k < 40; k++) { const r = await gamePy('result = renpy.get_screen("main_menu") is None and renpy.game.context().current is not None', 3000); if (r) break; await new Promise(z => setTimeout(z, 500)); }
+    if (scene) gameCmd(['jump', scene]);
+    const bar = h('div', { class: 'fixbar', role: 'status' }, h('span', {}, scene ? 'Playing the scene again with the fix.' : 'The game is running with the fix.'),
+      h('button', { class: 'btn small primary', onclick: () => { bar.remove(); toast('The fix is kept in the Fixes mod.'); } }, 'Keep the fix'),
+      h('button', { class: 'btn small', onclick: async () => { bar.remove(); if (done) await setFixFile(gid, done.path, done.before, done.modId); await gameAutosave(); closeGame(); render('game', { id: gid, cont: 1 }); toast('The fix was undone.'); } }, 'Undo'));
+    if (GAME.box) GAME.box.append(bar);
+  };
+  CUR.params = { id: gid, cont: 1 }; render('game', { id: gid, cont: 1 });
+}
 function gameErrors(list, title) {
   const text = (list || []).map(e => `${new Date(e.t).toLocaleString()}\n${e.full || e.short}`).join('\n\n----\n\n');
   openSheet('Errors in the game', h('div', { class: 'stack', id: 'gameerrors' },
     h('p', { class: 'hint' }, `These are mistakes in “${title}” itself (they would show on a computer too). The app skips them, like the Ignore button on the game's error screen. If the game gets stuck afterwards, use Saves to go back to a save. You can send this to the game's maker.`),
-    h('pre', { class: 'errlog' }, (list || []).map(e => e.short.trim()).join('\n\n') || 'No errors.'),
+    ...[...new Map((list || []).map(e => [e.short.trim(), e])).values()].slice(-6).map(e => { const P = parseGameError(e); return h('div', { class: 'stack', style: 'gap:6px' }, h('pre', { class: 'errlog' }, e.short.trim()),
+      P.kind && GAME.g && GAME.loaded ? h('div', {}, h('button', { class: 'btn small primary fixbtn', onclick: () => fixSheet(GAME.g.id, e) }, icon('tools'), P.kind === 'label' ? 'Fix this missing scene' : P.kind === 'image' ? 'Fix this missing picture' : `Fix “${P.name}”`)) : null); }),
+    (list || []).length ? null : h('p', { class: 'hint' }, 'No errors.'),
     h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: async () => { try { await navigator.clipboard.writeText(text); toast('Copied.'); } catch (e) { toast('Could not copy.'); } } }, 'Copy the full details'))));
 }
 /* a game's saves, newest first, with what each one shows: [{p, name, t, shot (Blob), info}] */
@@ -2834,8 +2981,9 @@ async function openGame(id, cont) {
   const drawQuick = async () => { const to = await lastAddTarget(); quickB.hidden = !to; if (to) { quickB.title = `Add the scene to “${to.label}”`; quickB.setAttribute('aria-label', `Add the scene (art only, with its music) to “${to.label}”`); } };
   drawQuick();
   const modsB = (g.game.mods || []).length ? h('button', { class: 'gameexit gamemods', 'aria-label': 'Mods', title: 'Mods', onclick: () => GAME.loaded && liveMods(id) }, icon('layers')) : null;
+  const errB = h('button', { class: 'gameexit gameerr', hidden: true, 'aria-label': 'Errors in the game (and fixes)', title: 'Errors in the game', onclick: () => gameErrors(GAME.errors, g.title) }, icon('tools'));
   const savesB = h('button', { class: 'gameexit gamesaves', 'aria-label': 'Saves', title: 'Saves', onclick: async () => { if (!GAME.loaded) return; await gameAutosave(); savePicker(id); } }, icon('list'));
-  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB);
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB, errB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
   document.body.classList.add('gaming'); document.body.append(box);
@@ -2896,13 +3044,17 @@ async function openGame(id, cont) {
         if (!load.hidden && GAME.loaded) { const t = String(m.text || ''); const w = /script|story/i.test(t) && !/extract/i.test(t) ? 'Loading the story…' : /unpack|extract/i.test(t) ? 'Unpacking the engine…' : null; if (w) lbl.textContent = w; }
       } else if (m.t === 'ready') {
         load.hidden = true; frame.focus();
+        if (GAME.afterReady) { const f = GAME.afterReady; GAME.afterReady = null; setTimeout(f, 600); }
       } else if (m.t === 'onscreenres') {
         if (GAME.onScreen) GAME.onScreen(m.ents, m.playing);
       } else if (m.t === 'composeres') {
         if (GAME.onCompose) GAME.onCompose(m.buf);
+      } else if (m.t === 'pyres') {
+        const f = GAME.pyq && GAME.pyq.get(m.q); if (f) { GAME.pyq.delete(m.q); f(m); }
       } else if (m.t === 'gameerror') {
         // an error in the game itself (skipped, unless set to show Ren'Py's screen)
         GAME.errors = GAME.errors || []; GAME.errors.push({ short: String(m.short || ''), full: String(m.full || ''), t: Date.now() }); if (GAME.errors.length > 30) GAME.errors.shift();
+        errB.hidden = false; errB.dataset.n = String(new Set(GAME.errors.map(e => e.short)).size);
         if (g.game.errors !== 'show' && Date.now() - (GAME.errToastAt || 0) > 6000) { GAME.errToastAt = Date.now(); undoToast('The game had an error and it was skipped.', () => gameErrors(GAME.errors, g.title), null, 6000, 'Details'); }
       } else if (m.t === 'autosaved') {
         if (GAME.onAutosaved) GAME.onAutosaved(m.ok);
@@ -4577,12 +4729,13 @@ function openReadingDefaults() {
    Nothing in it can be read without the password. Big libraries are split into several files ("part 1 of 3"); restore takes them all.
    Layout: "TKBK1", header length (4 bytes), header JSON, then records: store (1 byte), id length (2), id, type length (1), type, data length (4), data. */
 const BK_MAGIC = 'TKBK1', BK_STORES = ['galleries', 'images', 'thumbs'];
-async function backupList(withGames) {
+async function backupList(withGames, only) {
   const out = [], seen = new Set(); let games = 0, gals = 0;
   const add = (s, id) => { const k = s + '|' + id; if (id && !seen.has(k)) { seen.add(k); out.push([s, id]); } };
   for (const id of await ST.keys('galleries')) {
+    if (only && !only.includes(id)) continue; // (one game or gallery)
     const g = await S.open(await ST.get('galleries', id)); if (!g) continue; // another account's, or unreadable
-    if (g.sample) continue;
+    if (g.sample && !only) continue;
     if (isGame(g)) { if (!withGames) continue; games++; for (const x of await rpyIds(g)) add('images', x); }
     else if (!g.kind) gals++;
     add('galleries', id);
@@ -4590,12 +4743,12 @@ async function backupList(withGames) {
   }
   return { list: out, games, gals };
 }
-async function makeBackup(withGames, onProg = () => { }, cancelled = () => false) {
-  const { list, games, gals } = await backupList(withGames);
+async function makeBackup(withGames, onProg = () => { }, cancelled = () => false, only = null, label = null) {
+  const { list, games, gals } = await backupList(withGames, only);
   const lock = await DB.get('meta', lockKey()), bid = uid(), created = Date.now();
   const header = part => Crypt.te.encode(JSON.stringify({ kind: 'tankobon-backup', v: 1, id: bid, part, created, fp: FP, lock: { ...lock, id: 'lock' }, gals, games, records: list.length }));
   const FP = await Crypt.hash('fingerprint');
-  const stamp = new Date(created).toISOString().slice(0, 10), base = `Tankobon backup ${stamp}`;
+  const stamp = new Date(created).toISOString().slice(0, 10), base = label ? `${label.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 80) || 'Item'} (Tankobon) ${stamp}` : `Tankobon backup ${stamp}`;
   // where it goes: one file written as it is made (computers), or parts of at most PART bytes
   let writable = null;
   if (!NATIVE && window.showSaveFilePicker) {
@@ -4666,7 +4819,7 @@ async function restoreBackup(heads, pw, onProg = () => { }, cancelled = () => fa
   let key2 = null;
   if (!same) { if (!pw) throw new Error('password'); try { key2 = await Crypt.importKey(await Crypt.unwrapRaw(h0.lock, pw)); } catch (e) { throw new Error('password'); } }
   const have = Object.fromEntries(await Promise.all(BK_STORES.map(async st0 => [st0, new Set(await ST.keys(st0))])));
-  let done = 0, added = 0, galsAdded = 0, galsNewer = 0, complete = false;
+  let done = 0, added = 0, galsAdded = 0, galsNewer = 0, gamesAdded = 0, complete = false;
   for (const { body } of heads) {
     for await (const r of backupRecords(body)) {
       if (r.end) { complete = true; continue; }
@@ -4679,7 +4832,7 @@ async function restoreBackup(heads, pw, onProg = () => { }, cancelled = () => fa
           const cur = await S.open(await ST.get('galleries', r.id));
           if (cur && (cur.updatedAt || 0) >= (g.updatedAt || 0)) continue;
           galsNewer++;
-        } else if (!g.kind) galsAdded++;
+        } else if (g.game) gamesAdded++; else if (!g.kind) galsAdded++;
         await ST.put('galleries', { id: r.id, e: await Crypt.encJSON(g) }); added++;
         continue;
       }
@@ -4689,7 +4842,19 @@ async function restoreBackup(heads, pw, onProg = () => { }, cancelled = () => fa
     }
   }
   TAGS = null; await OWN.rebuild();
-  return { done, added, galsAdded, galsNewer, complete };
+  return { done, added, galsAdded, galsNewer, gamesAdded, complete };
+}
+/* one game or gallery as an encrypted file (the backup's format: it is restored from Settings → Backup, on any device or account) */
+async function exportOne(g) {
+  if (!(await askYes('Save an encrypted copy?', `You get a file with “${g.title}”${isGame(g) ? ', its saves and mods' : ''}, encrypted with your password. To open it on another device or account: Settings → Backup → Restore a backup (it asks for this password if it is another one).`, 'Save'))) return;
+  let cancel = false; const lbl = h('div', { class: 'num' }, 'Starting…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  openSheet('Saving an encrypted copy', h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar), h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; } }, 'Stop'))), () => { cancel = true; });
+  busy++;
+  try {
+    const r = await makeBackup(true, (d, t, w) => { lbl.textContent = `Saving ${d.toLocaleString()} of ${t.toLocaleString()} · ${mb(w)}`; bar.firstChild.style.width = (100 * d / Math.max(1, t)) + '%'; }, () => cancel, [g.id], g.title);
+    closeSheet(); if (r) toast(NATIVE && r.files.length ? `Saved to ${r.files.join(', ')}.` : `Encrypted copy saved (${mb(r.size)}${r.parts > 1 ? `, ${r.parts} files` : ''}).`, 5000);
+  } catch (e) { closeSheet(); toast('The copy was not finished: ' + (e.message || e), 4500); }
+  finally { busy = Math.max(0, busy - 1); }
 }
 function openBackup() {
   let withGames = true, cancel = false;
@@ -4734,7 +4899,7 @@ function openBackup() {
       const r = await restoreBackup(heads, pw, (d, t) => setP(d, t, `Restoring ${d.toLocaleString()} of ${t.toLocaleString()}`), () => cancel);
       closeSheet();
       if (!r.complete || heads.some((x, i) => x.h.part !== i + 1)) toast(`Some parts of this backup were not picked (or are missing). What was there is restored; pick the other parts to restore the rest.`, 7000); else
-      toast(r.added ? `Restored: ${plural(r.galsAdded, 'gallery').replace('gallerys', 'galleries')} added${r.galsNewer ? `, ${r.galsNewer} brought back to the backup's newer version` : ''}.` : 'Nothing to restore: everything in the backup is already here.', 5000);
+      toast(r.added ? `Restored: ${[r.galsAdded || !r.gamesAdded ? plural(r.galsAdded, 'gallery').replace('gallerys', 'galleries') : '', r.gamesAdded ? plural(r.gamesAdded, 'game') : ''].filter(Boolean).join(' and ')} added${r.galsNewer ? `, ${r.galsNewer} brought back to the backup's newer version` : ''}.` : 'Nothing to restore: everything in the backup is already here.', 5000);
       renderLibrary();
     } catch (e) { toast(e.message === 'password' ? 'That password is not right for this backup.' : 'The backup could not be restored: ' + (e.message || e), 4500); }
     finally { busy = Math.max(0, busy - 1); if (prog.isConnected) closeSheet(); }
@@ -4747,13 +4912,71 @@ function openBackup() {
     h('p', { class: 'hint' }, 'Restoring adds back what is missing and keeps what you have. A backup made with another password can be restored too: you will be asked for that password.')), () => { cancel = true; });
   count();
 }
+/* ================= what takes space =================
+   Each gallery (its pages, small copies, layers and sounds), each game (its files, mods and saves) and each downloaded
+   Ren'Py, biggest first. A gallery's size is measured once (it is kept, and measured again only after it changes). */
+async function storageSizes(onProg = () => { }, cancelled = () => false) {
+  const memo = (await DB.get('meta', mk('sizes')).catch(() => null)) || { id: mk('sizes'), v: {} }, out = [];
+  const gals = await S.gals();
+  for (const [k, g] of gals.entries()) {
+    if (cancelled()) break;
+    onProg(k, gals.length, g.title);
+    if (isGame(g)) {
+      const sv = (await rpyGetJSON(g.game.sv).catch(() => null)) || {}, saves = Object.values(sv).reduce((n, x) => n + (x.s || 0), 0);
+      const mods = (g.game.mods || []).reduce((n, m) => n + (m.size || 0), 0);
+      out.push({ g, kind: 'game', size: (g.game.size || 0) + mods + saves, parts: [['files', g.game.size || 0], ['mods', mods], ['saves', saves]] });
+      continue;
+    }
+    const m = memo.v[g.id];
+    if (m && m.u === (g.updatedAt || 0)) { out.push({ g, kind: 'gallery', size: m.n, parts: m.parts }); continue; }
+    let pics = 0, small = 0, snd = 0;
+    for (const id of Object.keys(g.meta || {})) {
+      const r = await ST.get('images', id).catch(() => null), n = r && r.e ? r.e.byteLength : 0;
+      if (g.meta[id][3] === 'a') snd += n; else { pics += n; const t = await ST.get('thumbs', id).catch(() => null); small += t && t.e ? t.e.byteLength : 0; }
+    }
+    const parts = [['pages', pics], ['small copies', small], ['sounds', snd]];
+    memo.v[g.id] = { u: g.updatedAt || 0, n: pics + small + snd, parts }; out.push({ g, kind: 'gallery', size: pics + small + snd, parts });
+  }
+  await DB.put('meta', memo).catch(() => { });
+  const reg = await RPY.reg();
+  for (const [v, e] of Object.entries(reg)) if (e && e.done) out.push({ v, kind: 'renpy', size: e.size || 0 });
+  return out.sort((a, b) => b.size - a.size);
+}
+function storageOverview() {
+  let cancel = false;
+  const mb = n => n < 1e6 ? `${Math.max(1, Math.round(n / 1e3)).toLocaleString()} KB` : n < 1e9 ? `${(n / 1e6).toFixed(n < 1e7 ? 1 : 0)} MB` : `${(n / 1e9).toFixed(2)} GB`;
+  const note = h('p', { class: 'hint num' }, 'Measuring…'), box = h('div', { class: 'stack', id: 'storage-list', style: 'gap:8px' });
+  const draw = items => {
+    const total = items.reduce((n, x) => n + x.size, 0), max = Math.max(1, ...items.map(x => x.size));
+    const by = k => items.filter(x => x.kind === k).reduce((n, x) => n + x.size, 0);
+    note.textContent = `${mb(total)} in all: galleries ${mb(by('gallery'))}, games ${mb(by('game'))}, Ren'Py ${mb(by('renpy'))}.`;
+    box.replaceChildren(...items.map(x => {
+      const title = x.kind === 'renpy' ? `Ren'Py ${x.v}` : x.g.title, what = x.kind === 'renpy' ? 'Downloaded to play games' : x.kind === 'game' ? gameKind(x.g) : 'Gallery';
+      const detail = (x.parts || []).filter(([, n]) => n > 0).map(([l, n]) => `${l} ${mb(n)}`).join(' · ');
+      const del = h('button', { class: 'btn ghost small', 'aria-label': `Delete ${title}`, onclick: async () => {
+        if (x.kind === 'renpy') { if (!(await askYes(`Delete the downloaded Ren'Py ${x.v}?`, 'Games that use it will ask to download it again when you play them.', 'Delete'))) return; await RPY.remove(x.v); }
+        else { if (!(await askYes(`Delete “${title}”?`, x.kind === 'game' ? 'The game, its saves and its mods are deleted from this device. This cannot be undone.' : 'The gallery and all its pages are deleted. This cannot be undone.', 'Delete'))) return;
+          await withBusy(() => purgeGallery(x.g)); if (!x.g.sample) Sync.deleted(x.g.id); }
+        items = items.filter(y => y !== x); draw(items); toast(`${title} deleted.`);
+      } }, icon('trash'));
+      const open = x.kind !== 'renpy' ? h('button', { class: 'btn ghost small', onclick: () => { closeSheet(); go('detail', { id: x.g.id }); } }, 'Open') : null;
+      return h('div', { class: 'storerow' },
+        h('div', { class: 'row', style: 'justify-content:space-between;gap:8px' }, h('span', { style: 'min-width:0;flex:1' }, h('b', {}, title), h('small', { class: 'hint', style: 'display:block' }, `${what}${detail ? ' · ' + detail : ''}`)),
+          h('b', { class: 'num', style: 'flex:none' }, mb(x.size)), open, del),
+        h('div', { class: 'bar' }, h('i', { style: `width:${Math.max(1, 100 * x.size / max)}%` })));
+    }));
+  };
+  openSheet('What takes space', h('div', { class: 'stack', id: 'storage-overview' }, note, box,
+    h('p', { class: 'hint' }, 'Sizes are of what is stored on this device (encrypted). Deleting a game here deletes its saves too: to keep them, export them from the game\'s page first.')), () => { cancel = true; });
+  storageSizes((k, n, t) => { note.textContent = `Measuring ${k + 1} of ${n}: ${t}`; }, () => cancel).then(items => { if (!cancel) draw(items); });
+}
 function openStorage() {
   const store = h('p', { class: 'hint num' }, 'Checking storage…');
   if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => store.textContent = `Using ${mb(e.usage || 0)} of about ${mb(e.quota || 0)} ${NATIVE ? 'for app data' : 'this browser allows the app'}.`).catch(() => store.textContent = '');
   else store.textContent = '';
   const persisted = h('p', { class: 'hint' });
   if (!NATIVE && navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p => persisted.textContent = p ? 'Chrome has marked your library as protected from automatic cleanup.' : 'Chrome may clear stored pages if your phone runs very low on space. Adding the app to your home screen makes this less likely.');
-  subSheet('Storage', h('div', { class: 'stack' }, storagePanel(), store, ST.folder ? null : persisted));
+  subSheet('Storage', h('div', { class: 'stack' }, storagePanel(), store, ST.folder ? null : persisted, EXP ? h('button', { class: 'btn', id: 'storage-what', onclick: () => storageOverview() }, icon('list'), 'See what takes space') : null));
 }
 /* ================= detail ================= */
 async function renderDetail(id, folderId, tq) {
@@ -4797,6 +5020,7 @@ async function renderDetail(id, folderId, tq) {
       h('button', { class: 'iconbtn', 'aria-label': atRoot ? 'Back to library' : 'Back', onclick: () => atRoot ? back('library') : back('detail', { id, folder: trail.length > 1 ? chs[trail[trail.length - 2]].id : undefined }) }, icon('back')),
       h('div', { class: 'grow' }, atRoot ? null : h('h2', {}, F.title)),
       atRoot ? h('button', { class: 'btn ghost small', onclick: () => exportZip(g) }, icon('download'), 'Save ZIP') : null,
+      atRoot && EXP ? h('button', { class: 'btn ghost small', id: 'export-one', onclick: () => exportOne(g) }, icon('lock'), 'Encrypted copy') : null,
       h('button', { class: 'btn ghost small', onclick: () => go('editor', atRoot ? { id } : { id, folder: F.id }) }, icon('edit'), 'Edit')),
     atRoot ? h('div', { class: 'hero' },
       h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
@@ -5134,14 +5358,26 @@ async function moveToGallery(src, keys, dst) {
   await saveGallery(dst); await saveGallery(src);
   return moved.size;
 }
+/* games in a gallery's folders move like pages: within the gallery (the copy open in Edit is changed), or to another gallery */
+async function moveGamesTo(g, gids, dstGal, dstCh) {
+  for (const c of g.chapters) if (c.games) { c.games = c.games.filter(x => !gids.includes(x)); if (!c.games.length) delete c.games; }
+  if (dstGal === g.id) { const t = g.chapters.find(c => c.id === dstCh) || g.chapters[0]; t.games = [...(t.games || []), ...gids]; if (!t.root) t.keep = true; }
+  await saveGallery(g);
+  for (const gid of gids) {
+    if (dstGal === g.id) { const gm = await S.gal(gid); if (isGame(gm)) { gm.game.at = { gal: g.id, ch: dstCh }; await saveGallery(gm); } }
+    else await placeGame(gid, dstGal, dstCh);
+  }
+}
 async function moveToGallerySheet(g, keys, done) {
+  const gameIds = keys.filter(k => k[0] === 'g').map(k => k.slice(2)); keys = keys.filter(k => k[0] !== 'g');
+  const moveTo = async o => { let n = 0; if (keys.length) n = await withBusy(() => moveToGallery(g, keys, o)); if (gameIds.length) { Tree.ensureRoot(o); await moveGamesTo(g, gameIds, o.id, o.chapters[0].id); } return n; };
   const others = (await S.gals()).filter(x => x.id !== g.id && !isGame(x)).sort((a, b) => natural(a.title, b.title));
   const list = h('div', { class: 'chlist' }, others.length ? others.map(o => h('button', { class: 'chrow', onclick: async () => {
-    closeSheet(); const n = await withBusy(() => moveToGallery(g, keys, o)); done && done(); toast(`${plural(n, 'page')} moved to “${o.title}”.`, 3500);
+    closeSheet(); const n = await moveTo(o); done && done(); toast(`${[n ? plural(n, 'page') : '', gameIds.length ? plural(gameIds.length, 'game') : ''].filter(Boolean).join(' and ')} moved to “${o.title}”.`, 3500);
   } }, h('span', { class: 'n' }, icon('folder')), h('span', { class: 't' }, o.title), h('span', { class: 's' }, plural(totalPages(o), 'page')))) : h('p', { class: 'hint' }, 'There is no other gallery yet.'));
   const newG = h('button', { class: 'btn ghost', onclick: async () => {
     const o = newGallery('New gallery'); Tree.ensureRoot(o); await saveGallery(o);
-    closeSheet(); const n = await withBusy(() => moveToGallery(g, keys, o)); done && done(); toast(`${plural(n, 'page')} moved to a new gallery. Rename it from its Edit screen.`, 4000);
+    closeSheet(); await moveTo(o); done && done(); toast('Moved to a new gallery. Rename it from its Edit screen.', 4000);
   } }, icon('plus'), 'Into a new gallery');
   openSheet(`Move ${plural(keys.length, 'item')} to another gallery`, h('div', { class: 'stack' }, h('p', { class: 'hint', style: 'margin:0' }, 'Pages go to the main level of the other gallery; folders keep what is inside them. Tags, layers and hidden marks come along.'), list, newG));
 }
@@ -7681,10 +7917,13 @@ async function renderPages(id, chId, host, gIn) {
     ch = g.chapters.find(c => c.id === chId) || ch; // after an undo the gallery's folders are fresh copies
     const ci = g.chapters.indexOf(ch), its = Tree.items(g.chapters, ci); let n = 0;
     head.textContent = `${chTitle(ch)} · ${plural(ch.pages.length, 'page')}`;
-    [...sel].forEach(k => { if (k[0] === 'p' ? !ch.pages.includes(k.slice(2)) : !chOf(k.slice(2))) sel.delete(k); });
+    [...sel].forEach(k => { if (k[0] === 'g' ? !(ch.games || []).includes(k.slice(2)) : k[0] === 'p' ? !ch.pages.includes(k.slice(2)) : !chOf(k.slice(2))) sel.delete(k); });
+    const gtiles = (ch.games || []).filter(x => gameInfo.has(x)).map(x => { const gm = gameInfo.get(x), k = 'g:' + x;
+      return h('div', { class: 'pcell game' + (sel.has(k) ? ' sel' : ''), 'data-gid': x, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Game ${gm.title}`,
+        onclick: e => selecting() || e.shiftKey ? toggle(k, e.currentTarget, e) : go('detail', { id: x }) }, lazyThumb(coverId(gm)), h('span', { class: 'gamebadge' }, icon('play')), h('span', { class: 'ftitle' }, gm.title)); });
     selBtn.textContent = selecting() ? 'Done selecting' : 'Select';
-    if (!its.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Add images to pick pictures from anywhere on your phone, or New folder to organize.'))); drawSel(); return; }
-    grid.replaceChildren(...its.map(it => {
+    if (!its.length && !gtiles.length) { grid.replaceChildren(h('div', { class: 'empty', style: 'grid-column:1/-1' }, h('p', { class: 'hint' }, 'Nothing here yet. Tap Add images to pick pictures from anywhere on your phone, or New folder to organize.'))); drawSel(); return; }
+    grid.replaceChildren(...gtiles, ...its.map(it => {
       if (it.t === 'c') {
         const c = g.chapters[it.ci], k = 'c:' + c.id;
         return h('div', { class: 'pcell folder' + (sel.has(k) ? ' sel' : '') + (c.hide ? ' off' : ''), 'data-cid': c.id, role: 'button', tabindex: 0, 'aria-pressed': String(sel.has(k)), 'aria-label': `Folder ${c.title}`,
@@ -7700,7 +7939,11 @@ async function renderPages(id, chId, host, gIn) {
   };
   const selPages = () => ch.pages.filter(p => sel.has('p:' + p));
   const selFolders = () => [...sel].filter(k => k[0] === 'c').map(k => k.slice(2));
-  const allKeys = () => Tree.items(g.chapters, g.chapters.indexOf(ch)).map(it => it.t === 'p' ? 'p:' + it.id : 'c:' + g.chapters[it.ci].id);
+  const allKeys = () => [...(ch.games || []).map(x => 'g:' + x), ...Tree.items(g.chapters, g.chapters.indexOf(ch)).map(it => it.t === 'p' ? 'p:' + it.id : 'c:' + g.chapters[it.ci].id)];
+  // the games kept in this gallery's folders (their name and cover, for their tiles)
+  const gameInfo = new Map();
+  (async () => { for (const gid of new Set(g.chapters.flatMap(c => c.games || []))) { const gm = await S.gal(gid).catch(() => null); if (isGame(gm)) gameInfo.set(gid, gm); } if (gameInfo.size) draw(); })();
+  const selGames = () => [...sel].filter(k => k[0] === 'g').map(k => k.slice(2));
   /* Editing tools for the selected images: each says what it needs when it cannot be used yet */
   /* the selected images in order; a selected folder counts as every image inside it (its folders too) */
   const selImages = () => {
@@ -7763,6 +8006,13 @@ async function renderPages(id, chId, host, gIn) {
       return;
     }
     const pages = selPages(), folders = selFolders();
+    // games selected: they can be moved (the other actions are for pictures)
+    if (selGames().length) {
+      selbar.replaceChildren(h('b', {}, `${plural(sel.size, 'item')} selected`),
+        h('button', { class: 'btn', id: 'ed-move', onclick: moveSheet }, icon('move'), 'Move'),
+        h('button', { class: 'btn', 'aria-label': 'Clear selection', onclick: () => { sel.clear(); selMode = false; draw(); } }, icon('x')));
+      return;
+    }
     const pagesInFolders = folders.reduce((n, fid) => { const i = g.chapters.findIndex(c => c.id === fid); return n + (i < 0 ? 0 : Tree.subtreePages(g.chapters, i)); }, 0);
     let armed = false;
     const del = h('button', { class: 'btn danger', onclick: async () => {
@@ -7819,6 +8069,8 @@ async function renderPages(id, chId, host, gIn) {
   /* move pages and folders (keys) inside another folder */
   const moveKeys = async (keys, targetId) => {
     const target = chOf(targetId); if (!target) return;
+    const gk = keys.filter(k => k[0] === 'g'); keys = keys.filter(k => k[0] !== 'g');
+    if (gk.length) { await moveGamesTo(g, gk.map(k => k.slice(2)), g.id, target.id); gk.forEach(k => sel.delete(k)); if (!keys.length) { draw(); return toast(`Moved into ${target.title}`); } }
     const pageSet = new Set(keys.filter(k => k[0] === 'p').map(k => k.slice(2)));
     const pages = ch.pages.filter(p => pageSet.has(p));
     if (pages.length) { Tree.fixAt(g.chapters, pageSet); ch.pages = ch.pages.filter(p => !pageSet.has(p)); target.pages.push(...pages); }

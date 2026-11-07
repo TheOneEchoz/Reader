@@ -1,6 +1,6 @@
 {
- "version": 117,
- "name": "1.23.0-beta.19",
+ "version": 118,
+ "name": "1.23.0-beta.20",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,10 +22,10 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: a Saves button in the player lists your saves, each with its picture; tap one to go there (where you are is kept in the auto-save first), or Save here in the first free slot. The game's page shows the last thing you saw on its Continue button.",
-  "Mistakes in a game itself (the grey “An exception has occurred” screen) are skipped, like its Ignore button, and the game goes on; a note says so, with Details to see or copy what went wrong. Each game's page can switch back to the game's own error screen.",
-  "Pictures on screen: “Art only” selects the scene's pictures without menus, text boxes or buttons. The gallery you added to last gets a one-tap button, in the sheet and in the player itself (the art, as one picture, with the music playing).",
-  "Sounds: each can play for as long as you stay (Loops), or once, 2, 3, 5 or 10 times. Sounds can be set on a folder or on the whole gallery (from the reader, or by selecting folders in Edit): every page inside plays them with its own.",
-  "Sounds while scrolling (vertical and horizontal modes): the page in the middle of the screen decides, once it stays there a moment, so pages you pass by do not make the music flicker."
+  "Ren'Py games: fixing a game's own mistakes. When an error is skipped, Details (or the new error button in the player's corner) has a Fix button. For a misspelt name it lists the names the game really has, closest spelling first, and shows the broken line before and after; missing scenes and pictures are offered the closest ones too.",
+  "Try it starts the game again with the fix, goes back to where you were and plays that scene again; then Keep the fix or Undo. Fixes go into one mod, “Fixes” (or another one you choose or make), so the game's own files are never changed and the mod can be switched off any time. When the game includes its script, the fix is a corrected copy of that script file.",
+  "Games kept in a gallery's folders show in Edit with the pictures, and move like them: Select, then Move into another folder or to another gallery.",
+  "Encrypted copy: one game (with its saves and mods) or one gallery as an encrypted file, to move it to another device or account; restore it from Settings → Backup.",
+  "Settings → Storage → See what takes space: every gallery, game and downloaded Ren'Py, biggest first, with what each is made of (pages, sounds, files, mods, saves); open or delete from there."
  ]
 }

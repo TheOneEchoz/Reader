@@ -38,10 +38,30 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('an error in the game is skipped and the game goes on', /Details/.test(note) && /skipped/.test(note) && Array.isArray(still) && still[0] === 'reached' && still[1] === false, JSON.stringify([note, still]));
   await p.click('.undobar button:has-text("Details")'); await p.waitForSelector('#gameerrors');
   ok('Details shows the error', /tkb_affection_sylive/.test(await p.$eval('#gameerrors', e => e.innerText)));
-  await p.evaluate(() => closeSheet());
+  // fix it: the right name is offered first; the line is shown before and after
+  ok('the error has a Fix button', !!(await p.$('#gameerrors .fixbtn')));
+  await p.click('#gameerrors .fixbtn'); await p.waitForSelector('#fix-sheet');
+  const picks = await p.$$eval('#fix-picks code', a => a.map(e => e.innerText));
+  const prev = await p.$eval('#fix-preview', e => e.innerText);
+  ok('the closest name the game has comes first', picks[0] === 'tkb_affection_sylvie', JSON.stringify(picks));
+  ok('the broken line is shown, before and after', /- .*tkb_affection_sylive/.test(prev) && /\+ .*tkb_affection_sylvie \+ 1/.test(prev), prev);
+  await p.screenshot({ path: '/tmp/claude-0/shots/fix-sheet.png' });
+  await p.click('#fix-try');
+  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  await p.waitForTimeout(2500);
+  fr = p.frames().find(f => f !== p.mainFrame());
+  const after = await fr.evaluate(() => window.renpy_exec('result = [getattr(store, "tkb_result", None), str(renpy.game.context().current)]')).catch(e => String(e));
+  ok('Try it plays the scene again with the fix: no error this time', Array.isArray(after) && after[0] === 4, JSON.stringify(after));
+  ok('with Keep and Undo', !!(await p.$('.fixbar button:has-text("Keep the fix")')) && !!(await p.$('.fixbar button:has-text("Undo")')));
+  await p.screenshot({ path: '/tmp/claude-0/shots/fix-trial.png' });
+  await p.click('.fixbar button:has-text("Keep the fix")');
+  const mods = await p.evaluate(async gid => { const g = await S.gal(gid); const m = g.game.mods.find(x => x.fixes); return m && { name: m.name, on: m.on, files: (await rpyGetJSON(m.list)).map(f => f.p) }; }, gid);
+  ok('the fix is in the game\'s Fixes mod', mods && mods.name === 'Fixes' && mods.on && JSON.stringify(mods.files) === '["game/zz_errtest.rpy"]', JSON.stringify(mods));
+
   await p.screenshot({ path: '/tmp/claude-0/shots/err-skipped.png' });
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
-  // Show the game's error screen
+  // Show the game's error screen (with the fix switched off, so the error happens again)
+  await p.evaluate(async gid => { const g = await S.gal(gid); g.game.mods.forEach(m => m.on = false); await saveGallery(g); renderDetail(gid); }, gid); await p.waitForTimeout(800);
   await p.click('#game-errors button:has-text("Show")'); await p.waitForTimeout(800);
   await p.click('#game-play'); fr = await start();
   for (let k = 0; k < 4; k++) { await p.mouse.click(box.x + box.width * 0.057, box.y + box.height * 0.40); await p.waitForTimeout(3000); if (await fr.evaluate(() => window.renpy_exec('result = renpy.get_screen("main_menu") is None')).catch(() => false)) break; }
