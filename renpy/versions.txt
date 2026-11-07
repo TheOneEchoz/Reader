@@ -1,0 +1,13 @@
+# Ren'Py web runtimes published on this site for the in-app player (one version per line).
+# Adding a version here makes the "Ren'Py runtimes" workflow download it from renpy.org into renpy/<version>/.
+8.5.3
+8.4.1
+8.3.7
+8.2.3
+8.1.3
+8.0.3
+7.8.7
+7.7.3
+7.6.3
+7.5.3
+7.4.11

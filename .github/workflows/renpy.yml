@@ -1,0 +1,54 @@
+name: Ren'Py runtimes
+# Downloads the official Ren'Py web runtimes (MIT licensed) listed in renpy/versions.txt from renpy.org
+# and publishes them on the site under renpy/<version>/, for the in-app game player.
+on:
+  push:
+    branches: [main]
+    paths: ['renpy/versions.txt', '.github/workflows/renpy.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: renpy-runtimes
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download missing runtimes
+        run: |
+          set -u
+          changed=0
+          for v in $(grep -v '^#' renpy/versions.txt | tr -d '\r' | grep .); do
+            d=renpy/$v
+            [ -f "$d/runtime.json" ] && continue
+            mkdir -p "$d"
+            url="https://www.renpy.org/dl/$v/renpy-$v-web.zip"
+            curl -sSI -H "Origin: https://theoneechoz.github.io" "$url" > "$d/headers.txt" 2>&1 || true
+            if ! curl -fsSL -o /tmp/w.zip "$url"; then echo "missing: $url" > "$d/error.txt"; changed=1; continue; fi
+            unzip -l /tmp/w.zip > "$d/listing.txt"
+            rm -rf /tmp/w && mkdir /tmp/w && unzip -q /tmp/w.zip -d /tmp/w
+            # keep the runtime files (the web/ folder of the add-on, and lib/web if present); skip files over 95 MB (GitHub limit)
+            root=$(find /tmp/w -type d -name web -not -path '*/lib/*' | head -1)
+            [ -n "$root" ] && cp -r "$root" "$d/web"
+            lib=$(find /tmp/w -type d -path '*/lib/web' | head -1)
+            [ -n "$lib" ] && mkdir -p "$d/lib" && cp -r "$lib" "$d/lib/web"
+            find /tmp/w -maxdepth 2 -iname 'LICENSE*' -exec cp {} "$d/" \; || true
+            find "$d" -type f -size +95M -print -delete > "$d/too-big.txt"
+            python3 - "$d" "$v" <<'PY'
+          import json, os, sys, hashlib
+          d, v = sys.argv[1], sys.argv[2]
+          files = []
+          for root, _, names in os.walk(d):
+              for n in names:
+                  p = os.path.join(root, n); rel = os.path.relpath(p, d)
+                  if rel in ('runtime.json',): continue
+                  files.append({'path': rel, 'size': os.path.getsize(p)})
+          files.sort(key=lambda f: f['path'])
+          json.dump({'version': v, 'files': files, 'total': sum(f['size'] for f in files)}, open(os.path.join(d, 'runtime.json'), 'w'), indent=1)
+          PY
+            changed=1
+          done
+          if [ $changed = 1 ]; then
+            git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+            git add renpy && git commit -qm "Ren'Py web runtimes: $(ls renpy | tr '\n' ' ')" && git push
+          fi
