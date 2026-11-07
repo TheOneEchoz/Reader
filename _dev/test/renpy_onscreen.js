@@ -70,6 +70,14 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
   const playingNow = await p.$eval('#asset-sounds', e => e.innerText.replace(/\s+/g, ' ')).catch(() => '');
   ok('the sheet lists the music playing now', /Playing now/i.test(playingNow) && /\.(ogg|opus|mp3)/.test(playingNow), playingNow);
+  // listen to one sound alone: the game's sound pauses meanwhile, and comes back after
+  const ctxState = () => fr.evaluate(() => (window.__tkbAudio || []).map(c => c.state).join(','));
+  const before0 = await ctxState();
+  await p.click('#asset-sounds .sndlisten'); await p.waitForTimeout(1200);
+  const during = await ctxState(), btnTxt = await p.$eval('#asset-sounds .sndlisten', b => b.innerText.trim());
+  await p.click('#asset-sounds .sndlisten'); await p.waitForTimeout(800);
+  const after0 = await ctxState();
+  ok('Listen plays that sound alone: the game\'s sound pauses, then comes back', /running/.test(before0) && !/running/.test(during) && btnTxt === 'Stop' && /running/.test(after0), JSON.stringify([before0, during, btnTxt, after0]));
   ok('the sheet offers Together (chosen) or Each on its own', await p.$eval('#asset-together button[aria-pressed="true"]', b => /Together/.test(b.innerText)));
   // the background and the text box: one picture of the screen's size
   await p.$$eval('#sheetBody .btile.asset', a => a.filter(e => /bg |textbox/.test(e.title)).forEach(e => e.click()));

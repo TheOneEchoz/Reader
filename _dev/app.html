@@ -2340,6 +2340,11 @@ function rpyDoc(html, loader) {
 /* Runs inside the sealed frame. Gets Ren'Py and the game from the app by messages; sends saves back. */
 function rpyBoot(SCRIPTS, LOADER) {
   try { Object.defineProperty(Navigator.prototype, 'serviceWorker', { get: () => undefined, configurable: true }); } catch (e) { } // sealed: it would only throw
+  // the game's sound (Ren'Py plays through Web Audio): kept, so the app can pause it while you listen to one of its sounds
+  const ACTX = [];
+  for (const k of ['AudioContext', 'webkitAudioContext']) { const C = window[k]; if (!C) continue; const W = function (...a) { const c = new C(...a); ACTX.push(c); return c; }; W.prototype = C.prototype; try { Object.setPrototypeOf(W, C); } catch (e) { } window[k] = W; }
+  const mediaEls = () => [...document.querySelectorAll('audio,video')];
+  window.__tkbAudio = ACTX;
   const P = window.parent, post = (m, t) => P.postMessage(m, '*', t || []);
   const URLS = {}, waiting = new Map(); let FILES = [], SAVES = [], EXTRACT = {}, MORE = [], LAZY = null, seq = 0;
   const ask = m => new Promise(res => { const q = ++seq; waiting.set(q, res); post(Object.assign({ q }, m)); });
@@ -2448,6 +2453,7 @@ function rpyBoot(SCRIPTS, LOADER) {
     else if (m.t === 'autosave') autosave();
     else if (m.t === 'onscreen') onscreen();
     else if (m.t === 'compose') compose(m.picks || []);
+    else if (m.t === 'gamesound') { for (const c of ACTX) { try { m.on ? c.resume() : c.suspend(); } catch (e) { } } for (const el of mediaEls()) { try { if (m.on) { if (el.__tkbPaused) { el.__tkbPaused = false; el.play(); } } else if (!el.paused) { el.__tkbPaused = true; el.pause(); } } catch (e) { } } }
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
   });
   window.addEventListener('error', e => fail(e.message));
@@ -3295,10 +3301,24 @@ async function openAssets(gid, opts = {}) {
   // music and sounds playing in the game now: switched on, they go with the picture(s) made here
   const sndOn = new Set((opts.sounds || []).filter(x => x.ch !== 'voice').map(x => x.name));
   const sndBox = opts.sounds && opts.sounds.length ? h('div', { class: 'panel stack', id: 'asset-sounds', style: 'gap:6px' }, h('div', { class: 'label' }, 'Playing now'),
-    opts.sounds.map(x => h('div', { class: 'row', style: 'justify-content:space-between;gap:8px' }, h('span', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis' }, h('b', {}, x.name.split('/').pop()), /^\d+$/.test(String(x.ch)) ? null : h('small', { class: 'hint' }, ` · ${x.ch}`)),
+    opts.sounds.map(x => h('div', { class: 'row', style: 'justify-content:space-between;gap:8px' }, h('span', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1' }, h('b', {}, x.name.split('/').pop()), /^\d+$/.test(String(x.ch)) ? null : h('small', { class: 'hint' }, ` · ${x.ch}`)),
+      h('button', { class: 'btn ghost small sndlisten', 'aria-label': `Listen to ${x.name.split('/').pop()} alone`, onclick: e => listenAlone(x.name, e.currentTarget) }, icon('play'), h('span', {}, 'Listen')),
       h('button', { class: 'switch', role: 'switch', 'aria-checked': String(sndOn.has(x.name)), 'aria-label': `Add ${x.name.split('/').pop()} to the picture`, onclick: e => { if (sndOn.has(x.name)) sndOn.delete(x.name); else sndOn.add(x.name); e.currentTarget.setAttribute('aria-checked', String(sndOn.has(x.name))); } }))),
     h('p', { class: 'hint', style: 'margin:0' }, 'Switched on, they go with the picture(s) you make or add: they play while you look at them in the gallery.')) : null;
   let gameFiles = null;
+  /* one of the game's sounds on its own, to know what it is: the game's sound is paused meanwhile */
+  let alone = null;
+  const gameSound = on => { try { GAME.frame && GAME.frame.contentWindow.postMessage({ t: 'gamesound', on }, '*'); } catch (e) { } };
+  const stopAlone = () => { if (!alone) return; alone.el.pause(); URL.revokeObjectURL(alone.el.src); alone.btn.replaceChildren(icon('play'), h('span', {}, 'Listen')); alone = null; gameSound(true); };
+  async function listenAlone(name, btn) {
+    const again = alone && alone.name === name; stopAlone(); if (again) return;
+    try {
+      gameFiles = gameFiles || await gameFileList(g0, 'on'); const r = await gameFileReader(gameFiles, name); if (!r) throw new Error('missing');
+      const el = new Audio(URL.createObjectURL(new Blob([await r()]))); el.loop = true; el.volume = Snd.vol;
+      gameSound(false); alone = { name, el, btn }; btn.replaceChildren(icon('x'), h('span', {}, 'Stop'));
+      el.play().catch(() => { });
+    } catch (e) { toast('That sound could not be played.'); gameSound(true); }
+  }
   const soundsFor = () => [...sndOn].map(n => ({ name: n.split('/').pop(), get: async () => { gameFiles = gameFiles || await gameFileList(g0, 'on'); const r = await gameFileReader(gameFiles, n); if (!r) throw new Error('missing'); return new Blob([await r()]); } }));
   // what the actions use: the selected pictures, or (on screen, together) one picture of them drawn as they are in the game
   const chosenPics = () => { const c = pics.filter(p => sel.has(p)); if (!(together && c.length)) return c; const names = c.map(p => p.name); let got = null; return [{ name: 'scene.png', size: 0, together: true, read: () => (got = got || opts.compose(names)) }]; };
@@ -3449,7 +3469,8 @@ async function openAssets(gid, opts = {}) {
   }
   openSheet(opts.title || 'The game\'s pictures', h('div', { class: 'stack' },
     opts.only ? null : h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: async () => { const g = await S.gal(gid); g.game.coverBy = 'auto'; await saveGallery(g); closeSheet(); toast('The main menu will be the cover after you play next time.', 3500); } }, icon('image'), 'Use the main menu as the cover'),
-    opts.only ? null : find, opts.only ? null : sortSeg, togetherSeg, note, grid, sndBox, sentinel, barEl), () => { cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
+    opts.only ? null : find, opts.only ? null : sortSeg, togetherSeg, note, grid, sndBox, sentinel, barEl), () => {
+    stopAlone(); cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
   $('#sheetBody').style.overflowAnchor = 'none'; // pictures arriving must not move the place you scrolled to
   bar(); more.observe(sentinel);
   try {

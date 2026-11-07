@@ -1,5 +1,14 @@
 [
  {
+  "v": 112,
+  "name": "1.23.0-beta.14",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "Ren'Py games: in Pictures on screen, each sound under Playing now has a Listen button that plays just that sound, so you can tell what it is. The game's own sound pauses while you listen and comes back when you stop or close the sheet."
+  ]
+ },
+ {
   "v": 111,
   "name": "1.23.0-beta.13",
   "date": "2026-11-07",

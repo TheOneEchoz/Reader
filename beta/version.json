@@ -1,6 +1,6 @@
 {
- "version": 111,
- "name": "1.23.0-beta.13",
+ "version": 112,
+ "name": "1.23.0-beta.14",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Sounds on pages: music and sound effects can be added to pictures, to listen to while reading. A page's sounds loop for as long as you are on it; if the next page has the same sound it keeps playing without a break, and a different one fades in as the old one fades out. A page can have several sounds.",
-  "Add them from the reader (the note button at the top: add sound files, or one the gallery already has; listen; volume and mute) or to many pages at once in Edit (select the pages, then Sound). Pages with sound show a note mark. Sounds are kept encrypted with the gallery, and go with it in backups and sync.",
-  "Ren'Py games: Pictures on screen also lists the music and sounds playing now; switched on, they go with the picture(s) you make or add, and play when you look at them in the gallery."
+  "Ren'Py games: in Pictures on screen, each sound under Playing now has a Listen button that plays just that sound, so you can tell what it is. The game's own sound pauses while you listen and comes back when you stop or close the sheet."
  ]
 }
