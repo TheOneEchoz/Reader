@@ -1,6 +1,6 @@
 {
- "version": 105,
- "name": "1.23.0-beta.7",
+ "version": 106,
+ "name": "1.23.0-beta.8",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,7 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: the game's pictures can be put in different orders: Suggested, Name, File size, Picture size, and Similar, which puts look-alike pictures together (the same character in different poses or outfits, the same scene with small changes), with the ones like no other at the end.",
-  "Picture size and Similar look at every picture once; the result is kept, encrypted, with the game, so it is instant afterwards. The order you chose is remembered while the app is open."
+  "Ren'Py games: mods. A game's page has a Mods section where each mod can be switched on or off before playing; Play says which are on. Add a mod as a folder, files or a ZIP, or drop it on the game's page. Mods are kept encrypted like the game.",
+  "When adding a game, .rpa archives that look like mods (by their name, or because their date is far from the game's own files) are listed, with a switch to keep each one as a mod you can switch off.",
+  "Games added before: “Turn files into a mod” lets you pick files or folders of the game folder to make them a mod; archives that look like mods are ticked already."
  ]
 }
