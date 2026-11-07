@@ -67,7 +67,8 @@ jobs:
           for v in $(grep -v '^#' renpy/versions.txt | tr -d '\r' | grep .); do
             d=$PWD/renpy/$v
             check=0; case " 8.5.3 7.8.7 8.1.3 " in *" $v "*) check=1;; esac
-            [ -f "$d/engine.zip" ] && [ -f "$d/engine-source.txt" ] && [ $check = 0 -o -f "$PWD/renpy/test/$v.done" ] && continue
+            [ -f "$d/engine.zip" ] && [ -f "$d/engine-source.txt" ] && continue
+            [ "${FIXTURES:-}" = 1 ] || check=0   # test games only when asked for (they are not part of the site)
             mkdir -p "$d"; log="$d/build-log.txt"; : > "$log"
             echo "== $v" | tee -a "$log"
             rm -rf /tmp/sdk && mkdir /tmp/sdk

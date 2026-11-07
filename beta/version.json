@@ -1,6 +1,6 @@
 {
- "version": 99,
- "name": "1.23.0-beta.1",
+ "version": 100,
+ "name": "1.23.0-beta.2",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Everything from 1.22.0 is now in the normal version too. Still only here, while it is tested: Edit image (and the pencils in the Layers menu), the new Find variants (up to 20 images, and by hand), and the Layers menu changes (the warning about layers on no saved page, renaming groups from their heading, the combination's name in the reader, and the half-height Layers panel while reading).",
-  "Fixed: after tagging several galleries at once, searching the library for the new tag found nothing until the library was opened again.",
-  "A cover.jpg next to chapter folders now also becomes the cover when a ZIP or CBZ is shared to the app or dropped on the window."
+  "Ren'Py games: drop a game's folder (or its ZIP) on the window, or use Add → “Add a Ren'Py game”, and it becomes a game in your library. Only the game's own files are copied, encrypted; its launchers are left out.",
+  "The app finds out which Ren'Py made the game and which version plays it. That part of Ren'Py (about 20–40 MB) is downloaded once from the Tankōbon website, only after asking you, and kept encrypted with your library.",
+  "Games play inside the app, sealed off: they cannot reach the internet or store anything of their own, and the game's files are only decrypted into memory while you play. Saves are kept encrypted with the game.",
+  "Games stay on the device they were added on: they are not sent to your other devices yet."
  ]
 }

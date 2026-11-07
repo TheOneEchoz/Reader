@@ -490,6 +490,16 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .pickbox .ic{width:16px;height:16px}
 .pickrow.on .pickbox{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#gamebox{position:fixed;inset:0;z-index:80;background:#000}
+#gamebox iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000}
+#gamebox .gameload{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;color:#eee;text-align:center;background:#0f1012}
+#gamebox .gameload[hidden]{display:none}
+#gamebox .gameload .progress{width:min(360px,80vw)}
+#gamebox .gamecover{width:120px;aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:#222}
+#gamebox .gamecover img{width:100%;height:100%;object-fit:cover}
+#gamebox .gameexit{position:absolute;top:8px;left:8px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;opacity:.35;cursor:pointer;z-index:2}
+#gamebox .gameexit:hover,#gamebox .gameexit:focus-visible{opacity:1}
+body.gaming{overflow:hidden}
 </style>
 
 </head>
@@ -689,8 +699,8 @@ async function restoreGallery(g, snap) {
 const ANDROID = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
 const DESK = !ANDROID && !!window.TkbDesktop;
 const NATIVE = ANDROID || DESK; // running as an installed app rather than a website
-const APP_VERSION = 99; // replaced by the build with the release number
-const CHANGELOG = [{"v": 99, "name": "1.23.0-beta.1", "date": "2026-10-04", "beta": true, "items": ["Everything from 1.22.0 is now in the normal version too. Still only here, while it is tested: Edit image (and the pencils in the Layers menu), the new Find variants (up to 20 images, and by hand), and the Layers menu changes (the warning about layers on no saved page, renaming groups from their heading, the combination's name in the reader, and the half-height Layers panel while reading).", "Fixed: after tagging several galleries at once, searching the library for the new tag found nothing until the library was opened again.", "A cover.jpg next to chapter folders now also becomes the cover when a ZIP or CBZ is shared to the app or dropped on the window."]}, {"v": 98, "name": "1.22.0", "date": "2026-10-04", "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer and Combine as layers, which uses the image you tapped first as the base.", "Import: PDF files can be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in “Choose ZIP, CBZ or PDF files”, drop them on the window, share them to the app, or put them in a folder you add. It works offline. A cover.jpg next to chapter folders (in a folder, ZIP or CBZ) becomes the gallery's cover.", "Menus keep their place: switching something or changing a setting no longer scrolls the menu back to the top, and a different menu always opens at the top. “What's new” starts closed for new users and shows the latest versions first.", "Still in the experimental version only, while they are tested: Edit image, the new Find variants (including by hand), and the new layer menu changes."]}, {"v": 97, "name": "1.22.0-beta.27", "date": "2026-10-04", "beta": true, "items": ["Find variants by hand: the slider is now “Sensitivity”, in the Choose tab, and starts at 100%: every point that differs at all shows. Lower it to ignore faint differences, like the noise in JPEG pictures. (Working out which versions have a layer, and how well a see-through colour fits, still allows for that noise.)"]}, {"v": 96, "name": "1.22.0-beta.26", "date": "2026-10-03", "beta": true, "items": ["Find variants by hand has a tidier panel: what is being compared stays at the top (with arrows to go to the previous or next version), with a line saying how much differs. Below it, tabs: Choose (choosing what goes into a layer, and the brush or colour tool settings), New layer, Layers, View (what to show and how different a point must be) and Base. The tools stay at the bottom, and the tab content scrolls on its own."]}, {"v": 95, "name": "1.22.0-beta.25", "date": "2026-10-02", "beta": true, "items": ["PDF files can now be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in “Choose ZIP, CBZ or PDF files”, drop them on the window, share them to the app, or put them in a folder you add. The PDF reader is only loaded when a PDF is opened, and works offline."]}, {"v": 94, "name": "1.22.0-beta.24", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: a see-through layer now gives back its own version as it was. Where the effect is not just one colour laid over (more than one colour, or more than a tint), it takes whatever colour and strength give what the version shows, instead of forcing one colour.", "For a tint whose colour changes (a coloured gradient), a see-through layer can use “Same strength”: one strength everywhere (with a slider), and the colour is found at each point. Look at “Rebuilt” on another version that has it to set the strength."]}, {"v": 93, "name": "1.22.0-beta.23", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: choosing “By hand” no longer asks for the base picture or how small a change to catch; both are set inside (the first image is the base to start with, and “Use all of it as the base” in “Build the base” makes any version the base).", "The two pictures being compared are now chosen side by side, at the top of the panel (“Compare” and “With”).", "Making a layer keeps what you chose with the brushes, instead of starting the choice over.", "The “Take away” brush now shows where it paints (in red) while you paint."]}, {"v": 92, "name": "1.22.0-beta.22", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: “Invert the choice” swaps what goes into the layer and what does not.", "A new “Only what changed” switch (on to start with): the brush, the colour tool and Invert then only choose points that are different. Turn it off to choose anything.", "A colour tool: tap a colour in the picture to choose (or take away) every point of that colour, with a colour range, and optionally only where it is joined to where you tapped."]}, {"v": 91, "name": "1.22.0-beta.21", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: a “Difference” slider sets how different a point must be to count (from 2 to 100; 24 is Normal). The orange area follows it as you move it.", "Any two versions can be compared with each other (“Compared with”), not only a version with the base.", "The base can be put together by hand (“Build the base”), for when every version has something of its own: choose a version and paint with “Take” to bring in what it shows there; “Put back” brings back the original. Orange shows where that version differs from the base as it is now. The layers are then made over the new base, and the version the base started from is compared too."]}, {"v": 90, "name": "1.22.0-beta.20", "date": "2026-09-28", "beta": true, "items": ["Find variants by hand: a layer can now be see-through (for a shadow, a blush or a glow). Choose “See-through” before making it: it becomes one colour laid over what is under it, as strong at each point as the version shows, so it also looks right over other things (a shadow over a hat it never fell on in that version). Soft edges are followed until they fade out.", "Each layer can be switched between solid and see-through afterwards; for see-through layers the colour is found for you, and can be changed (with how well it fits shown).", "Layers that only fit together (a hat with a shadow over it) are now found in a version together."]}, {"v": 89, "name": "1.22.0-beta.19", "date": "2026-09-28", "beta": true, "items": ["Find variants can now be done by hand: choose “By hand”, pick the base, and each other version is compared with it in turn. What is different shows in orange and is already chosen (green); paint to add or take away, then make a layer. One version can give several layers (a hat, then a scarf).", "A layer made from one version is also put in every other version that shows the same thing (a hat in two versions); each layer has a switch for the version you are looking at. “Base” and “Rebuilt” let you check the result, and “Make the layered image” saves it with each version as a saved combination."]}, {"v": 88, "name": "1.22.0-beta.18", "date": "2026-09-28", "beta": true, "items": ["Find variants is back to how it was in 1.22.0-beta.10: the experimental “Layer stack” method is removed."]}, {"v": 87, "name": "1.22.0-beta.17", "date": "2026-09-28", "beta": true, "items": ["Find variants: new choice under Method, “Layer stack (new)”, next to the current way (which stays the default). It is experimental, to compare the two on your pages.", "The base is put together from what most versions show at each place (three versions with black hair and two with blond: black hair), so no version has to be a clean base. When every version has something the others don't (a hat, glasses, a scarf), the base comes out without any of them.", "Each thing is found by where it goes on without an edge, and its layer is whole even where something covers it in some versions. A splash keeps its drop.", "See-through effects (a blush, a shadow) are found first and taken out, so what is under them comes out as one layer, and the effect is one see-through layer over everything it covers (a blush over an open eye and over a closed one).", "Things that always come together but are different things stay separate layers: they turn on together in each version's combination, and each can still be turned on or off by itself. It takes about as long as the current way."]}, {"v": 86, "name": "1.22.0-beta.16", "date": "2026-09-28", "beta": true, "items": ["Find variants is back to how it was in 1.22.0-beta.10. The changes from beta.11 to beta.15 are undone: the “Step by step” method, the AI switch (and its download), and the outline and edge rules.", "Everything else stays as it was in beta.10: up to 20 images compared in sections, the image editor, merging layers, and menus keeping their scroll position."]}, {"v": 85, "name": "1.22.0-beta.15", "date": "2026-09-28", "beta": true, "items": ["Find variants has a new way of finding layers, “Step by step” (now the default; the old one is still there as “Classic” under Method). It first breaks the pictures into many small, exact pieces, then joins the pieces that belong to the same change by how they continue into each other.", "A see-through effect over things that are different underneath (a blush over an open eye in one version and over a closed eye in another; a bracelet's shadow over a tattoo or over bare arm) is now one see-through layer, instead of several pieces.", "Without the AI too: a part of a thing that most versions have on its own (the drop of a splash) goes back into that thing's layer when it continues it with no edge and in the same colours. The base then shows what's there without it.", "Two layers left for exactly the same versions are joined into one."]}, {"v": 84, "name": "1.22.0-beta.14", "date": "2026-09-28", "beta": true, "items": ["Find variants with AI: a layer holding two different things (a collar, and a bit of hair that only comes with it) is split, so each thing is its own layer. Two of the same kind of thing (both eyes) stay together, and a shadow stays with what casts it.", "Find variants with AI: a thing with a missing piece, because most versions have just that piece (a splash whose drop is also in other versions), is made whole. The base then shows what's there without it, and the versions that only have the drop get it from a small layer of their own."]}, {"v": 83, "name": "1.22.0-beta.13", "date": "2026-09-28", "beta": true, "items": ["Find variants: new experimental switch “Keep whole objects together”. A small AI (MobileSAM) looks at each picture to see where objects end, so an edge shared by versions goes into each object's own layer instead of becoming a separate layer you have to turn on with them.", "The AI runs on this device; nothing is sent anywhere. It downloads about 33 MB the first time it's used, then works offline. It makes Find variants slower, especially on phones."]}, {"v": 82, "name": "1.22.0-beta.12", "date": "2026-09-28", "beta": true, "items": ["Find variants: dark shapes now keep their edges too (the previous version only managed it for light shapes). A white or a dark band now each carry their own outline, so either looks right even over a version that doesn't have it."]}, {"v": 81, "name": "1.22.0-beta.11", "date": "2026-09-28", "beta": true, "items": ["Find variants: things that replace each other (a white band or a dark one) now each keep their outline, so each is whole on its own and they become a one-at-a-time choice, instead of a shared “Change” layer with a dark one covering it.", "Find variants: a thing whose edge another version paints over (bare skin where a band had its black edge) now keeps a copy of that edge, so it still has it when shown over that version.", "Find variants: fixed a case where part of one version could show through in another (like pieces of an open eye on a closed one)."]}, {"v": 80, "name": "1.22.0-beta.10", "date": "2026-09-28", "beta": true, "items": ["Fixed: Find variants could stop with “Cannot read properties of undefined (reading 'chunks')” when it compared big pictures in sections."]}, {"v": 79, "name": "1.22.0-beta.9", "date": "2026-09-28", "beta": true, "items": ["Find variants now works with up to 20 images (was 12).", "When many big versions would not fit in the device's memory at once, the pictures are compared in sections from top to bottom and the results joined, so it doesn't run out of memory. The result screen says when this happened."]}, {"v": 78, "name": "1.22.0-beta.8", "date": "2026-09-28", "beta": true, "items": ["Menus keep their place: switching something, changing a setting or any other change no longer scrolls the menu back to the top. This includes menus that redraw themselves and parts that load a moment later.", "A different menu now always opens at the top, instead of sometimes where the last one was scrolled to."]}, {"v": 77, "name": "1.22.0-beta.7", "date": "2026-09-28", "beta": true, "items": ["Edit image → Merge: new “Keep the originals” switch. The merged picture becomes a new layer above them, and the original layers stay in the list, switched off, so you can go back to them. It also works with the base image."]}, {"v": 76, "name": "1.22.0-beta.6", "date": "2026-09-28", "beta": true, "items": ["Back to how Find variants worked in 1.22.0-beta.4, without the extra “Details” layers of beta.5.", "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends, and no steps inside them."]}, {"v": 74, "name": "1.22.0-beta.4", "date": "2026-09-28", "beta": true, "items": ["Split and Merge are now tools inside Edit image, next to the brush and eraser, instead of separate buttons.", "Split works on the image itself too: blue becomes a new layer on top, so a plain image can become a layered one.", "Merge can mix layers into each other, or into the image itself.", "After a split or merge the editor stays open on the result, and Undo works without leaving it.", "Fixed: undoing a change in a folder could leave its page grid out of date."]}, {"v": 73, "name": "1.22.0-beta.3", "date": "2026-09-28", "beta": true, "items": ["New “Edit image” in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.", "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.", "New “Split a layer”: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).", "Layers menu: a pencil on each layer (and on the base image) opens the editor, and “Merge layers” mixes the layers you choose into one."]}, {"v": 72, "name": "1.22.0-beta.2", "date": "2026-09-27", "beta": true, "items": ["Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.", "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.", "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no “eraser” layers."]}, {"v": 71, "name": "1.22.0-beta.1", "date": "2026-09-27", "beta": true, "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer, Find variants and Combine as layers.", "Find variants makes one layer per thing that changes (hair, hat, arm, bracelet, shadow…), shared by every version that has it, stacked in the right order (a bracelet on top of its arm, effects on top). It warns when a small change was not captured, names the result after what the file names share, and uses shorter page names.", "Layers: a warning (with a fix) when layers are on no saved page; groups can be renamed from their heading; the reader shows which saved combination you are on and the layers panel leaves the page visible; Combine as layers uses the image you tapped first as the base.", "Import: a cover.jpg next to chapter folders becomes the gallery's cover. “What's new” starts closed for new users and shows the latest versions first."]}, {"v": 70, "name": "1.21.2", "date": "2026-09-27", "items": ["New on the unlock screen: “Experimental version”. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.", "The change log of the experimental version is only shown to people using it."]}, {"v": 69, "name": "1.21.1", "date": "2026-09-27", "items": ["Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.", "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."]}, {"v": 68, "name": "1.21.0", "date": "2026-09-27", "items": ["Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.", "New switch “Understand see-through effects” (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.", "The preview marks options that became see-through."]}, {"v": 67, "name": "1.20.3", "date": "2026-09-27", "items": ["The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."]}, {"v": 66, "name": "1.20.2", "date": "2026-09-27", "items": ["Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."]}, {"v": 65, "name": "1.20.1", "date": "2026-09-27", "items": ["Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."]}, {"v": 64, "name": "1.20.0", "date": "2026-09-27", "items": ["Find variants finds what changes have in common: when one option contains another (an arm with a bracelet, and just the arm), it keeps only what it adds, so you get “arm” and “bracelet” as separate layers. The bracelet can be shown on its own, and the version with both shows the arm plus the bracelet.", "Find variants and Combine as layers now make a new image for the layered result instead of using up one of your images. The originals are kept, hidden from reading (for Find variants you can choose to remove them).", "Layer lists now go from the top layer down to the base, in the layers editor and in the switches."]}, {"v": 63, "name": "1.19.2", "date": "2026-09-27", "items": ["Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.", "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."]}, {"v": 62, "name": "1.19.1", "date": "2026-09-27", "items": ["Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.", "The base picture, the preview at the top, and images in the layer library open full size the same way."]}, {"v": 61, "name": "1.19.0", "date": "2026-09-27", "items": ["Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.", "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).", "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.", "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."]}, {"v": 60, "name": "1.18.2", "date": "2026-09-27", "items": ["Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.", "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."]}, {"v": 59, "name": "1.18.1", "date": "2026-09-27", "items": ["New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."]}, {"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
+const APP_VERSION = 100; // replaced by the build with the release number
+const CHANGELOG = [{"v": 100, "name": "1.23.0-beta.2", "date": "2026-11-07", "beta": true, "items": ["Ren'Py games: drop a game's folder (or its ZIP) on the window, or use Add → “Add a Ren'Py game”, and it becomes a game in your library. Only the game's own files are copied, encrypted; its launchers are left out.", "The app finds out which Ren'Py made the game and which version plays it. That part of Ren'Py (about 20–40 MB) is downloaded once from the Tankōbon website, only after asking you, and kept encrypted with your library.", "Games play inside the app, sealed off: they cannot reach the internet or store anything of their own, and the game's files are only decrypted into memory while you play. Saves are kept encrypted with the game.", "Games stay on the device they were added on: they are not sent to your other devices yet."]}, {"v": 99, "name": "1.23.0-beta.1", "date": "2026-10-04", "beta": true, "items": ["Everything from 1.22.0 is now in the normal version too. Still only here, while it is tested: Edit image (and the pencils in the Layers menu), the new Find variants (up to 20 images, and by hand), and the Layers menu changes (the warning about layers on no saved page, renaming groups from their heading, the combination's name in the reader, and the half-height Layers panel while reading).", "Fixed: after tagging several galleries at once, searching the library for the new tag found nothing until the library was opened again.", "A cover.jpg next to chapter folders now also becomes the cover when a ZIP or CBZ is shared to the app or dropped on the window."]}, {"v": 98, "name": "1.22.0", "date": "2026-10-04", "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer and Combine as layers, which uses the image you tapped first as the base.", "Import: PDF files can be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in “Choose ZIP, CBZ or PDF files”, drop them on the window, share them to the app, or put them in a folder you add. It works offline. A cover.jpg next to chapter folders (in a folder, ZIP or CBZ) becomes the gallery's cover.", "Menus keep their place: switching something or changing a setting no longer scrolls the menu back to the top, and a different menu always opens at the top. “What's new” starts closed for new users and shows the latest versions first.", "Still in the experimental version only, while they are tested: Edit image, the new Find variants (including by hand), and the new layer menu changes."]}, {"v": 97, "name": "1.22.0-beta.27", "date": "2026-10-04", "beta": true, "items": ["Find variants by hand: the slider is now “Sensitivity”, in the Choose tab, and starts at 100%: every point that differs at all shows. Lower it to ignore faint differences, like the noise in JPEG pictures. (Working out which versions have a layer, and how well a see-through colour fits, still allows for that noise.)"]}, {"v": 96, "name": "1.22.0-beta.26", "date": "2026-10-03", "beta": true, "items": ["Find variants by hand has a tidier panel: what is being compared stays at the top (with arrows to go to the previous or next version), with a line saying how much differs. Below it, tabs: Choose (choosing what goes into a layer, and the brush or colour tool settings), New layer, Layers, View (what to show and how different a point must be) and Base. The tools stay at the bottom, and the tab content scrolls on its own."]}, {"v": 95, "name": "1.22.0-beta.25", "date": "2026-10-02", "beta": true, "items": ["PDF files can now be added like ZIP and CBZ files: each page becomes a picture (about 2200 pixels on its long side). Choose them in “Choose ZIP, CBZ or PDF files”, drop them on the window, share them to the app, or put them in a folder you add. The PDF reader is only loaded when a PDF is opened, and works offline."]}, {"v": 94, "name": "1.22.0-beta.24", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: a see-through layer now gives back its own version as it was. Where the effect is not just one colour laid over (more than one colour, or more than a tint), it takes whatever colour and strength give what the version shows, instead of forcing one colour.", "For a tint whose colour changes (a coloured gradient), a see-through layer can use “Same strength”: one strength everywhere (with a slider), and the colour is found at each point. Look at “Rebuilt” on another version that has it to set the strength."]}, {"v": 93, "name": "1.22.0-beta.23", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: choosing “By hand” no longer asks for the base picture or how small a change to catch; both are set inside (the first image is the base to start with, and “Use all of it as the base” in “Build the base” makes any version the base).", "The two pictures being compared are now chosen side by side, at the top of the panel (“Compare” and “With”).", "Making a layer keeps what you chose with the brushes, instead of starting the choice over.", "The “Take away” brush now shows where it paints (in red) while you paint."]}, {"v": 92, "name": "1.22.0-beta.22", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: “Invert the choice” swaps what goes into the layer and what does not.", "A new “Only what changed” switch (on to start with): the brush, the colour tool and Invert then only choose points that are different. Turn it off to choose anything.", "A colour tool: tap a colour in the picture to choose (or take away) every point of that colour, with a colour range, and optionally only where it is joined to where you tapped."]}, {"v": 91, "name": "1.22.0-beta.21", "date": "2026-10-02", "beta": true, "items": ["Find variants by hand: a “Difference” slider sets how different a point must be to count (from 2 to 100; 24 is Normal). The orange area follows it as you move it.", "Any two versions can be compared with each other (“Compared with”), not only a version with the base.", "The base can be put together by hand (“Build the base”), for when every version has something of its own: choose a version and paint with “Take” to bring in what it shows there; “Put back” brings back the original. Orange shows where that version differs from the base as it is now. The layers are then made over the new base, and the version the base started from is compared too."]}, {"v": 90, "name": "1.22.0-beta.20", "date": "2026-09-28", "beta": true, "items": ["Find variants by hand: a layer can now be see-through (for a shadow, a blush or a glow). Choose “See-through” before making it: it becomes one colour laid over what is under it, as strong at each point as the version shows, so it also looks right over other things (a shadow over a hat it never fell on in that version). Soft edges are followed until they fade out.", "Each layer can be switched between solid and see-through afterwards; for see-through layers the colour is found for you, and can be changed (with how well it fits shown).", "Layers that only fit together (a hat with a shadow over it) are now found in a version together."]}, {"v": 89, "name": "1.22.0-beta.19", "date": "2026-09-28", "beta": true, "items": ["Find variants can now be done by hand: choose “By hand”, pick the base, and each other version is compared with it in turn. What is different shows in orange and is already chosen (green); paint to add or take away, then make a layer. One version can give several layers (a hat, then a scarf).", "A layer made from one version is also put in every other version that shows the same thing (a hat in two versions); each layer has a switch for the version you are looking at. “Base” and “Rebuilt” let you check the result, and “Make the layered image” saves it with each version as a saved combination."]}, {"v": 88, "name": "1.22.0-beta.18", "date": "2026-09-28", "beta": true, "items": ["Find variants is back to how it was in 1.22.0-beta.10: the experimental “Layer stack” method is removed."]}, {"v": 87, "name": "1.22.0-beta.17", "date": "2026-09-28", "beta": true, "items": ["Find variants: new choice under Method, “Layer stack (new)”, next to the current way (which stays the default). It is experimental, to compare the two on your pages.", "The base is put together from what most versions show at each place (three versions with black hair and two with blond: black hair), so no version has to be a clean base. When every version has something the others don't (a hat, glasses, a scarf), the base comes out without any of them.", "Each thing is found by where it goes on without an edge, and its layer is whole even where something covers it in some versions. A splash keeps its drop.", "See-through effects (a blush, a shadow) are found first and taken out, so what is under them comes out as one layer, and the effect is one see-through layer over everything it covers (a blush over an open eye and over a closed one).", "Things that always come together but are different things stay separate layers: they turn on together in each version's combination, and each can still be turned on or off by itself. It takes about as long as the current way."]}, {"v": 86, "name": "1.22.0-beta.16", "date": "2026-09-28", "beta": true, "items": ["Find variants is back to how it was in 1.22.0-beta.10. The changes from beta.11 to beta.15 are undone: the “Step by step” method, the AI switch (and its download), and the outline and edge rules.", "Everything else stays as it was in beta.10: up to 20 images compared in sections, the image editor, merging layers, and menus keeping their scroll position."]}, {"v": 85, "name": "1.22.0-beta.15", "date": "2026-09-28", "beta": true, "items": ["Find variants has a new way of finding layers, “Step by step” (now the default; the old one is still there as “Classic” under Method). It first breaks the pictures into many small, exact pieces, then joins the pieces that belong to the same change by how they continue into each other.", "A see-through effect over things that are different underneath (a blush over an open eye in one version and over a closed eye in another; a bracelet's shadow over a tattoo or over bare arm) is now one see-through layer, instead of several pieces.", "Without the AI too: a part of a thing that most versions have on its own (the drop of a splash) goes back into that thing's layer when it continues it with no edge and in the same colours. The base then shows what's there without it.", "Two layers left for exactly the same versions are joined into one."]}, {"v": 84, "name": "1.22.0-beta.14", "date": "2026-09-28", "beta": true, "items": ["Find variants with AI: a layer holding two different things (a collar, and a bit of hair that only comes with it) is split, so each thing is its own layer. Two of the same kind of thing (both eyes) stay together, and a shadow stays with what casts it.", "Find variants with AI: a thing with a missing piece, because most versions have just that piece (a splash whose drop is also in other versions), is made whole. The base then shows what's there without it, and the versions that only have the drop get it from a small layer of their own."]}, {"v": 83, "name": "1.22.0-beta.13", "date": "2026-09-28", "beta": true, "items": ["Find variants: new experimental switch “Keep whole objects together”. A small AI (MobileSAM) looks at each picture to see where objects end, so an edge shared by versions goes into each object's own layer instead of becoming a separate layer you have to turn on with them.", "The AI runs on this device; nothing is sent anywhere. It downloads about 33 MB the first time it's used, then works offline. It makes Find variants slower, especially on phones."]}, {"v": 82, "name": "1.22.0-beta.12", "date": "2026-09-28", "beta": true, "items": ["Find variants: dark shapes now keep their edges too (the previous version only managed it for light shapes). A white or a dark band now each carry their own outline, so either looks right even over a version that doesn't have it."]}, {"v": 81, "name": "1.22.0-beta.11", "date": "2026-09-28", "beta": true, "items": ["Find variants: things that replace each other (a white band or a dark one) now each keep their outline, so each is whole on its own and they become a one-at-a-time choice, instead of a shared “Change” layer with a dark one covering it.", "Find variants: a thing whose edge another version paints over (bare skin where a band had its black edge) now keeps a copy of that edge, so it still has it when shown over that version.", "Find variants: fixed a case where part of one version could show through in another (like pieces of an open eye on a closed one)."]}, {"v": 80, "name": "1.22.0-beta.10", "date": "2026-09-28", "beta": true, "items": ["Fixed: Find variants could stop with “Cannot read properties of undefined (reading 'chunks')” when it compared big pictures in sections."]}, {"v": 79, "name": "1.22.0-beta.9", "date": "2026-09-28", "beta": true, "items": ["Find variants now works with up to 20 images (was 12).", "When many big versions would not fit in the device's memory at once, the pictures are compared in sections from top to bottom and the results joined, so it doesn't run out of memory. The result screen says when this happened."]}, {"v": 78, "name": "1.22.0-beta.8", "date": "2026-09-28", "beta": true, "items": ["Menus keep their place: switching something, changing a setting or any other change no longer scrolls the menu back to the top. This includes menus that redraw themselves and parts that load a moment later.", "A different menu now always opens at the top, instead of sometimes where the last one was scrolled to."]}, {"v": 77, "name": "1.22.0-beta.7", "date": "2026-09-28", "beta": true, "items": ["Edit image → Merge: new “Keep the originals” switch. The merged picture becomes a new layer above them, and the original layers stay in the list, switched off, so you can go back to them. It also works with the base image."]}, {"v": 76, "name": "1.22.0-beta.6", "date": "2026-09-28", "beta": true, "items": ["Back to how Find variants worked in 1.22.0-beta.4, without the extra “Details” layers of beta.5.", "Find variants: soft changes like a blush or a gradient now fade out as smoothly as in the original, with no visible edge where the layer ends, and no steps inside them."]}, {"v": 74, "name": "1.22.0-beta.4", "date": "2026-09-28", "beta": true, "items": ["Split and Merge are now tools inside Edit image, next to the brush and eraser, instead of separate buttons.", "Split works on the image itself too: blue becomes a new layer on top, so a plain image can become a layered one.", "Merge can mix layers into each other, or into the image itself.", "After a split or merge the editor stays open on the result, and Undo works without leaving it.", "Fixed: undoing a change in a folder could leave its page grid out of date."]}, {"v": 73, "name": "1.22.0-beta.3", "date": "2026-09-28", "beta": true, "items": ["New “Edit image” in Editing tools: brush, eraser and colour picker, with size, opacity and softness, plus exposure, contrast, saturation, hue and warmth. Works on the image itself or on any of its layers, with undo and redo. Pinch or use the mouse wheel to zoom.", "Save replaces the picture (with Undo for a few seconds); Save as a copy keeps the original and adds the edited one next to it.", "New “Split a layer”: paint roughly in red and blue over two parts of a layer, and it becomes two layers. What you did not paint goes with the part it is joined to by similar colours (you can turn that off).", "Layers menu: a pencil on each layer (and on the base image) opens the editor, and “Merge layers” mixes the layers you choose into one."]}, {"v": 72, "name": "1.22.0-beta.2", "date": "2026-09-27", "beta": true, "items": ["Find variants: a part that is partly covered in some versions (a tattoo under a bracelet) now becomes one complete layer, instead of a full copy and a cut-out copy.", "Find variants: a shadow falling across different things (over the tattoo and over bare skin) is found as one see-through shadow that goes with the thing casting it.", "Find variants: when versions add things step by step (arm, then tattoo, then bracelet), the base is the bare picture and each addition is its own layer, with no “eraser” layers."]}, {"v": 71, "name": "1.22.0-beta.1", "date": "2026-09-27", "beta": true, "items": ["Accounts have a username now: unlock with your username and password. Older accounts choose one the first time. If you forget a password, type the account's username on the unlock screen to delete just that account; erasing every account needs “erase everything” typed.", "Only the clue of the username you typed is shown. The auto-lock time is now per account. Deleting an account says so after the restart. Paired devices can be removed in Devices & sync.", "Reader: dim, page number and messages now show in one-page and two-page modes; tapping the edge while zoomed moves around the page before turning; the mouse wheel, arrow keys, Home/End and Page Up/Down work in every mode (press ? for the list); a lock button at the top; tall webtoon pages fit the width; your spot inside a tall page is remembered; “Shift pairs” for two-page spreads; an end card with “Read next”; dark panels while reading; the tap map only shows the first few times.", "Library: choose several galleries to tag or delete together; results say how many galleries match; plain words search titles and # searches tags; sort by most pages; the search stays at the top.", "Editing: type several tags at once with commas (the box empties after adding); Shift-click to select a range, Ctrl+A for all, “Select all” stays in the bar; make any page the gallery cover; Move can send pages and folders to another gallery; merging two tags by renaming asks first; Done leaves Edit; Undo for hiding, deleting a layer, Find variants and Combine as layers.", "Find variants makes one layer per thing that changes (hair, hat, arm, bracelet, shadow…), shared by every version that has it, stacked in the right order (a bracelet on top of its arm, effects on top). It warns when a small change was not captured, names the result after what the file names share, and uses shorter page names.", "Layers: a warning (with a fix) when layers are on no saved page; groups can be renamed from their heading; the reader shows which saved combination you are on and the layers panel leaves the page visible; Combine as layers uses the image you tapped first as the base.", "Import: a cover.jpg next to chapter folders becomes the gallery's cover. “What's new” starts closed for new users and shows the latest versions first."]}, {"v": 70, "name": "1.21.2", "date": "2026-09-27", "items": ["New on the unlock screen: “Experimental version”. Turn it on to try new features before everyone gets them (they may still have problems); turn it off to go back. Your galleries and accounts stay the same.", "The change log of the experimental version is only shown to people using it."]}, {"v": 69, "name": "1.21.1", "date": "2026-09-27", "items": ["Hidden folders and images now go together: hiding or showing a folder does the same to every image (and folder) inside it.", "A folder whose images are all hidden becomes hidden by itself, and showing one of its images shows the folder again."]}, {"v": 68, "name": "1.21.0", "date": "2026-09-27", "items": ["Find variants understands transparency: images with see-through parts (like PNGs with a clear background) keep them. Clear and white are no longer treated as the same, and the base and layers keep the exact transparency, soft edges included.", "New switch “Understand see-through effects” (on by default): shadows, blush, glows and tints become real see-through layers (the colour plus how see-through it is), so they also look right over other layers, for example a shadow over a different hair colour. Solid additions and plain colour swaps (like a new eye colour) stay solid.", "The preview marks options that became see-through."]}, {"v": 67, "name": "1.20.3", "date": "2026-09-27", "items": ["The “Original image” view now also works for layered images made before 1.20.1: the app finds the original by its name (the layer's name, or the version it belongs to), looking first in the same folder."]}, {"v": 66, "name": "1.20.2", "date": "2026-09-27", "items": ["Layers editor: the picture you are editing now stays at the top while the rest of the menu scrolls under it, so you always see what your changes do."]}, {"v": 65, "name": "1.20.1", "date": "2026-09-27", "items": ["Layers editor: the full-size view of a layer has a new “Original image” choice that shows the image the layer was taken from (for layers made with Find variants or Combine as layers, while the originals are still in the gallery)."]}, {"v": 64, "name": "1.20.0", "date": "2026-09-27", "items": ["Find variants finds what changes have in common: when one option contains another (an arm with a bracelet, and just the arm), it keeps only what it adds, so you get “arm” and “bracelet” as separate layers. The bracelet can be shown on its own, and the version with both shows the arm plus the bracelet.", "Find variants and Combine as layers now make a new image for the layered result instead of using up one of your images. The originals are kept, hidden from reading (for Find variants you can choose to remove them).", "Layer lists now go from the top layer down to the base, in the layers editor and in the switches."]}, {"v": 63, "name": "1.19.2", "date": "2026-09-27", "items": ["Layers: every layer now has its own switch, also inside groups, so you can show several layers of the same group at once. Each group has a “One at a time” switch if you want it to work as a pick-one choice.", "Layers are much faster: switching a layer updates the preview and the reader page right away (pictures are kept ready instead of being decrypted and redrawn each time), and saving happens once a moment after you stop tapping. Renaming a layer or changing its group no longer redraws the picture."]}, {"v": 62, "name": "1.19.1", "date": "2026-09-27", "items": ["Layers editor: tap a layer's small picture to see it full size. Choose “What changes” (the layer over a faded base, so the change stands out), “On the base”, or “Layer alone” (on a checkerboard). Tap the picture to see it at full size and scroll around.", "The base picture, the preview at the top, and images in the layer library open full size the same way."]}, {"v": 61, "name": "1.19.0", "date": "2026-09-27", "items": ["Find variants can now split into parts (the new default). It finds each area that changes (hair, eyes…), sees which versions look the same there, and makes each part its own pick-one choice. Parts mix freely, so you can make combinations that were never drawn, like black hair with green eyes from only blond+green and black+blue.", "Areas that always change together (like both eyes) become one part. Options are named from the words the file names share, for example “black” or “green”, and the base look is named too (“blond”).", "Each original version is still saved as a combination and reads as its own page. “Whole versions” is still there if you prefer one layer per version.", "The shared base is now built from the look most versions have at each point, so it never mixes two colours into a new one."]}, {"v": 60, "name": "1.18.2", "date": "2026-09-27", "items": ["Fixed: Find variants deleted the layers of images that already had some. Those images are now compared by their base picture and keep all their layers; their saved combinations become pages of that version.", "Editing tools: a selected folder now counts as every image inside it (including its folders), for Combine as layers and Find variants."]}, {"v": 59, "name": "1.18.1", "date": "2026-09-27", "items": ["New “Editing tools” button when images are selected in Edit. It gathers Add layers / Layers, Combine as layers and Find variants in one place, and says what to select when a tool cannot be used yet. The selection bar is shorter as a result."]}, {"v": 58, "name": "1.18.0", "date": "2026-09-27", "items": ["New: Find variants. In Edit, select 2 to 12 versions of the same picture and tap “Find variants”. The app finds what they share and what is different, and turns them into one layered image: a base picture plus one layer per version with only its changes.", "The base can be what all versions share (with 3 or more) or one of the versions. You can choose how small a change to catch, which helps with blurry or compressed images.", "Before saving you see each version rebuilt from the base and its layer, with how much it changes and how closely it matches the original, and a warning if some images look too different to be versions of one picture.", "Each version becomes a saved combination, so they still read as separate pages. The layers are in a pick-one group, so you can also switch between them with the layers button. You can keep the original images too, hidden from reading."]}, {"v": 57, "name": "1.17.0", "date": "2026-09-27", "items": ["Tap controls on one side: in reading settings, “Where to tap” can now be Both sides, Right side only or Left side only. On one side, tap the top half for the next page and the bottom half for the previous one; the rest of the screen opens the menu. Works in every reading mode.", "When the reader opens, a see-through map of the tap areas shows for a couple of seconds so you know where to tap. It also shows when you change the tap setting, and can be turned off (“Show where to tap when opening the reader”)."]}, {"v": 56, "name": "1.16.0", "date": "2026-09-27", "items": ["New: the layer library. Each account has its own collection of layer images to reuse on any layered image, for artists who reuse the same pose with other extras. Find it in Settings → Library → Layer library.", "Add images to it (sorted into folders), drop them on the window while it is open, or save any existing layer to it with the bookmark button in the layers editor.", "In the layers editor, “Add from the layer library” puts library images on the image without copying them. Images from the same library folder start as a pick-one group.", "Deleting an image from the library takes it off every image that uses it (the app tells you how many first). The library syncs to your other devices.", "Small copies of see-through images now show on white instead of black.", "Fixed: in the browser, choosing files could count as pressing Back and close the page you were on."]}, {"v": 55, "name": "1.15.2", "date": "2026-09-27", "items": ["Layers: the name box and Save button now sit above the saved combinations.", "Layers: new “Show all layers” / “Hide all layers” button. In pick-one groups, showing all keeps the one you chose (or the first one)."]}, {"v": 54, "name": "1.15.1", "date": "2026-09-27", "items": ["Drag and drop also works in the layers editor: while it is open, images dropped on the window are added as layers of that image."]}, {"v": 53, "name": "1.15.0", "date": "2026-09-27", "items": ["Drag and drop on the computer: drop images, ZIP/CBZ files or whole folders onto an open gallery or folder to add them right there. Images become pages; ZIP files and folders become folders inside, keeping their structure.", "You can still choose “Make a new gallery instead”. Dropping on the library makes new galleries as before, and now whole folders work too (one gallery per folder).", "While dragging, the window shows where the files will go."]}, {"v": 52, "name": "1.14.0", "date": "2026-09-27", "items": ["Layered images: each saved combination is now its own page when reading. Just turn the page to see the next one, no need to open the layers button.", "In the layers editor you can reorder saved combinations with the arrows (that is the order they are read in), rename them and delete them.", "In the reader, the layers button on one of these pages changes that combination, and tapping another combination jumps to its page."]}, {"v": 51, "name": "1.13.0", "date": "2026-09-27", "items": ["New: layered images. A page can now be made of a base picture plus full-size layers that you show or hide at any time.", "To make one, in Edit select the base image first and then its layers, and tap “Combine as layers”. Or select one image and tap “Add layers” to add layer files to it.", "Put layers in a pick-one group (like outfits or expressions) so only one of them shows at a time.", "While reading, the layers button at the top switches layers on the page you are looking at. Your choice is remembered, and you can save combinations to switch back with one tap.", "Layered images sync to your other devices, and Save ZIP includes the picture as shown plus all its layers."]}, {"v": 50, "name": "1.12.0", "date": "2026-09-27", "items": ["The Tags box is always there now, in the library and inside every gallery and folder, folded away until you tap it.", "Every tag in your account shows up everywhere, not only in the gallery where it was made.", "Searching by tag inside a folder only looks at that folder and what is inside it. Reading those results stays inside the folder too."]}, {"v": 49, "name": "1.11.1", "date": "2026-09-27", "items": ["Tag search: tags stay in place when you switch them between must have, any of and must not have.", "The tag list in the library and in galleries folds away; tap its title to open it. The title shows the current search."]}, {"v": 48, "name": "1.11.0", "date": "2026-09-27", "items": ["Tags belong to your account: Settings → Tags lists them all, even unused ones, and lets you add, rename or delete a tag everywhere at once. Each account has its own tags, and they sync with your paired devices.", "Tag a whole gallery from Edit gallery → Gallery tags.", "New tag search: every chosen tag can be “must have”, “any of” or “must not have”, all in the same search. Tap a tag to switch. For example: must have #action, any of #funny or #romance, and not #sad."]}, {"v": 47, "name": "1.10.2", "date": "2026-09-27", "items": ["Direct Wi‑Fi transfer: the app remembers which network address of the other device works, instead of trying every address again before each group of pages. This removes long pauses, especially with computers that have extra network adapters.", "Bigger groups of pages per request, and the library is redrawn less often while pages arrive.", "New app file (update it from App updates): tries all addresses at once, and on Android keeps Wi‑Fi at full speed during a transfer instead of letting power saving slow it down."]}, {"v": 46, "name": "1.10.1", "date": "2026-09-27", "items": ["Faster sync over the normal connection: several groups of pages are requested at once instead of one after another.", "The sync progress card now says whether pages come directly over Wi‑Fi or over the normal connection, and how many pages per second arrive."]}, {"v": 45, "name": "1.10.0", "date": "2026-09-27", "items": ["The Android and Windows apps can now update their app file from inside the app, so you no longer need to download it from GitHub.", "Android: the app downloads the new app file and opens Android's installer; tap Install. The first time, Android asks you to allow Tankōbon to install apps.", "Windows: the new app file downloads in the background and installs by itself when you close the app, or right away with Restart and update.", "This needs one last manual install of the new app file."]}, {"v": 44, "name": "1.9.2", "date": "2026-09-27", "items": ["Version numbers now use the usual form, like 1.9.2: the first number changes for very big changes, the second for new features and the third for fixes and small improvements."]}, {"v": 43, "name": "1.9.1", "date": "2026-09-27", "items": ["New “What's new” section on the unlock screen, so you can see what changed in each version."]}, {"v": 42, "name": "1.9.0", "date": "2026-09-27", "items": ["Fast direct Wi‑Fi transfer between the Android and Windows apps: pages download many at a time over your home network, still encrypted. It switches back to the normal connection by itself if the network does not allow it.", "Needs the newest app file on both devices. You can turn it off in Settings → Devices and sync."]}, {"v": 40, "name": "1.8.1", "date": "2026-09-27", "items": ["Fixed the “T.takeIncoming is not a function” message on phones with an older app file.", "Settings → App updates now tells you when a newer app file is available."]}, {"v": 39, "name": "1.8.0", "date": "2026-09-27", "items": ["Settings reorganized into clear sections: Account, Sync, Reading, Privacy and screen, Library and App. Each page has a way back to Settings."]}, {"v": 38, "name": "1.7.2", "date": "2026-09-27", "items": ["Update the app from the unlock screen without unlocking an account.", "The automatic-update switch moved to the unlock screen."]}, {"v": 37, "name": "1.7.1", "date": "2026-09-27", "items": ["Lock button at the top of the library to leave an account without closing the app.", "New accounts open straight away; the sample gallery is prepared in the background with a progress bar.", "Progress bars while devices sync: pages received and pages sent."]}, {"v": 36, "name": "1.7.0", "date": "2026-09-27", "items": ["Local accounts: every password opens its own separate account with its own galleries, settings and sync. Make as many as you like; none can see or change another.", "Replaces the decoy password. A decoy you already had became an ordinary account."]}, {"v": 35, "name": "1.6.0", "date": "2026-09-26", "items": ["Every folder has the same editing screen as the gallery: name, cover, tags, list or folders view, sorting, adding pages, new folders and deleting.", "Folders can have their own cover.", "Fixed dragging pages and folders in the Folders view."]}, {"v": 34, "name": "1.5.0", "date": "2026-09-26", "items": ["Receive ZIP and CBZ files: Share or Open with on Android, double-click or Open with on Windows, or drag them onto the window. Each can become its own gallery, or one gallery with a chapter per file."]}, {"v": 33, "name": "1.4.0", "date": "2026-09-26", "items": ["Windows app. The library is kept encrypted in Documents\\Tankobon and survives uninstalling."]}, {"v": 32, "name": "1.3.2", "date": "2026-09-26", "items": ["Sync fix: galleries and pages that did not arrive are asked for again.", "Sync now button in Devices and sync."]}, {"v": 31, "name": "1.3.1", "date": "2026-09-26", "items": ["Pairing scanner picks a normal rear camera, has a Switch camera button, and can read the code from a photo or screenshot."]}, {"v": 30, "name": "1.3.0", "date": "2026-09-26", "items": ["Android app. Pages are stored as encrypted files in the app's own storage, not in Chrome.", "Updates arrive only when you tap Update, with a notification when one is available, or automatically if you switch that on."]}, {"v": 29, "name": "1.2.0", "date": "2026-09-26", "items": ["Search and read by several tags at once, with “all of them” or “any of them”."]}, {"v": 28, "name": "1.1.1", "date": "2026-09-26", "items": ["Tags on a folder also apply to every image and folder inside it."]}, {"v": 27, "name": "1.1.0", "date": "2026-09-26", "items": ["Tags on pages and folders, with suggestions as you type.", "Read only the pages with a tag.", "Option to include hidden pages when reading.", "Password clue.", "Phone-folder storage retired; libraries still in a phone folder can be moved back into the app."]}, {"v": 22, "name": "1.0.0", "date": "2026-09-26", "items": ["Earlier versions: galleries and chapters, several page layouts and zoom, encryption with a password, sync between devices, extras and hidden pages, full screen and the privacy cover."]}]; // replaced by the build with changelog.json
 /* Versions are shown as 1.x.y; the whole number underneath is only used to compare them. */
 const VNAME = (n, remote) => (remote && remote.name) || ((CHANGELOG.find(c => c.v === n) || {}).name) || String(n);
 const APP_VNAME = VNAME(APP_VERSION);
@@ -923,6 +933,7 @@ async function render(view, params) {
   if (view === 'pages') { view = 'editor'; params = { id: params.id, folder: params.ch, view: 'folders' }; } // old address of a folder's page editor
   closeSheet();
   if (CUR.view === 'reader' && view !== 'reader') leaveReader();
+  if (CUR.view === 'game' && view !== 'game') closeGame();
   CUR = { view, params };
   for (const v of ['library', 'detail', 'editor', 'pages']) $('#v-' + v).hidden = v !== view;
   $('#reader').hidden = view !== 'reader';
@@ -933,9 +944,10 @@ async function render(view, params) {
     else if (view === 'detail') await renderDetail(params.id, params.folder, tagQuery(params));
     else if (view === 'editor') await renderEditor(params.id, params.folder, params.view);
     else if (view === 'pages') await renderEditor(params.id, params.ch, 'folders');
+    else if (view === 'game') await openGame(params.id);
     else if (view === 'reader') await openReader(params.id, params.ch, params.page, params.start, params.scope, params.only, tagQuery(params));
   } catch (e) { console.error(e); toast('Something went wrong: ' + (e.message || e)); }
-  if (view !== 'reader') window.scrollTo(0, params.scroll || 0);
+  if (view !== 'reader' && view !== 'game') window.scrollTo(0, params.scroll || 0);
 }
 
 /* ================= gallery helpers ================= */
@@ -1439,6 +1451,10 @@ function newGallery(title) {
 /* ---------- files handed to the app: shared or opened from another app, dropped on the window ---------- */
 let RECEIVED = [];
 async function receiveFiles(files) {
+  if (EXP && Crypt.ready && files.some(f => /\.zip$/i.test(f.name))) {
+    const { games, rest } = await rpyGamesIn(files).catch(() => ({ games: [], rest: files }));
+    if (games.length) { await rpyAddSheet(games); if (!rest.length) return; files = rest; }
+  }
   const zips = files.filter(f => ZIP_EXT.test(f.name) || /zip|cbz|comicbook|pdf/i.test(f.type || '')), imgs = files.filter(f => !zips.includes(f) && (IMG_EXT.test(f.name) || (f.type || '').startsWith('image/')));
   if (!zips.length && !imgs.length) { toast('Those files are not ZIP, CBZ, PDF or images, so nothing was added.', 3500); return; }
   if (!Crypt.ready) { RECEIVED.push(...zips, ...imgs); return; }
@@ -1565,6 +1581,10 @@ async function dropEntries(files) {
   return entries;
 }
 async function handleDrop(files) {
+  if (EXP) {
+    const { games, rest } = await rpyGamesIn(files).catch(() => ({ games: [], rest: files }));
+    if (games.length) { await rpyAddSheet(games); if (!rest.some(f => isImgFile(f) || isZipFile(f))) return; files = rest; }
+  }
   if (!files.some(f => isImgFile(f) || isZipFile(f))) return toast('Those files are not ZIP, CBZ, PDF or images, so nothing was added.', 3500);
   const t = dropTarget(), g = t && await S.gal(t.id);
   const tops = [...new Set(files.filter(f => f.relPath).map(f => f.relPath.split('/')[0]))];
@@ -1647,9 +1667,16 @@ function openAddSheet(existing, folder) {
   const status = h('div', { class: 'progress', hidden: true });
   const opts = h('div', { class: 'stack' });
   const folderOK = NATIVE || 'webkitdirectory' in document.createElement('input');
+  const chooseGame = async () => {
+    const files = await pickFiles({ folder: true }); if (!files.length) return;
+    const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
+    if (!games.length) return toast('No Ren\'Py game was found in that folder. Choose the folder that has the game\'s “game” folder inside.', 4500);
+    closeSheet(); rpyAddSheet(games);
+  };
   const choose = async kind => {
     const files = kind === 'folder' ? await pickFiles({ folder: true }) : kind === 'images' ? await pickFiles({ accept: 'image/*' }) : await pickFiles({ accept: '.zip,.cbz,.pdf,application/zip,application/x-cbz,application/pdf' });
     if (!files.length) return;
+    if (EXP && !existing && (kind === 'folder' || kind === 'zip')) { const { games, rest } = await rpyGamesIn(files).catch(() => ({ games: [], rest: files })); if (games.length) { closeSheet(); await rpyAddSheet(games); if (!rest.length) return; } }
     let cancel = false;
     opts.hidden = true; status.hidden = false;
     const lbl = h('div', { class: 'num' }, 'Reading files…'); const bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
@@ -1683,12 +1710,487 @@ function openAddSheet(existing, folder) {
     existing ? null : h('button', { class: 'bigopt', onclick: createEmpty }, icon('plus'), h('div', {}, h('b', {}, 'Create an empty gallery'), h('span', {}, 'Start from nothing. Make your own chapters and add images to each one from anywhere on your phone.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('folder') }, icon('folder'), h('div', {}, h('b', {}, 'Choose a folder'), h('span', {}, folderOK ? 'Images in subfolders become chapters. CBZ/ZIP files inside also count as chapters.' : 'Your browser may not support picking folders. Try the options below.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
+    EXP && !existing ? h('button', { class: 'bigopt picks', id: 'add-game', onclick: chooseGame }, icon('play'), h('div', {}, h('b', {}, 'Add a Ren\'Py game'), h('span', {}, 'Choose the game\'s folder (with its “game” folder inside). You can also drop a game folder or its ZIP on the window.'))) : null,
     h('button', { class: 'bigopt picks', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP, CBZ or PDF files'), h('span', {}, 'Each page of a PDF becomes a picture. Folders inside a ZIP become chapters. Picking several files makes one chapter per file.')))
   );
   openSheet(folder ? `Add pages to “${folder.title}”` : existing ? 'Add pages to this gallery' : 'Add a gallery', h('div', { class: 'stack' },
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'add-name' }, existing ? 'Chapter name for loose images' : 'Gallery name'), name),
     opts, status,
     h('p', { class: 'hint' }, 'Pages are copied into this app on your phone, so the gallery keeps working even if you move the original folder. Android will ask you to confirm access to the folder.')));
+}
+
+/* ================= Ren'Py games (experimental) =================
+   A Ren'Py game (its folder, or a ZIP of it) dropped on the app becomes a game in the library. Only its game/ folder is
+   kept, encrypted in pieces like the pages; the Windows/Mac/Linux launchers and the engine that came with it are left out.
+   To play, the web version of Ren'Py runs in a sealed frame: no network, no storage of its own, no pop-ups. That part of
+   Ren'Py is downloaded once from this app's website (only after asking) and kept encrypted with the library too.
+   The game's files are decrypted into the frame's memory only, and its saves come back here to be encrypted. */
+const RPY_BASE = SITE + 'renpy/';
+const RPY_CHUNK = 4 << 20;
+/* the Ren'Py versions on the website (renpy/versions.txt), newest first; mb: download size */
+const RPY_RUNTIMES = [
+  { v: '8.5.3', py: '3.12', mb: 41 }, { v: '8.4.1', py: '3.12', mb: 42 }, { v: '8.3.7', py: '3.11', mb: 41 }, { v: '8.2.3', py: '3.11', mb: 39 },
+  { v: '8.1.3', py: '3.11', mb: 35 }, { v: '7.8.7', py: '2.7', mb: 22 }, { v: '7.7.3', py: '2.7', mb: 21 }, { v: '7.6.3', py: '2.7', mb: 20 },
+  { v: '7.5.3', py: '2.7', mb: 19 }, { v: '7.4.11', py: '2.7', mb: 19 }];
+const rpyLoader = v => v.startsWith('7.') ? 'index.js' : 'renpy.js';
+const RPY_FILES = {
+  'renpy.js': ['web/index.html', 'web/renpy-pre.js', 'web/renpy.js', 'web/renpy.wasm', 'web/renpy.data', 'engine.zip'],
+  'index.js': ['web/index.html', 'web/index.js', 'web/index.wasm', 'web/pythonhome-data.js', 'web/pythonhome.data', 'web/pyapp-data.js', 'web/pyapp.data', 'engine.zip'],
+};
+const vcmp = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0); return 0; };
+const isGame = g => !!(g && g.game);
+
+/* ---------- finding a game among dropped or picked files ----------
+   items: [{path, size, blob()}] with / in paths. A game is a folder holding game/ with Ren'Py scripts or archives. */
+function rpyFind(items) {
+  let root = null;
+  for (const it of items) {
+    const p = it.path; if (!/\.(rpyc|rpy|rpa|rpymc)$/i.test(p)) continue;
+    const k = /^game\//i.test(p) ? 0 : p.search(/\/game\//i) + 1; if (k < 0 || (k === 0 && !/^game\//i.test(p))) continue;
+    const r = p.slice(0, k); if (root === null || r.length < root.length) root = r;
+  }
+  if (root === null) return null;
+  return { root, items: items.filter(it => it.path.startsWith(root)) };
+}
+function rpyTitle(root, fallback) {
+  let t = (root.replace(/\/$/, '').split('/').pop() || fallback || 'Game').trim();
+  t = t.replace(/([-_ ](v?\d+(\.\d+)*[a-z]?|pc|win|windows|linux|mac|market|all|dists?|web|android))+$/i, '') || t;
+  if (!/\s/.test(t)) t = t.replace(/[_]+/g, ' ');
+  return t;
+}
+/* Which Ren'Py made it: version files, logs from playing it, or at least which Python compiled its engine. */
+async function rpyVersion(f) {
+  const rel = it => it.path.slice(f.root.length);
+  const text = async it => { const u = new Uint8Array(await (await it.blob()).slice(0, 2e6).arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return s; };
+  const pick = s => { const m = s.match(/(?:^|[^\d.])([678])\.(\d{1,2})\.(\d{1,2})(?:\.\d+)?(?![\d])/); return m ? `${m[1]}.${m[2]}.${m[3]}` : null; };
+  for (const it of f.items.filter(it => /^renpy\/(__pycache__\/)?vc_version\b[^/]*$/i.test(rel(it)))) { const v = pick(await text(it)); if (v) return { v, how: 'version' }; }
+  for (const n of ['log.txt', 'traceback.txt', 'errors.txt']) {
+    const it = f.items.find(x => rel(x).toLowerCase() === n); if (!it) continue;
+    const m = (await text(it)).match(/Ren'Py ([678]\.\d+\.\d+)/); if (m) return { v: m[1], how: 'log' };
+  }
+  for (const it of f.items.filter(it => /^renpy\/(__pycache__\/)?__init__\b[^/]*$/i.test(rel(it)))) { const v = pick(await text(it)); if (v) return { v, how: 'version' }; }
+  const tag = f.items.map(it => (rel(it).match(/^renpy\/.*\.cpython-3(\d+)\.pyc$/) || [])[1]).find(Boolean);
+  if (tag) return { py: '3.' + tag, how: 'python' };
+  if (f.items.some(it => /^renpy\/.*\.pyo$/i.test(rel(it)))) return { py: '2.7', how: 'python' };
+  return {};
+}
+/* The Ren'Py to play it with: the same version line if the website has it, else the nearest newer one of the same major
+   version (newer Ren'Py plays older games), else the newest. Ren'Py 8.0 games need 8.1: the 8.0 web version was Python 2. */
+function rpyChoose(det) {
+  const R = RPY_RUNTIMES, py3 = R.filter(r => r.py !== '2.7'), py2 = R.filter(r => r.py === '2.7');
+  const near = (pool, v) => {
+    const [M, m] = v.split('.').map(Number), mm = r => r.v.split('.').map(Number);
+    return pool.find(r => mm(r)[0] === M && mm(r)[1] === m) || pool.filter(r => mm(r)[0] === M && mm(r)[1] > m).sort((a, b) => vcmp(a.v, b.v))[0] || pool[0];
+  };
+  if (det.v) {
+    const M = +det.v.split('.')[0];
+    if (M >= 8) return { rt: near(py3, det.v).v, sure: true };
+    const old = vcmp(det.v, '7.4.0') < 0;
+    return { rt: near(py2, old ? '7.4.0' : det.v).v, sure: !old, old };
+  }
+  if (det.py === '2.7') return { rt: py2[0].v };
+  if (det.py) return { rt: (det.py === '3.9' ? py3.find(r => r.v.startsWith('8.1')) : py3.find(r => r.py === det.py) || py3[0]).v };
+  return { rt: py3[0].v };
+}
+const rpyRuntime = v => RPY_RUNTIMES.find(r => r.v === v) || { v, mb: 40 };
+
+/* ---------- encrypted pieces ---------- */
+async function rpyPut(buf) { const id = uid(); await ST.put('images', { id, t: 'application/octet-stream', e: await Crypt.enc(buf) }); return id; }
+async function rpyGet(id) { const r = await ST.get('images', id); if (!r || !r.e) throw new Error('A piece of the game is missing.'); return Crypt.dec(r.e); }
+async function rpyRead(ids, size) {
+  const out = new Uint8Array(size); let off = 0;
+  for (const id of ids) { const u = new Uint8Array(await rpyGet(id)); out.set(u, off); off += u.length; }
+  return out.buffer;
+}
+async function rpyPutJSON(o, id) { id = id || uid(); await ST.put('images', { id, t: 'application/json', e: await Crypt.encJSON(o) }); return id; }
+async function rpyGetJSON(id) { if (!id) return null; const r = await ST.get('images', id).catch(() => null); if (!r || !r.e) return null; try { return await Crypt.decJSON(r.e); } catch (e) { return null; } }
+/* every record a game uses (for deleting it) */
+async function rpyIds(g) {
+  if (!isGame(g)) return [];
+  const out = [g.game.list, g.game.sv].filter(Boolean);
+  for (const f of (await rpyGetJSON(g.game.list)) || []) out.push(...f.c);
+  for (const s of Object.values((await rpyGetJSON(g.game.sv)) || {})) out.push(...s.c);
+  return out;
+}
+
+/* ---------- the downloaded parts of Ren'Py (one per version), kept with this account ---------- */
+const RPY = {
+  async reg() { const r = await DB.get('meta', mk('renpy')).catch(() => null); if (!r || !r.e) return {}; try { return await Crypt.decJSON(r.e); } catch (e) { return {}; } },
+  async saveReg(o) { await DB.put('meta', { id: mk('renpy'), e: await Crypt.encJSON(o) }); },
+  async has(v) { const r = await this.reg(); return !!(r[v] && r[v].done); },
+  /* download version v from the website, in encrypted pieces. onProg(done, total) */
+  async download(v, onProg = () => { }, cancelled = () => false) {
+    const base = RPY_BASE + v + '/';
+    let info; try { info = await (await fetch(base + 'runtime.json', { cache: 'no-store' })).json(); } catch (e) { throw new Error('Could not reach the Tankōbon website. Check your connection and try again.'); }
+    const need = RPY_FILES[info.loader] || RPY_FILES[rpyLoader(v)], sizes = Object.fromEntries((info.files || []).map(f => [f.path, f.size]));
+    const total = need.reduce((n, p) => n + (sizes[p] || 0), 0); let done = 0;
+    const ent = { files: {}, size: total, loader: info.loader || rpyLoader(v), at: Date.now() }, made = [];
+    try {
+      for (const path of need) {
+        const res = await fetch(base + path, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Could not download Ren'Py ${v} (${res.status}).`);
+        const rd = res.body.getReader(); let buf = new Uint8Array(RPY_CHUNK), fill = 0, size = 0; const c = [];
+        const flush = async () => { const id = await rpyPut(buf.slice(0, fill)); c.push(id); made.push(id); fill = 0; };
+        for (; ;) {
+          if (cancelled()) throw new Error('Stopped.');
+          const { done: end, value } = await rd.read(); if (end) break;
+          for (let off = 0; off < value.length;) { const n = Math.min(value.length - off, RPY_CHUNK - fill); buf.set(value.subarray(off, off + n), fill); fill += n; off += n; if (fill === RPY_CHUNK) await flush(); }
+          size += value.length; done += value.length; onProg(done, total);
+        }
+        if (fill) await flush();
+        ent.files[path] = { c, s: size };
+      }
+      ent.done = true;
+      const reg = await this.reg(); if (reg[v]) await this.drop(reg[v]); reg[v] = ent; await this.saveReg(reg);
+    } catch (e) { await ST.delMany('images', made).catch(() => { }); throw e; }
+  },
+  async drop(ent) { const ids = []; for (const f of Object.values(ent.files || {})) ids.push(...f.c); await ST.delMany('images', ids).catch(() => { }); },
+  async remove(v) { const reg = await this.reg(); if (reg[v]) { await this.drop(reg[v]); delete reg[v]; await this.saveReg(reg); } },
+  /* all its files, decrypted: {name: ArrayBuffer} (names without folders) */
+  async load(v) {
+    const ent = (await this.reg())[v]; if (!ent || !ent.done) throw new Error(`Ren'Py ${v} is not downloaded.`);
+    const out = {}; for (const [p, f] of Object.entries(ent.files)) out[p.split('/').pop()] = await rpyRead(f.c, f.s);
+    return { files: out, loader: ent.loader };
+  },
+};
+/* ask, then download (with a progress sheet). Resolves true when it is there. */
+function rpyAskDownload(v, why) {
+  const rt = rpyRuntime(v);
+  return new Promise(async res => {
+    if (!(await askYes(`Download Ren'Py ${v}?`, `${why ? why + ' ' : ''}It is the part of Ren'Py that plays games: about ${rt.mb} MB, downloaded once from the Tankōbon website and kept encrypted with your library.`, 'Download'))) return res(false);
+    const lbl = h('div', { class: 'num' }, 'Starting…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+    let cancel = false, fin = false;
+    openSheet(`Downloading Ren'Py ${v}`, h('div', { class: 'stack' }, h('div', { class: 'progress' }, lbl, bar),
+      h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; } }, 'Stop'))), () => { cancel = true; if (!fin) res(false); });
+    busy++;
+    try {
+      await RPY.download(v, (d, t) => { lbl.textContent = `${mb(d)} of ${mb(t)}`; bar.firstChild.style.width = (100 * d / Math.max(1, t)) + '%'; }, () => cancel);
+      fin = true; closeSheet(); toast(`Ren'Py ${v} is ready.`); res(true);
+    } catch (e) { fin = true; closeSheet(); if (!cancel) toast(e.message || String(e), 4500); res(false); }
+    finally { busy = Math.max(0, busy - 1); }
+  });
+}
+
+/* ---------- adding a game ---------- */
+const fileItem = f => ({ path: (f.relPath || f.webkitRelativePath || f.name).replace(/\\/g, '/'), size: f.size || 0, blob: async () => loadPicked(f) });
+async function zipItems(file) {
+  if (typeof JSZip === 'undefined') throw new Error('The ZIP reader could not load.');
+  const zip = await JSZip.loadAsync(file);
+  return Object.values(zip.files).filter(z => !z.dir && !hiddenPath(z.name)).map(z => ({ path: z.name.replace(/\\/g, '/'), size: (z._data && z._data.uncompressedSize) || 0, blob: () => z.async('blob') }));
+}
+/* Ren'Py games among dropped/picked files: [{found, title}] and the files that are not part of a game */
+async function rpyGamesIn(files) {
+  const games = [], rest = [];
+  const tops = new Map();
+  for (const f of files) { const p = (f.relPath || f.webkitRelativePath || '').replace(/\\/g, '/'); if (p.includes('/')) { const t = p.split('/')[0]; if (!tops.has(t)) tops.set(t, []); tops.get(t).push(f); } else rest.push(f); }
+  for (const [t, list] of tops) { const found = rpyFind(list.map(fileItem)); if (found) games.push({ found, title: rpyTitle(found.root, t) }); else rest.push(...list); }
+  for (const f of rest.slice()) {
+    if (!/\.zip$/i.test(f.name)) continue;
+    try { const found = rpyFind(await zipItems(f)); if (found) { games.push({ found, title: rpyTitle(found.root, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); } } catch (e) { }
+  }
+  return { games, rest };
+}
+async function rpyCover(found) {
+  const rel = it => it.path.slice(found.root.length).toLowerCase();
+  const imgs = found.items.filter(it => /^game\//.test(rel(it)) && /\.(png|jpe?g|webp)$/i.test(it.path) && it.size < 30e6);
+  const rank = it => { const r = rel(it); return /^game\/gui\/main_menu\./.test(r) ? 0 : /\/(title|cover|main_?menu|splash|key_?art)[^/]*$/.test(r) ? 1 : /^game\/gui\/game_menu\./.test(r) ? 2 : /window_icon|\/gui\//.test(r) ? 5 : 3; };
+  const list = imgs.sort((a, b) => rank(a) - rank(b) || b.size - a.size).slice(0, 6);
+  for (const it of list) { try { const blob = await it.blob(), t = await makeThumb(blob); if (t.w >= 64) return { blob, t, name: it.path.split('/').pop() }; } catch (e) { } }
+  return null;
+}
+async function drawnCover(title) {
+  const c = document.createElement('canvas'); c.width = 600; c.height = 800; const x = c.getContext('2d');
+  const gr = x.createLinearGradient(0, 0, 0, 800); gr.addColorStop(0, '#2a2140'); gr.addColorStop(1, '#0f1012'); x.fillStyle = gr; x.fillRect(0, 0, 600, 800);
+  x.fillStyle = '#fff'; x.font = 'bold 54px sans-serif'; x.textAlign = 'center';
+  const words = title.split(/\s+/), lines = []; let line = '';
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > 520 && line) { lines.push(line); line = w; } else line = t; } lines.push(line);
+  lines.slice(0, 5).forEach((l, i) => x.fillText(l, 300, 360 + i * 66 - (lines.length - 1) * 33));
+  x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '28px sans-serif'; x.fillText("Ren'Py game", 300, 720);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .9));
+  return { blob, t: await makeThumb(blob), name: 'cover.jpg' };
+}
+/* store a found game as a new gallery-like record. onProg(done, total) */
+async function rpyImport(found, title, det, rt, onProg = () => { }, cancelled = () => false) {
+  const rel = it => it.path.slice(found.root.length);
+  const files = found.items.filter(it => /^game\//i.test(rel(it)) && !/^game\/saves\//i.test(rel(it)) && !hiddenPath(rel(it)));
+  const saves = found.items.filter(it => /^game\/saves\/[^/]+/i.test(rel(it)) && !hiddenPath(rel(it)));
+  const total = files.reduce((n, it) => n + it.size, 0) || 1; let done = 0;
+  const g = newGallery(title); Tree.ensureRoot(g);
+  const list = [], made = [];
+  try {
+    for (const it of files) {
+      if (cancelled()) throw new Error('Stopped.');
+      const blob = await it.blob(), c = [];
+      for (let off = 0; off < blob.size || (off === 0 && !c.length); off += RPY_CHUNK) {
+        const part = await blob.slice(off, off + RPY_CHUNK).arrayBuffer(); const id = await rpyPut(part); c.push(id); made.push(id);
+        done += part.byteLength; onProg(done, total);
+        if (!blob.size) break;
+      }
+      list.push({ p: rel(it), s: blob.size, c });
+    }
+    const sv = {};
+    for (const it of saves) { const buf = await (await it.blob()).arrayBuffer(); const id = await rpyPut(buf); made.push(id); sv[rel(it)] = { s: buf.byteLength, c: [id] }; }
+    const cov = (await rpyCover(found)) || (await drawnCover(title));
+    const cid = uid(); await S.putBlob('images', cid, cov.blob); await S.putBlob('thumbs', cid, cov.t.thumb); made.push(cid);
+    g.meta[cid] = [cov.t.w, cov.t.h, cov.name]; g.cover = cid; g.customCover = cid;
+    const listId = await rpyPutJSON(list), svId = await rpyPutJSON(sv); made.push(listId, svId);
+    g.game = { engine: 'renpy', ver: det.v || null, py: det.py || null, how: det.how || null, rt, list: listId, sv: svId, files: list.length, size: list.reduce((n, f) => n + f.s, 0), addedAt: Date.now() };
+    await saveGallery(g);
+    return g;
+  } catch (e) { await ST.delMany('images', made).catch(() => { }); await ST.delMany('thumbs', made).catch(() => { }); throw e; }
+}
+/* the sheet for adding one or more found games */
+async function rpyAddSheet(games) {
+  const rows = [];
+  for (const gm of games) { gm.det = await rpyVersion(gm.found).catch(() => ({})); gm.pick = rpyChoose(gm.det); }
+  const reg = await RPY.reg();
+  const status = h('div', { class: 'progress', hidden: true }), lbl = h('div', { class: 'num' }), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  status.append(lbl, bar);
+  for (const [i, gm] of games.entries()) {
+    const files = gm.found.items.filter(it => /^game\//i.test(it.path.slice(gm.found.root.length))), size = files.reduce((n, it) => n + it.size, 0);
+    gm.name = h('input', { class: 'text', id: 'game-name-' + i, autocomplete: 'off', value: gm.title });
+    const d = gm.det, made = d.v ? `Made with Ren'Py ${d.v}.` : d.py ? `Made with Ren'Py ${d.py === '2.7' ? '7' : '8'} (the exact version was not found).` : 'The Ren\'Py version was not found.';
+    const plays = `It will play with Ren'Py ${gm.pick.rt}${reg[gm.pick.rt] && reg[gm.pick.rt].done ? ', which is already downloaded.' : ` (about ${rpyRuntime(gm.pick.rt).mb} MB, downloaded once after asking you).`}`;
+    rows.push(h('div', { class: 'panel stack', style: 'gap:8px' },
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'game-name-' + i }, 'Game name'), gm.name),
+      h('p', { class: 'hint', style: 'margin:0' }, `${plural(files.length, 'file')} · ${mb(size)}. ${made} ${plays}`),
+      gm.pick.old ? h('div', { class: 'banner' }, `This game was made with an older Ren'Py than the web version supports (7.4 and newer). It may not work.`) : null,
+      size > 1.5e9 ? h('div', { class: 'banner' }, `This is a big game. Playing it needs about ${mb(size)} of free memory, which phones may not have.`) : null));
+  }
+  let cancel = false;
+  const btn = h('button', { class: 'btn primary', id: 'game-add', onclick: async () => {
+    btn.disabled = true; status.hidden = false; busy++; const made = [];
+    try {
+      for (const [j, gm] of games.entries()) {
+        if (cancel) break;
+        lbl.textContent = 'Reading…';
+        const g = await rpyImport(gm.found, gm.name.value.trim() || gm.title, gm.det, gm.pick.rt, (d, t) => { lbl.textContent = `${games.length > 1 ? `Game ${j + 1} of ${games.length}: ` : ''}${mb(d)} of ${mb(t)}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
+        made.push(g);
+      }
+    } catch (e) { if (!cancel) toast('Could not add the game: ' + (e.message || e), 4500); }
+    finally { busy = Math.max(0, busy - 1); }
+    closeSheet();
+    if (!made.length) return;
+    toast(made.length === 1 ? `“${made[0].title}” added.` : `${made.length} games added.`, 3000);
+    if (made.length === 1) go('detail', { id: made[0].id }); else go('library');
+    const missing = [...new Set(made.map(g => g.game.rt))].filter(v => !(reg[v] && reg[v].done));
+    for (const v of missing) await rpyAskDownload(v, made.length === 1 ? `To play “${made[0].title}”, the app needs Ren'Py ${v}.` : `Some of these games need Ren'Py ${v}.`);
+    if (CUR.view === 'detail') render(CUR.view, CUR.params);
+  } }, icon('plus'), games.length === 1 ? 'Add the game' : `Add ${games.length} games`);
+  openSheet(games.length === 1 ? 'Add a Ren\'Py game' : `Add ${games.length} Ren'Py games`, h('div', { class: 'stack' },
+    rows, btn, status,
+    h('p', { class: 'hint' }, 'Only the game\'s own files are copied, encrypted, into your library; its launchers are left out. Games stay on this device: they are not sent to your other devices. Saves are kept encrypted with the game.')), () => { cancel = true; });
+  setTimeout(() => btn.focus(), 60);
+}
+
+/* ---------- the game's page ---------- */
+async function renderGameDetail(v, g) {
+  const id = g.id, G = g.game, reg = await RPY.reg(), ready = !!(reg[G.rt] && reg[G.rt].done);
+  const saves = (await rpyGetJSON(G.sv)) || {}, nSaves = Object.keys(saves).filter(p => /\.save$/i.test(p) && !/\/sync\//.test(p)).length, svSize = Object.values(saves).reduce((n, s) => n + s.s, 0);
+  const made = G.ver ? `Made with Ren'Py ${G.ver}` : G.py ? `Made with Ren'Py ${G.py === '2.7' ? '7' : '8'}` : 'Ren\'Py version not found';
+  const pick = h('select', { class: 'text', id: 'game-rt', 'aria-label': 'Ren\'Py version to play with' }, RPY_RUNTIMES.map(r => h('option', { value: r.v, selected: r.v === G.rt }, `Ren'Py ${r.v}${reg[r.v] && reg[r.v].done ? ' (downloaded)' : ` (${r.mb} MB)`}`)));
+  pick.addEventListener('change', async () => { const cur = await S.gal(id); cur.game.rt = pick.value; await saveGallery(cur); renderDetail(id); });
+  let armed = false;
+  const del = h('button', { class: 'btn danger', onclick: async () => {
+    if (!armed) { armed = true; del.textContent = 'Tap again to delete the game and its saves'; setTimeout(() => { armed = false; if (del.isConnected) del.textContent = 'Delete the game'; }, 4000); return; }
+    del.disabled = true; await withBusyGame(() => purgeGallery(g)); Sync.deleted(id); toast(`“${g.title}” deleted.`); go('library', {}, true);
+  } }, icon('trash'), 'Delete the game');
+  const name = h('input', { class: 'text', id: 'game-title', value: g.title, autocomplete: 'off' });
+  name.addEventListener('change', async () => { const t = name.value.trim(); if (!t) return; const cur = await S.gal(id); cur.title = t; await saveGallery(cur); toast('Renamed.'); });
+  v.replaceChildren(h('div', { class: 'wrap' },
+    h('header', { class: 'appbar' }, h('button', { class: 'iconbtn', 'aria-label': 'Back to library', onclick: () => back('library') }, icon('back')), h('div', { class: 'grow' })),
+    h('div', { class: 'hero' }, h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
+      h('div', {}, h('h1', {}, g.title), h('div', { class: 'sub num' }, `Ren'Py game · ${mb(G.size)}`), h('div', { class: 'sub' }, made),
+        h('div', { class: 'sub' }, g.lastReadAt ? ago(g.lastReadAt).replace('Read', 'Played') : 'Not played yet'))),
+    h('div', { class: 'stack' },
+      EXP ? h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'game-play', style: 'flex:1', onclick: () => go('game', { id }) }, icon('play'), 'Play'))
+        : h('div', { class: 'banner' }, 'Games can be played in the experimental version of the app for now.'),
+      h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'label' }, 'Ren\'Py'),
+        h('p', { class: 'hint', style: 'margin:0' }, ready ? `Plays with Ren'Py ${G.rt}, which is downloaded.` : `Plays with Ren'Py ${G.rt}, which is not downloaded yet (about ${rpyRuntime(G.rt).mb} MB). You will be asked before it is downloaded.`),
+        pick,
+        h('div', { class: 'row', style: 'flex-wrap:wrap' },
+          !ready && EXP ? h('button', { class: 'btn small', onclick: async () => { if (await rpyAskDownload(G.rt)) renderDetail(id); } }, icon('download'), `Download Ren'Py ${G.rt}`) : null,
+          ready ? h('button', { class: 'btn ghost small', onclick: async () => { if (await askYes(`Delete the downloaded Ren'Py ${G.rt}?`, 'Games that use it will ask to download it again when you play them.', 'Delete')) { await RPY.remove(G.rt); renderDetail(id); } } }, `Delete the downloaded Ren'Py ${G.rt}`) : null)),
+      h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'label' }, 'Saves'),
+        h('p', { class: 'hint', style: 'margin:0' }, nSaves ? `${plural(nSaves, 'saved game')} · ${mb(svSize)}, kept encrypted with the game.` : 'No saved games yet. Saves you make in the game are kept here, encrypted.'),
+        Object.keys(saves).length ? h('div', {}, h('button', { class: 'btn ghost small', onclick: async () => {
+          if (!(await askYes('Delete all saves?', `Every saved game and setting of “${g.title}” will be deleted. This cannot be undone.`, 'Delete saves'))) return;
+          const cur = await S.gal(id), idx = (await rpyGetJSON(cur.game.sv)) || {}; await ST.delMany('images', Object.values(idx).flatMap(s => s.c)); await rpyPutJSON({}, cur.game.sv); renderDetail(id);
+        } }, 'Delete all saves')) : null),
+      h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'field' }, h('label', { class: 'label', for: 'game-title' }, 'Name'), name),
+        h('p', { class: 'hint', style: 'margin:0' }, `${plural(G.files, 'file')}. Games stay on this device: they are not sent to your other devices.`), h('div', {}, del)))));
+}
+async function withBusyGame(fn) { busy++; try { return await fn(); } finally { busy = Math.max(0, busy - 1); } }
+
+/* ---------- playing ---------- */
+const GAME = { box: null, frame: null, g: null, list: null, onMsg: null, loaded: false, loads: 0 };
+function closeGame() {
+  if (!GAME.box) return;
+  window.removeEventListener('message', GAME.onMsg);
+  clearInterval(GAME.focusT); GAME.box.remove(); Object.assign(GAME, { box: null, frame: null, g: null, list: null, onMsg: null, loaded: false, loads: 0 });
+  document.body.classList.remove('gaming');
+}
+/* Ren'Py's own page, sealed: its scripts are loaded from memory by rpyBoot, and nothing may reach the network. */
+function rpyDoc(html, loader) {
+  const scripts = [];
+  // (the page may be written with or without quotes around attributes)
+  html = html.replace(/<script\b[^>]*?\bsrc=(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>\s*<\/script>/gi, (m, a, b, c) => { scripts.push((a || b || c).split('/').pop()); return ''; });
+  html = html.replace(/<link\b[^>]*>/gi, '').replace(/navigator\.serviceWorker/g, '(void 0)').replace(/<img\b[^>]*\bid=["']?presplash\b[^>]*>/i, '<img id="presplash" alt="">');
+  const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; connect-src blob: data:; img-src blob: data:; media-src blob: data:; style-src 'unsafe-inline'; font-src blob: data:; worker-src blob:; form-action 'none'";
+  html = html.replace(/<head>/i, `<head><meta http-equiv="Content-Security-Policy" content="${csp}">`);
+  html = html.replace(/<\/head>/i, '<style>#ContextContainer{display:none!important}html,body{background:#000}</style></head>');
+  html = html.replace(/<\/body>(?![\s\S]*<\/body>)/i, `<script>(${rpyBoot.toString()})(${JSON.stringify(scripts)}, ${JSON.stringify(loader)});<\/script></body>`);
+  return html;
+}
+/* Runs inside the sealed frame. Gets Ren'Py and the game from the app by messages; sends saves back. */
+function rpyBoot(SCRIPTS, LOADER) {
+  try { Object.defineProperty(Navigator.prototype, 'serviceWorker', { get: () => undefined, configurable: true }); } catch (e) { } // sealed: it would only throw
+  const P = window.parent, post = (m, t) => P.postMessage(m, '*', t || []);
+  const URLS = {}, waiting = new Map(); let FILES = [], SAVES = [], seq = 0;
+  const ask = m => new Promise(res => { const q = ++seq; waiting.set(q, res); post(Object.assign({ q }, m)); });
+  const mime = n => /\.wasm$/.test(n) ? 'application/wasm' : /\.js$/.test(n) ? 'text/javascript' : 'application/octet-stream';
+  const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src)); document.body.appendChild(s); });
+  const mkdirs = path => { let cur = ''; for (const p of path.split('/').filter(Boolean)) { cur += '/' + p; try { FS.mkdir(cur); } catch (e) { } } };
+  const fail = e => post({ t: 'error', msg: String((e && e.message) || e) });
+  async function writeGame() {
+    const total = FILES.reduce((n, f) => n + f.s, 0); let done = 0, last = 0;
+    for (let i = 0; i < FILES.length; i++) {
+      const f = FILES[i], arr = new Uint8Array(f.s); let off = 0;
+      for (let k = 0; k < f.n; k++) { const r = await ask({ t: 'chunk', i, k }); const u = new Uint8Array(r.buf); arr.set(u, off); off += u.length; done += u.length; }
+      const path = '/' + f.p; mkdirs(path.slice(0, path.lastIndexOf('/')));
+      FS.writeFile(path, arr, { canOwn: true });
+      if (Date.now() - last > 150 || i === FILES.length - 1) { last = Date.now(); post({ t: 'progress', done, total }); }
+    }
+  }
+  /* saves live in memory here; whenever Ren'Py saves (it calls syncfs), they are sent to the app */
+  const ROOTS = ['/home/web_user/.renpy', '/game/saves'];
+  let syncT = 0;
+  const walk = (dir, out) => { for (const n of FS.readdir(dir)) { if (n === '.' || n === '..') continue; const p = dir + '/' + n; if (FS.isDir(FS.stat(p).mode)) walk(p, out); else out.push(p); } };
+  function sendSaves() {
+    const paths = []; for (const r of ROOTS) { try { walk(r, paths); } catch (e) { } }
+    const files = paths.map(p => ({ p: p.slice(1), buf: FS.readFile(p).buffer }));
+    post({ t: 'saves', files }, files.map(f => f.buf));
+  }
+  function initSaves() {
+    const T = Object.assign({}, MEMFS, { mount: m => MEMFS.mount(m), syncfs: (mount, populate, cb) => { if (!populate) { clearTimeout(syncT); syncT = setTimeout(sendSaves, 300); } cb(null); } });
+    for (const r of ROOTS) { mkdirs(r); try { FS.mount(T, {}, r); } catch (e) { fail(e); } }
+    for (const s of SAVES) { const p = '/' + s.p; mkdirs(p.slice(0, p.lastIndexOf('/'))); FS.writeFile(p, new Uint8Array(s.buf)); }
+  }
+  function patchNew() { // Ren'Py 8.1 and newer (renpy.js), after renpy-pre.js ran
+    const i = Module.preRun.findIndex(f => f && f.name === 'initFs');
+    if (i >= 0) Module.preRun[i] = initSaves; else Module.preRun.push(initSaves);
+    Module.preRun.push(function tkbGame() { Module.addRunDependency('tkbGame'); writeGame().then(() => { post({ t: 'loaded' }); Module.removeRunDependency('tkbGame'); }, fail); });
+    const ae = window.atExit; window.atExit = () => { post({ t: 'exit' }); if (ae) ae(); };
+  }
+  function patchOld() { // Ren'Py 7 (index.js)
+    const i = Module.preRun.findIndex(f => f && f.name === 'create_persistent');
+    if (i >= 0) Module.preRun[i] = initSaves; else Module.preRun.push(initSaves);
+    const orig = window.gameExtractAndRun;
+    window.gameExtractAndRun = () => writeGame().then(() => { post({ t: 'loaded' }); orig(); }, fail);
+    const iv = setInterval(() => { if (Module.quit && !Module.quit.tkb) { const o = Module.quit; Module.quit = function () { post({ t: 'exit' }); return o.apply(this, arguments); }; Module.quit.tkb = 1; clearInterval(iv); } }, 500);
+  }
+  async function start(m) {
+    for (const n of Object.keys(m.files)) {
+      let data = m.files[n];
+      // Ren'Py 8.1 and 8.2 ask for 'game.zip' by name: use the one handed over here
+      if (n === 'renpy-pre.js') data = new TextDecoder().decode(data).replace(/fetch\((['"])game\.zip\1\)/g, 'fetch(window.gameZipURL)');
+      URLS[n] = URL.createObjectURL(new Blob([data], { type: mime(n) }));
+    }
+    FILES = m.game; SAVES = m.saves || [];
+    window.Module = window.Module || {};
+    Module.locateFile = p => URLS[String(p).split('/').pop()] || p;
+    if (LOADER === 'renpy.js') window.gameZipURL = URLS['engine.zip']; else window.DEFAULT_GAME_FILENAME = URLS['engine.zip'];
+    try {
+      for (const s of SCRIPTS) {
+        if (!URLS[s]) continue;
+        if (LOADER === 'renpy.js' && s === 'renpy.js') patchNew();
+        if (LOADER === 'index.js' && s === 'index.js') patchOld();
+        await load(URLS[s]);
+      }
+    } catch (e) { fail(e); }
+  }
+  window.addEventListener('message', e => {
+    if (e.source !== P) return; const m = e.data || {};
+    if (m.t === 'boot') start(m);
+    else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
+  });
+  window.addEventListener('error', e => fail(e.message));
+  post({ t: 'hello' });
+}
+let gameSaveChain = Promise.resolve();
+const hex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+function persistSaves(gid, files) { gameSaveChain = gameSaveChain.then(() => doPersistSaves(gid, files)).catch(e => console.error('saves', e)); return gameSaveChain; }
+async function doPersistSaves(gid, files) {
+  if (!files.length) return; // never wipe the saves because nothing was listed
+  const g = await S.gal(gid); if (!isGame(g)) return;
+  const idx = (await rpyGetJSON(g.game.sv)) || {}, seen = new Set(); let changed = false;
+  for (const f of files) {
+    seen.add(f.p);
+    const hsh = hex(await crypto.subtle.digest('SHA-256', f.buf)), old = idx[f.p];
+    if (old && old.h === hsh) continue;
+    const c = []; for (let off = 0; off < f.buf.byteLength || !c.length; off += RPY_CHUNK) { c.push(await rpyPut(f.buf.slice(off, off + RPY_CHUNK))); if (!f.buf.byteLength) break; }
+    if (old) await ST.delMany('images', old.c).catch(() => { });
+    idx[f.p] = { s: f.buf.byteLength, c, h: hsh, t: Date.now() }; changed = true;
+  }
+  for (const p of Object.keys(idx)) if (!seen.has(p)) { await ST.delMany('images', idx[p].c).catch(() => { }); delete idx[p]; changed = true; }
+  if (changed) await rpyPutJSON(idx, g.game.sv);
+}
+async function openGame(id) {
+  const g = await S.gal(id);
+  if (!isGame(g)) return go('library', {}, true);
+  if (!EXP) { toast('Games can be played in the experimental version of the app for now.', 3500); return back('detail', { id }); }
+  const v = g.game.rt;
+  if (!(await RPY.has(v)) && !(await rpyAskDownload(v, `To play “${g.title}”, the app needs Ren'Py ${v}.`))) return back('detail', { id });
+  if (CUR.view !== 'game' || CUR.params.id !== id) return;
+  closeGame();
+  const lbl = h('div', { class: 'num' }, 'Opening…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  const cover = h('div', { class: 'gamecover' }, thumbImg(coverId(g), ''));
+  const load = h('div', { class: 'gameload', role: 'status' }, cover, h('b', {}, g.title), h('div', { class: 'progress' }, lbl, bar));
+  const frame = h('iframe', { title: g.title, sandbox: 'allow-scripts', allow: 'autoplay; gamepad', referrerpolicy: 'no-referrer' });
+  const exit = h('button', { class: 'gameexit', 'aria-label': 'Leave the game', onclick: async () => { if (!GAME.loaded || await askYes('Leave the game?', 'Anything you have not saved in the game will be lost.', 'Leave')) back('detail', { id }); } }, icon('x'));
+  const box = h('div', { id: 'gamebox' }, load, exit);
+  Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
+  clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
+  document.body.classList.add('gaming'); document.body.append(box);
+  let rt, list, saves;
+  try {
+    lbl.textContent = `Opening Ren'Py ${v}…`;
+    [rt, list, saves] = await Promise.all([RPY.load(v), rpyGetJSON(g.game.list), rpyGetJSON(g.game.sv)]);
+    if (!list) throw new Error('The game\'s file list is missing.');
+  } catch (e) { lbl.textContent = 'Could not open the game: ' + (e.message || e); return; }
+  if (GAME.frame !== frame) return;
+  GAME.list = list;
+  g.lastReadAt = Date.now(); saveGallery(g).catch(() => { });
+  const html = new TextDecoder().decode(rt.files['index.html']);
+  GAME.onMsg = async e => {
+    if (!GAME.frame || e.source !== GAME.frame.contentWindow) return;
+    const m = e.data || {}, win = GAME.frame.contentWindow;
+    try {
+      if (m.t === 'hello') {
+        const files = { ...rt.files }; delete files['index.html'];
+        const sv = []; for (const [p, s] of Object.entries(saves || {})) { try { sv.push({ p, buf: await rpyRead(s.c, s.s) }); } catch (x) { } }
+        win.postMessage({ t: 'boot', files, game: list.map(f => ({ p: f.p, s: f.s, n: f.c.length })), saves: sv }, '*', [...Object.values(files), ...sv.map(s => s.buf)]);
+        rt = null; // handed over
+      } else if (m.t === 'chunk') {
+        const buf = await rpyGet(GAME.list[m.i].c[m.k]); win.postMessage({ q: m.q, buf }, '*', [buf]);
+      } else if (m.t === 'progress') {
+        lbl.textContent = `Opening the game · ${mb(m.done)} of ${mb(m.total)}`; bar.firstChild.style.width = (100 * m.done / Math.max(1, m.total)) + '%';
+      } else if (m.t === 'loaded') {
+        GAME.loaded = true; load.hidden = true; frame.focus();
+      } else if (m.t === 'saves') {
+        persistSaves(id, m.files || []);
+      } else if (m.t === 'exit') {
+        setTimeout(() => back('detail', { id }), 300);
+      } else if (m.t === 'error') {
+        console.warn('game:', m.msg);
+        if (!GAME.loaded) lbl.textContent = 'The game could not start: ' + m.msg;
+      }
+    } catch (x) { console.error(x); }
+  };
+  window.addEventListener('message', GAME.onMsg);
+  // the frame may only ever show the page made here: if the game tries to go to a web page, it is stopped
+  frame.addEventListener('load', () => { if (++GAME.loads > 1 && GAME.frame === frame) { toast('The game tried to open a web page, so it was stopped.', 4500); back('detail', { id }); } });
+  frame.srcdoc = rpyDoc(html, rt.loader); box.prepend(frame);
 }
 
 /* ================= chapter tree =================
@@ -1985,13 +2487,14 @@ async function renderLibrary() {
 function card(g, tq) {
   const tag = tq ? tagLabel(tq) : null;
   const pi = progressInfo(g), tp = totalPages(g);
-  const meta = pi ? `${chLabel(g, pi.ci)} · p. ${pi.page + 1}` : `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`;
+  const meta = isGame(g) ? `Ren'Py game · ${mb(g.game.size)}` : pi ? `${chLabel(g, pi.ci)} · p. ${pi.page + 1}` : `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`;
   return h('article', { class: 'card' }, h('div', { class: 'cwrap' },
     h('button', { class: 'cover', 'aria-label': tag ? `Pages tagged ${tag} in ${g.title}` : `Open ${g.title}`, onclick: () => go('detail', { id: g.id, ...tqParams(tq) }) }, thumbImg(coverId(g)),
-      g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (chCount(g) > 0 ? h('span', { class: 'chip num' }, `${chCount(g)} CH`) : null)),
+      isGame(g) ? h('span', { class: 'chip' }, 'GAME') : g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (chCount(g) > 0 ? h('span', { class: 'chip num' }, `${chCount(g)} CH`) : null)),
+    isGame(g) ? h('button', { class: 'play', 'aria-label': `Play ${g.title}`, onclick: () => go(EXP ? 'game' : 'detail', { id: g.id }) }, icon('play')) :
     h('button', { class: 'play', 'aria-label': tag ? `Read pages tagged ${tag} in ${g.title}` : `${pi ? 'Continue' : 'Start'} reading ${g.title}`, onclick: () => go('reader', { id: g.id, ...tqParams(tq) }) }, icon('play'))),
     h('div', { style: 'display:grid;gap:4px' }, h('h3', {}, g.title), h('p', { class: 'meta num' }, meta),
-      h('div', { class: 'bar' }, h('i', { style: `width:${pi ? (100 * pi.flat / tp).toFixed(1) : 0}%` }))));
+      isGame(g) ? null : h('div', { class: 'bar' }, h('i', { style: `width:${pi ? (100 * pi.flat / tp).toFixed(1) : 0}%` }))));
 }
 let lockSeg;
 /* ---------- settings: one tidy list; each row opens its own page with a way back ---------- */
@@ -2066,6 +2569,7 @@ function openStorage() {
 async function renderDetail(id, folderId, tq) {
   const v = $('#v-detail'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
+  if (isGame(g)) return renderGameDetail(v, g);
   if (tq) return renderTagged(v, g, tq, folderId, await accountTagNames());
   const chs = g.chapters, fi = Math.max(0, folderId ? chs.findIndex(c => c.id === folderId) : 0), F = chs[fi], atRoot = fi === 0;
   const p = effPrefs(g), pi = progressInfo(g), tp = totalPages(g), nums = Tree.nums(chs);
@@ -2158,6 +2662,7 @@ function renderTagged(v, g, tq, folderId, tags) {
 /* ================= editor ================= */
 /* One editing screen for the whole gallery and for every folder inside it. */
 async function renderEditor(id, folderId, view) {
+  { const g0 = await S.gal(id); if (isGame(g0)) return go('detail', { id }, true); }
   const v = $('#v-editor'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
   const fi0 = folderId ? g.chapters.findIndex(c => c.id === folderId) : 0;
@@ -2407,7 +2912,7 @@ async function moveToGallery(src, keys, dst) {
   return moved.size;
 }
 async function moveToGallerySheet(g, keys, done) {
-  const others = (await S.gals()).filter(x => x.id !== g.id).sort((a, b) => natural(a.title, b.title));
+  const others = (await S.gals()).filter(x => x.id !== g.id && !isGame(x)).sort((a, b) => natural(a.title, b.title));
   const list = h('div', { class: 'chlist' }, others.length ? others.map(o => h('button', { class: 'chrow', onclick: async () => {
     closeSheet(); const n = await withBusy(() => moveToGallery(g, keys, o)); done && done(); toast(`${plural(n, 'page')} moved to “${o.title}”.`, 3500);
   } }, h('span', { class: 'n' }, icon('folder')), h('span', { class: 't' }, o.title), h('span', { class: 's' }, plural(totalPages(o), 'page')))) : h('p', { class: 'hint' }, 'There is no other gallery yet.'));
@@ -5329,6 +5834,7 @@ function buildPages() {
 async function openReader(id, ch, page, start, scope, only, tq) {
   const g = await S.gal(id);
   if (!g) return go('library', {}, true);
+  if (isGame(g)) return go('game', { id }, true);
   R.g = g; R.p = effPrefs(g); R.nums = Tree.nums(g.chapters); PIN.clear();
   const sci = scope ? g.chapters.findIndex(c => c.id === scope) : -1;
   R.extra = sci >= 0 && !tq; R.within = tq && sci > 0 ? sci : 0; R.scope = sci; R.only = !!only; R.tq = tq || null;
@@ -5512,7 +6018,7 @@ function step(d) {
 /* the last page: what now? */
 async function endCard() {
   const g = R.g, all = (await S.gals()).sort((a, b) => natural(a.title, b.title)), at = all.findIndex(x => x.id === g.id);
-  const next = at >= 0 ? all.slice(at + 1).concat(all.slice(0, at)).find(x => x.id !== g.id && !x.sample) : null;
+  const next = at >= 0 ? all.slice(at + 1).concat(all.slice(0, at)).find(x => x.id !== g.id && !x.sample && !isGame(x)) : null;
   const scoped = R.tq || R.extra;
   openSheet('The end', h('div', { class: 'endcard' },
     h('p', { class: 'hint', style: 'margin:0' }, scoped ? 'You reached the last page of these pages.' : `You finished “${g.title}”.`),
@@ -5988,7 +6494,7 @@ document.addEventListener('pointerdown', e => {
 }, true);
 /* ---- privacy screen: cover everything as soon as the app loses focus, before Android takes its recent-apps picture ---- */
 const shield = $('#shield');
-const cover = () => { if (UI.shield !== false) shield.hidden = false; };
+const cover = () => { if (UI.shield !== false && !(GAME.frame && document.activeElement === GAME.frame && !document.hidden)) shield.hidden = false; }; // (a game being played has the focus: still this app)
 const uncover = () => { if (!document.hidden && document.hasFocus()) shield.hidden = true; };
 window.addEventListener('blur', cover);
 window.addEventListener('pagehide', cover);
@@ -6479,6 +6985,7 @@ async function reencrypt(oldK, newK, resume, onProg) {
   }
 }
 async function purgeGallery(g) {
+  if (isGame(g)) await ST.delMany('images', await rpyIds(g)).catch(() => { });
   const ids = Object.keys(g.meta || {});
   await ST.delMany('images', ids); await ST.delMany('thumbs', ids); ids.forEach(forgetURL);
   await ST.del('galleries', g.id);
@@ -6703,7 +7210,7 @@ function eraseBox() {
 async function deleteAccountOf(slot, onProg) {
   const own = await DB.get('meta', mkFor(slot, 'own')).catch(() => null), ids = own ? own.ids : [];
   let i = 0; for (const id of ids) { for (const st of ['galleries', 'thumbs', 'images']) await ST.del(st, id).catch(() => { }); if (onProg && ++i % 20 === 0) onProg(i, ids.length); }
-  for (const k of [lockIdOf(slot), mkFor(slot, 'sync'), mkFor(slot, 'tombs'), mkFor(slot, 'sampleGone'), mkFor(slot, 'own'), mkFor(slot, 'acc'), slot === '' ? null : mkFor(slot, 'defaults')].filter(Boolean)) await DB.del('meta', k).catch(() => { });
+  for (const k of [lockIdOf(slot), mkFor(slot, 'sync'), mkFor(slot, 'tombs'), mkFor(slot, 'renpy'), mkFor(slot, 'sampleGone'), mkFor(slot, 'own'), mkFor(slot, 'acc'), slot === '' ? null : mkFor(slot, 'defaults')].filter(Boolean)) await DB.del('meta', k).catch(() => { });
   await saveLockToFolder();
   if (!(await allLocks()).length) { try { await DB.nuke(); } catch (e) { } }
   return { found: !!own };
@@ -7001,7 +7508,7 @@ const Sync = (() => {
   async function listing(ids) {
     const gs = ids ? (await Promise.all(ids.map(S.gal))).filter(Boolean) : await S.gals();
     if (!ids) { for (const reg of [TagReg, LayLib]) { const r = await reg.get().catch(() => null); if (r && r.updatedAt) gs.push(r); } }
-    return gs.filter(g => !g.sample).map(g => ({ id: g.id, u: g.updatedAt || 0, p: g.progressAt || 0 }));
+    return gs.filter(g => !g.sample && !g.game).map(g => ({ id: g.id, u: g.updatedAt || 0, p: g.progressAt || 0 }));
   }
   async function send(m, target) { if (!act) return; const b = new Uint8Array(await Crypt.encJSON(m)); return act.send(b, target ? { target } : {}); }
   async function start() {
@@ -7064,7 +7571,7 @@ const Sync = (() => {
       }
       lastSync = Date.now(); emit();
     } else if (m.t === 'want') {
-      for (const id of m.ids) { const g = await S.gal(id); if (g && !g.sample) await send({ t: 'gal', g }, pid); }
+      for (const id of m.ids) { const g = await S.gal(id); if (g && !g.sample && !g.game) await send({ t: 'gal', g }, pid); }
       log(`Sending ${plural(m.ids.length, 'gallery').replace('gallerys', 'galleries')}`);
     } else if (m.t === 'gal') {
       wanting.delete(m.g.id); emit();
