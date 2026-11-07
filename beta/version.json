@@ -1,6 +1,6 @@
 {
- "version": 103,
- "name": "1.23.0-beta.5",
+ "version": 104,
+ "name": "1.23.0-beta.6",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games, Windows app: the app looks for the game's saves in Ren'Py's save folder (%APPDATA%\\RenPy) by itself, after adding a game and on the game's page, and asks whether to import them. It reads the folder name the game itself uses, even from its compiled scripts. “Not now” stops it asking until new saves appear there. (Needs the new Windows app, build 8 or newer.)",
-  "Saves in the game's own folder (game/saves) are now shown when adding the game, with a switch to include them or leave them out.",
-  "Imported saves are copies, kept encrypted in the app; the originals are left untouched."
+  "Ren'Py games: “Show the saves” on a game's page lists its saves, each with its picture, name and date. Delete one with the bin button; Undo brings it back.",
+  "Importing saves can be undone: the message after an import has Undo, which puts the saves back as they were.",
+  "“Export saves” gives a ZIP of the game's saves laid out like Ren'Py's own save folder, to keep as a copy or put back on a computer. The app's save keys are left out of it, so they can never replace a computer's own."
  ]
 }
