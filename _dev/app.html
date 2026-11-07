@@ -530,8 +530,18 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gameexit{position:absolute;top:8px;left:8px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;opacity:.35;cursor:pointer;z-index:2}
 #gamebox .gameexit:hover,#gamebox .gameexit:focus-visible{opacity:1}
 #gamebox .gamelock{left:48px}
-#gamebox .gamepics{left:88px}
-#gamebox .gamemods{left:128px}
+#gamebox .gamesaves{left:88px}
+#gamebox .gamepics{left:128px}
+#gamebox .gamequick{left:168px}
+#gamebox .gamemods{left:208px}
+#gamebox .gamequick[hidden]+.gamemods{left:168px}
+.errlog{white-space:pre-wrap;font-size:12px;max-height:40vh;overflow:auto;background:var(--surface2);padding:10px;border-radius:10px;margin:0}
+.savegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.savecard{display:grid;gap:3px;text-align:left;padding:6px;border-radius:12px;background:var(--surface2);color:inherit;border:0;cursor:pointer}
+.savecard .saveshot{display:block;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#000}
+.savecard .saveshot img{width:100%;height:100%;object-fit:cover;display:block}
+.savecard small{opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contshot{width:64px;height:36px;border-radius:6px;object-fit:cover;margin-right:4px;background:#000}
 .sndmark{position:absolute;right:4px;bottom:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center}
 .sndmark svg{width:13px;height:13px}
 #rSound.on{color:var(--accent)}
@@ -716,10 +726,10 @@ function toast(msg, ms = 2200) {
 }
 /* a message with an Undo button for a few seconds; onGone runs when it can no longer be undone */
 let undoBox = null;
-function undoToast(msg, onUndo, onGone, ms = 7000) {
+function undoToast(msg, onUndo, onGone, ms = 7000, label = 'Undo') {
   if (undoBox) undoBox.finish(false);
   let done = false;
-  const el = h('div', { class: 'undobar', role: 'status' }, h('span', {}, msg), h('button', { class: 'btn small', onclick: () => finish(true) }, 'Undo'));
+  const el = h('div', { class: 'undobar', role: 'status' }, h('span', {}, msg), h('button', { class: 'btn small', onclick: () => finish(true) }, label));
   const finish = undo => { if (done) return; done = true; clearTimeout(tm); el.remove(); if (undoBox && undoBox.el === el) undoBox = null; if (undo) onUndo && onUndo(); else onGone && onGone(); };
   const tm = setTimeout(() => finish(false), ms);
   undoBox = { el, finish }; document.body.append(el);
@@ -2277,12 +2287,16 @@ async function renderGameDetail(v, g) {
         h('div', { class: 'sub' }, g.lastReadAt ? ago(g.lastReadAt).replace('Read', 'Played') : 'Not played yet'))),
     h('div', { class: 'stack' },
       EXP ? h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'game-play', style: 'flex:1', onclick: () => go('game', { id }) }, icon('play'), (G.mods || []).some(m => m.on) ? `Play with ${(G.mods || []).filter(m => m.on).map(m => m.name).join(', ')}` : 'Play'),
-        nSaves ? h('button', { class: 'btn', id: 'game-continue', onclick: () => go('game', { id, cont: 1 }) }, icon('play'), 'Continue') : null)
+        nSaves ? (() => { const b = h('button', { class: 'btn', id: 'game-continue', onclick: () => go('game', { id, cont: 1 }) }, icon('play'), 'Continue'); rpySaveCards(saves).then(cs => { const c = cs[0]; if (c && c.shot && b.isConnected) { const im = h('img', { class: 'contshot', alt: 'Where you left off', src: URL.createObjectURL(c.shot) }); b.replaceChildren(im, h('span', {}, 'Continue')); b.title = `${saveLabel(c.name)} · ${new Date(c.t).toLocaleString()}`; } }); return b; })() : null)
         : h('div', { class: 'banner' }, 'Games can be played in the experimental version of the app for now.'),
       modsPanel(id, G),
       h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'label' }, 'Ren\'Py'),
         h('p', { class: 'hint', style: 'margin:0' }, ready ? `Plays with Ren'Py ${G.rt}, which is downloaded.` : `Plays with Ren'Py ${G.rt}, which is not downloaded yet (about ${rpyRuntime(G.rt).mb} MB). You will be asked before it is downloaded.`),
         pick,
+        EXP ? h('div', { class: 'stack', style: 'gap:6px' }, h('div', { class: 'label' }, 'Game errors'),
+          h('div', { class: 'seg', role: 'group', id: 'game-errors', 'aria-label': 'Game errors' }, [['skip', 'Skip them'], ['show', 'Show the game\'s error screen']].map(([v, l]) =>
+            h('button', { 'aria-pressed': String((G.errors === 'show' ? 'show' : 'skip') === v), onclick: async () => { const x = await S.gal(id); if (v === 'show') x.game.errors = 'show'; else delete x.game.errors; await saveGallery(x); renderDetail(id); } }, l))),
+          h('p', { class: 'hint', style: 'margin:0' }, 'Mistakes in the game itself (the grey “An exception has occurred” screen) are skipped, like its Ignore button, and the game goes on; a note says so, with the details.')) : null,
         EXP ? (() => {
           const big = (G.size || 0) > RPY_LAZY_MB * 1e6, cur = G.lazy === true ? 'on' : G.lazy === false ? 'off' : 'auto';
           const seg = h('div', { class: 'seg', role: 'group', id: 'game-lazy', 'aria-label': 'Load pictures and sounds' }, [['auto', 'Automatic'], ['on', 'As needed'], ['off', 'All at the start']].map(([v, l]) =>
@@ -2455,6 +2469,7 @@ function rpyBoot(SCRIPTS, LOADER) {
     else if (m.t === 'autosave') autosave();
     else if (m.t === 'onscreen') onscreen();
     else if (m.t === 'compose') compose(m.picks || []);
+    else if (m.t === 'rpycmd') { try { window.renpy_exec && window.renpy_exec('store._tkb_cmd = ' + JSON.stringify(m.cmd).replace(/^\[/, '(').replace(/\]$/, ',)') + '\nresult = True'); } catch (e) { } }
     else if (m.t === 'gamesound') { for (const c of ACTX) { try { m.on ? c.resume() : c.suspend(); } catch (e) { } } for (const el of mediaEls()) { try { if (m.on) { if (el.__tkbPaused) { el.__tkbPaused = false; el.play(); } } else if (!el.paused) { el.__tkbPaused = true; el.pause(); } } catch (e) { } } }
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
   });
@@ -2587,6 +2602,93 @@ async function liveMods(gid) {
     h('p', { class: 'hint' }, 'Ren\'Py reads a game\'s mods only when it starts. The game is saved, started again with these mods, and put back where you are; it takes a few seconds. A mod that changes the scene you are in may not load that save well: then load an earlier save.')));
 }
 /* the newest save (Ren'Py writes its time inside each save), as a slot name like "1-1" or "auto-1" */
+const RPY_HOOKS = [
+  'init 1999 python:',
+  '    import time as _tkb_time',
+  '    _tkb_errs = []',
+  '    def _tkb_exc(short, full, traceback_fn):',
+  '        try:',
+  '            import emscripten, json',
+  '            emscripten.run_script("parent.postMessage({t: \'gameerror\', short: %s, full: %s}, \'*\')" % (json.dumps(short[-1500:]), json.dumps(full[-6000:])))',
+  '        except Exception:',
+  '            pass',
+  '        if getattr(store, "_tkb_errors", "skip") != "skip":',
+  '            return False',
+  '        now = _tkb_time.time()',
+  '        _tkb_errs[:] = [t for t in _tkb_errs if now - t < 5] + [now]',
+  '        return len(_tkb_errs) <= 12', // (the same trouble over and over: the game's own screen after all)
+  '    config.exception_handler = _tkb_exc',
+  '    def _tkb_periodic():',
+  '        c = getattr(store, "_tkb_cmd", None)',
+  '        if not c:',
+  '            return',
+  '        store._tkb_cmd = None',
+  '        if c[0] == "save":',
+  '            try:',
+  '                renpy.take_screenshot()',
+  '                renpy.save(c[1], extra_info=c[2])',
+  '                renpy.notify(c[3])',
+  '            except Exception:',
+  '                renpy.notify("The game could not be saved here.")',
+  '        elif c[0] == "load":',
+  '            if renpy.can_load(c[1]):',
+  '                renpy.load(c[1])',
+  '            else:',
+  '                renpy.notify("That save could not be found.")',
+  '    if hasattr(config, "periodic_callbacks"):',
+  '        config.periodic_callbacks.append(_tkb_periodic)',
+  '    else:',
+  '        _tkb_old_periodic = config.periodic_callback',
+  '        def _tkb_periodic2():',
+  '            if _tkb_old_periodic:',
+  '                _tkb_old_periodic()',
+  '            _tkb_periodic()',
+  '        config.periodic_callback = _tkb_periodic2',
+  ''].join('\n');
+function gameErrors(list, title) {
+  const text = (list || []).map(e => `${new Date(e.t).toLocaleString()}\n${e.full || e.short}`).join('\n\n----\n\n');
+  openSheet('Errors in the game', h('div', { class: 'stack', id: 'gameerrors' },
+    h('p', { class: 'hint' }, `These are mistakes in “${title}” itself (they would show on a computer too). The app skips them, like the Ignore button on the game's error screen. If the game gets stuck afterwards, use Saves to go back to a save. You can send this to the game's maker.`),
+    h('pre', { class: 'errlog' }, (list || []).map(e => e.short.trim()).join('\n\n') || 'No errors.'),
+    h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: async () => { try { await navigator.clipboard.writeText(text); toast('Copied.'); } catch (e) { toast('Could not copy.'); } } }, 'Copy the full details'))));
+}
+/* a game's saves, newest first, with what each one shows: [{p, name, t, shot (Blob), info}] */
+async function rpySaveCards(idx) {
+  const out = [];
+  for (const [p, s] of Object.entries(idx || {})) {
+    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/(tokens|sync)\//.test(p)) continue;
+    const c = { p, name: p.split('/').pop(), t: s.t || 0, shot: null, info: '' };
+    try {
+      const z = await JSZip.loadAsync(await rpyRead(s.c, s.s));
+      const j = z.file('json'); if (j) { const o = JSON.parse(await j.async('string')); if (o._ctime) c.t = o._ctime * 1000; if (o._save_name) c.info = String(o._save_name); }
+      const sh = z.file('screenshot.png'); if (sh) c.shot = await sh.async('blob');
+      const ex = z.file('extra_info'); if (!c.info && ex) c.info = (await ex.async('string')).trim();
+    } catch (e) { }
+    out.push(c);
+  }
+  return out.sort((a, b) => b.t - a.t);
+}
+/* the saves, while playing: tap one to go to it (your place is saved to the auto-save first); or save here, in a free slot */
+async function savePicker(gid) {
+  const g = await S.gal(gid), idx = (await rpyGetJSON(g.game.sv)) || {}, urls = [];
+  const cards = await rpySaveCards(idx);
+  const send = cmd => { try { GAME.frame.contentWindow.postMessage({ t: 'rpycmd', cmd }, '*'); } catch (e) { } };
+  const used = new Set(cards.map(c => c.name.replace(/(-LT\d+)?\.save$/i, '')));
+  let free = null; for (let pg = 1; pg < 50 && !free; pg++) for (let sl = 1; sl <= 6; sl++) if (!used.has(`${pg}-${sl}`)) { free = `${pg}-${sl}`; break; }
+  const saveB = h('button', { class: 'btn primary small', id: 'savepick-save', onclick: () => {
+    if (!free) return; send(["save", free, "Saved from the app", "Saved."]); closeSheet();
+    toast(`Saved in ${saveLabel(free + '-LT1.save')}.`, 2500);
+  } }, icon('download'), 'Save here');
+  const grid = h('div', { class: 'savegrid', id: 'savepick-list' }, cards.map(c => {
+    const img = h('img', { alt: '' }); if (c.shot) { const u = URL.createObjectURL(c.shot); urls.push(u); img.src = u; }
+    return h('button', { class: 'savecard', 'aria-label': `Go to ${saveLabel(c.name)}`, onclick: async () => {
+      if (!(await askYes(`Go to ${saveLabel(c.name)}?`, 'Where you are now is saved to the auto-save first, so you can come back to it.', 'Go'))) return;
+      closeSheet(); await gameAutosave(); send(['load', c.name.replace(/(-LT\d+)?\.save$/i, '')]);
+    } }, h('span', { class: 'saveshot' }, img), h('b', {}, saveLabel(c.name)), c.info ? h('small', {}, c.info) : null, h('small', { class: 'num' }, c.t ? new Date(c.t).toLocaleString() : ''));
+  }));
+  openSheet('Saves', h('div', { class: 'stack', id: 'savepick' }, h('div', { class: 'row' }, saveB, h('span', { class: 'hint' }, free ? `In ${saveLabel(free + '-LT1.save')}.` : 'All slots are full.')),
+    cards.length ? grid : h('p', { class: 'hint' }, 'No saves yet.')), () => urls.forEach(u => URL.revokeObjectURL(u)));
+}
 async function newestSlot(idx) {
   let best = null, bt = -1;
   for (const [p, s] of Object.entries(idx)) {
@@ -2693,27 +2795,47 @@ async function openGame(id, cont) {
   // leaving or locking saves to the auto-save first
   const exit = h('button', { class: 'gameexit', 'aria-label': 'Leave the game (it is saved to the auto-save first)', title: 'Leave (saved to the auto-save)', onclick: async () => { exit.disabled = true; if (GAME.loaded && await gameAutosave()) toast('Saved to the auto-save.'); back('detail', { id }); } }, icon('x'));
   const lockB = h('button', { class: 'gameexit gamelock', 'aria-label': 'Lock the app (the game is saved to the auto-save first)', title: 'Lock (saved to the auto-save)', onclick: async () => { lockB.disabled = true; if (GAME.loaded) await gameAutosave(); lockNow(); } }, icon('lock'));
+  /* what is on screen now: [layer, index, files] in drawing order, and what is playing */
+  const onScreen = () => new Promise(res => { GAME.onScreen = (l, pl) => { GAME.onScreen = null; res(l ? { ents: l, playing: pl || [] } : null); }; frame.contentWindow.postMessage({ t: 'onscreen' }, '*'); setTimeout(() => { if (GAME.onScreen) { GAME.onScreen = null; res(null); } }, 8000); });
+  // the chosen pictures, drawn together as they are on screen: everything on screen that uses one of them, in drawing order
+  const composer = ents => sel => new Promise((res, rej) => {
+    const want = new Set(sel.map(n => n.toLowerCase())), picks = ents.filter(e => e[2].some(f => want.has(f.toLowerCase()))).map(e => [e[0], e[1]]);
+    GAME.onCompose = b => { GAME.onCompose = null; b ? res(new Uint8Array(b)) : rej(new Error('The game could not draw them.')); };
+    frame.contentWindow.postMessage({ t: 'compose', picks }, '*'); setTimeout(() => { if (GAME.onCompose) { GAME.onCompose = null; rej(new Error('The game did not answer.')); } }, 10000);
+  });
+  // only the art: what is shown in the scene (backgrounds, characters, effects), not menus, text boxes or buttons
+  const artOf = ents => [...new Set(ents.filter(e => !['screens', 'overlay', 'transient'].includes(e[0])).flatMap(e => e[2]).filter(f => !/^gui\//i.test(f)))];
+  // the music and sounds playing now ("<loop 2.0>music.ogg" -> music.ogg), to go with the pictures
+  const soundsOf = playing => [...new Map(playing.map(([ch, f]) => [String(f).replace(/^<[^>]*>/, ''), ch])).entries()].map(([name, ch]) => ({ name, ch }));
   const picsB = h('button', { class: 'gameexit gamepics', 'aria-label': 'Pictures on screen', title: 'Pictures on screen', onclick: async () => {
     if (!GAME.loaded) return;
-    let playing = [];
-    const ents = await new Promise(res => { GAME.onScreen = (l, pl) => { GAME.onScreen = null; playing = pl || []; res(l); }; frame.contentWindow.postMessage({ t: 'onscreen' }, '*'); setTimeout(() => { if (GAME.onScreen) { GAME.onScreen = null; res(null); } }, 8000); });
-    if (!ents) return toast('The game could not say what is on screen.');
+    const os = await onScreen(); if (!os) return toast('The game could not say what is on screen.');
+    const { ents } = os;
     // the scene first (backgrounds and characters), then the rest (the interface)
     const order = [...ents.filter(e => e[0] === 'master'), ...ents.filter(e => e[0] !== 'master')];
     const names = [...new Set(order.flatMap(e => e[2]))];
     if (!names.length) return toast('No pictures are on screen right now.');
-    // the chosen pictures, drawn together as they are on screen: everything on screen that uses one of them, in drawing order
-    const compose = sel => new Promise((res, rej) => {
-      const want = new Set(sel.map(n => n.toLowerCase())), picks = ents.filter(e => e[2].some(f => want.has(f.toLowerCase()))).map(e => [e[0], e[1]]);
-      GAME.onCompose = b => { GAME.onCompose = null; b ? res(new Uint8Array(b)) : rej(new Error('The game could not draw them.')); };
-      frame.contentWindow.postMessage({ t: 'compose', picks }, '*'); setTimeout(() => { if (GAME.onCompose) { GAME.onCompose = null; rej(new Error('The game did not answer.')); } }, 10000);
-    });
-    // the music and sounds playing now ("<loop 2.0>music.ogg" -> music.ogg), to go with the pictures
-    const sounds = [...new Map(playing.map(([ch, f]) => [String(f).replace(/^<[^>]*>/, ''), ch])).entries()].map(([name, ch]) => ({ name, ch }));
-    openAssets(id, { only: names, inGame: true, title: 'Pictures on screen', compose, sounds });
+    openAssets(id, { only: names, inGame: true, title: 'Pictures on screen', compose: composer(ents), sounds: soundsOf(os.playing), art: artOf(ents), onAdded: drawQuick });
   } }, icon('image'));
+  /* one tap: the art on screen, as one picture, with the music playing, into the gallery you added to last */
+  const quickB = h('button', { class: 'gameexit gamequick', hidden: true, onclick: async () => {
+    if (!GAME.loaded || quickB.disabled) return; const to = await lastAddTarget(); if (!to) return drawQuick();
+    quickB.disabled = true;
+    try {
+      const os = await onScreen(); if (!os) throw new Error('The game could not say what is on screen.');
+      const art = artOf(os.ents); if (!art.length) throw new Error('No art is on screen right now.');
+      const bytes = await composer(os.ents)(art), gf = await gameFileList(g, 'on');
+      const sounds = soundsOf(os.playing).filter(x => x.ch !== 'voice').map(x => ({ name: x.name.split('/').pop(), get: async () => { const r = await gameFileReader(gf, x.name); if (!r) throw new Error('missing'); return new Blob([await r()]); } }));
+      await importInto(to.g, [{ title: to.g.title, chId: to.ch, items: [{ name: 'scene.png', sounds, get: async () => new Blob([bytes], { type: 'image/png' }) }] }], () => { }, () => false);
+      toast(`Scene added to “${to.label}”.`, 2500);
+    } catch (e) { toast(e.message || 'The scene could not be added.', 3500); }
+    finally { quickB.disabled = false; }
+  } }, icon('plus'));
+  const drawQuick = async () => { const to = await lastAddTarget(); quickB.hidden = !to; if (to) { quickB.title = `Add the scene to “${to.label}”`; quickB.setAttribute('aria-label', `Add the scene (art only, with its music) to “${to.label}”`); } };
+  drawQuick();
   const modsB = (g.game.mods || []).length ? h('button', { class: 'gameexit gamemods', 'aria-label': 'Mods', title: 'Mods', onclick: () => GAME.loaded && liveMods(id) }, icon('layers')) : null;
-  const box = h('div', { id: 'gamebox' }, load, exit, lockB, picsB, modsB);
+  const savesB = h('button', { class: 'gameexit gamesaves', 'aria-label': 'Saves', title: 'Saves', onclick: async () => { if (!GAME.loaded) return; await gameAutosave(); savePicker(id); } }, icon('list'));
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
   document.body.classList.add('gaming'); document.body.append(box);
@@ -2753,7 +2875,7 @@ async function openGame(id, cont) {
         }
         GAME.lazy = lazy ? lazy.remote.length : 0;
         // Continue: Ren'Py loads this save itself when it starts (its own auto_load setting)
-        const more = [];
+        const more = [{ p: 'game/zzzz_tankobon_hooks.rpy', text: RPY_HOOKS }, { p: 'game/zzzz_tankobon_errors.rpy', text: `init 1998 python:\n    store._tkb_errors = ${JSON.stringify(g.game.errors === 'show' ? 'show' : 'skip')}\n` }];
         if (cont) { const slot = await newestSlot(saves || {}); if (slot) more.push({ p: 'game/zzzz_tankobon_continue.rpy', text: `init 1999 python:\n    config.auto_load = ${JSON.stringify(slot)}\n` }); }
         win.postMessage({ t: 'boot', files, game, saves: sv, extract, more, lazy: lazy && { parts: lazy.parts, remote: lazy.remote } }, '*', [...Object.values(files), ...sv.map(s => s.buf)]);
         rt = null; // handed over
@@ -2778,6 +2900,10 @@ async function openGame(id, cont) {
         if (GAME.onScreen) GAME.onScreen(m.ents, m.playing);
       } else if (m.t === 'composeres') {
         if (GAME.onCompose) GAME.onCompose(m.buf);
+      } else if (m.t === 'gameerror') {
+        // an error in the game itself (skipped, unless set to show Ren'Py's screen)
+        GAME.errors = GAME.errors || []; GAME.errors.push({ short: String(m.short || ''), full: String(m.full || ''), t: Date.now() }); if (GAME.errors.length > 30) GAME.errors.shift();
+        if (g.game.errors !== 'show' && Date.now() - (GAME.errToastAt || 0) > 6000) { GAME.errToastAt = Date.now(); undoToast('The game had an error and it was skipped.', () => gameErrors(GAME.errors, g.title), null, 6000, 'Details'); }
       } else if (m.t === 'autosaved') {
         if (GAME.onAutosaved) GAME.onAutosaved(m.ok);
       } else if (m.t === 'shotres') {
@@ -3296,6 +3422,13 @@ async function rpyLazyPlan(g, list, onProg = () => { }) {
 }
 const RPY_PIC = /\.(png|jpe?g|webp|avif|gif|bmp)$/i;
 /* every picture of a game: loose ones and the ones in its archives. [{name, size, read()}] */
+async function lastAddTarget() {
+  const t = UI.lastAddTo; if (!t) return null;
+  const g = await S.gal(t.gal).catch(() => null); if (!g || isGame(g)) return null; Tree.ensureRoot(g);
+  const c = g.chapters.find(x => x.id === t.ch) || g.chapters[0];
+  return { g, ch: c.id, label: c.root ? g.title : `${g.title} › ${c.title}` };
+}
+function rememberAddTo(galId, chId) { UI.lastAddTo = { gal: galId, ch: chId }; saveMeta(); }
 async function gameFileReader(list, name) {
   const want = String(name).replace(/^\/+/, '').toLowerCase();
   const f = list.find(x => x.p.toLowerCase() === 'game/' + want); if (f) return () => rpyRange(f, 0, f.s);
@@ -3404,13 +3537,29 @@ async function openAssets(gid, opts = {}) {
     const i = list.findIndex(p => sel.has(p)); view(i < 0 ? 0 : i);
   } }, icon('full'), 'View');
   const allB = h('button', { class: 'btn ghost small', onclick: () => { list.forEach(p => sel.add(p)); grid.querySelectorAll('.btile').forEach(b => b.setAttribute('aria-pressed', 'true')); bar(); } }, 'Select all');
+  // only the art (no menus, text boxes or buttons)
+  const artB = opts.art ? h('button', { class: 'btn ghost small', id: 'asset-art', onclick: () => { const want = new Set(opts.art.map(n => n.toLowerCase())); sel.clear(); for (const p of list) if (want.has(p.name.toLowerCase())) sel.add(p); grid.querySelectorAll('.btile').forEach(b => b.setAttribute('aria-pressed', String([...sel].some(p => p.name === b.title)))); bar(); } }, icon('image'), 'Art only') : null;
+  let quickTo = null;
+  const quickB = h('button', { class: 'btn small', id: 'asset-quick', hidden: true, onclick: () => quickAdd() });
+  if (opts.inGame) lastAddTarget().then(t => { quickTo = t; if (t) { quickB.replaceChildren(icon('plus'), `Add to “${t.label}”`); bar(); } });
+  async function quickAdd() {
+    if (!quickTo || !sel.size) return; quickB.disabled = true; busy++;
+    try {
+      const chosen = chosenPics(), snds = soundsFor();
+      const items = chosen.map(p => { const n = p.name.split('/').pop(); return { name: n, sounds: snds, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
+      const dest = await S.gal(quickTo.g.id);
+      const r = await importInto(dest, [{ title: dest.title, chId: quickTo.ch, items }], () => { }, () => false);
+      closeSheet(); toast(`${plural(r.done - r.skipped, 'picture')} added to “${quickTo.label}”.`, 3000);
+    } catch (e) { toast('Could not add them: ' + (e.message || e), 4000); quickB.disabled = false; }
+    finally { busy = Math.max(0, busy - 1); }
+  }
   const noneB = h('button', { class: 'btn ghost small', onclick: () => { sel.clear(); grid.querySelectorAll('.btile').forEach(b => b.setAttribute('aria-pressed', 'false')); bar(); } }, 'Clear');
   const barEl = h('div', { class: 'assetbar' });
   const bar = () => {
     count.textContent = sel.size ? `${plural(sel.size, 'picture')} selected${together && sel.size > 1 ? ' (as one picture)' : ''}` : 'Tap pictures to select them';
-    coverB.disabled = together ? !sel.size : sel.size !== 1; galB.disabled = !sel.size; addB.disabled = !sel.size; noneB.hidden = !sel.size;
+    coverB.disabled = together ? !sel.size : sel.size !== 1; quickB.hidden = !quickTo; quickB.disabled = !sel.size; galB.disabled = !sel.size; addB.disabled = !sel.size; noneB.hidden = !sel.size;
     viewB.disabled = !list.length;
-    if (!barEl.querySelector('#asset-name, #asset-where')) barEl.replaceChildren(count, h('span', { class: 'grow' }), viewB, noneB, allB, coverB, addB, galB);
+    if (!barEl.querySelector('#asset-name, #asset-where')) barEl.replaceChildren(count, h('span', { class: 'grow' }), viewB, noneB, artB, allB, coverB, addB, galB, quickB);
   };
   const tile = pic => {
     const img = h('img', { alt: '' });
@@ -3504,6 +3653,7 @@ async function openAssets(gid, opts = {}) {
         const [galId, chId] = where.value.split('|'), dest = await S.gal(galId);
         const chosen = chosenPics(), snds = soundsFor();
         const items = chosen.map(p => { const n = p.name.split('/').pop(); return { name: n, sounds: snds, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
+        rememberAddTo(galId, chId); if (opts.onAdded) opts.onAdded();
         const r = await importInto(dest, [{ title: g0.title, chId, items }], (d, t) => { lbl.textContent = `Adding picture ${d.toLocaleString()} of ${t.toLocaleString()}`; barI.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
         closeSheet(); toast(`${plural(r.done - r.skipped, 'picture')} added to “${dest.title}”.`, 3000);
       } catch (e) { toast('Could not add them: ' + (e.message || e), 4000); go1.disabled = false; }
@@ -3525,7 +3675,8 @@ async function openAssets(gid, opts = {}) {
         let common = dirs[0] || []; for (const d of dirs) { let k = 0; while (k < common.length && d[k] === common[k]) k++; common = common.slice(0, k); }
         const snds = soundsFor();
         const entries = chosen.map(p => { const parts = p.name.split('/'), n = parts.pop(); return { dir: parts.slice(common.length).join('/'), name: n, sounds: snds, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
-        const g = newGallery(name.value.trim() || `${g0.title} pictures`); await saveGallery(g);
+        const g = newGallery(name.value.trim() || `${g0.title} pictures`); Tree.ensureRoot(g); await saveGallery(g);
+        if (opts.inGame) { rememberAddTo(g.id, g.chapters[0].id); if (opts.onAdded) opts.onAdded(); }
         const r = await importInto(g, groupChapters(entries, g.title), (d, t) => { lbl.textContent = `Adding picture ${d.toLocaleString()} of ${t.toLocaleString()}`; barI.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
         if (!g.chapters.some(c => c.pages.length)) { await ST.del('galleries', g.id); closeSheet(); return toast('No pictures could be added.'); }
         closeSheet(); toast(`Gallery made with ${plural(r.done - r.skipped, 'picture')}.`, 3000); if (!opts.inGame) go('detail', { id: g.id });
@@ -7648,7 +7799,7 @@ async function renderPages(id, chId, host, gIn) {
         } }, icon(allOff ? 'eye' : 'eyeoff'), allOff ? 'Show in reading' : 'Hide from reading');
       })(),
       h('button', { class: 'btn', onclick: () => openTools() }, icon('tools'), 'Editing tools'),
-      EXP && pages.length ? h('button', { class: 'btn', id: 'ed-sound', onclick: () => soundSheet(g, pages, draw) }, icon('music'), 'Sound') : null,
+      EXP && (pages.length || [...sel].some(k => k[0] === 'c')) ? h('button', { class: 'btn', id: 'ed-sound', onclick: () => pages.length ? soundSheet(g, pages, draw) : soundSheet(g, [], draw, false, [...sel].filter(k => k[0] === 'c').map(k => k.slice(2))) }, icon('music'), 'Sound') : null,
       sel.size === 1 && pages.length === 1 ? h('button', { class: 'btn', onclick: async () => {
         if (ch.root) { await dropCustomCover(g); g.cover = pages[0]; } else { await dropFolderCover(g, ch); ch.cover = pages[0]; }
         await saveGallery(g); sel.clear(); draw(); window.__drawCover && window.__drawCover(); toast(ch.root ? 'Gallery cover updated' : 'Folder cover updated');
@@ -7909,6 +8060,11 @@ function buildPages() {
    and g.audio says which page has which: { pageId: [soundId, …] }. While reading, the sounds of the page(s) on screen loop;
    a sound the next page also has keeps playing without a break; others fade out while the new ones fade in. */
 const isSoundId = (g, id) => !!(g.meta && g.meta[id] && g.meta[id][3] === 'a');
+function pageSounds(g, pid, ci) {
+  const out = [...((g.audio || {})[pid] || [])], F = g.folderAudio || {};
+  for (let i = ci; i >= 0 && g.chapters[i]; i = Tree.parent(g.chapters, i)) out.push(...(F[g.chapters[i].id] || []));
+  return out;
+}
 const AUDIO_EXT = /\.(ogg|opus|mp3|wav|flac|m4a|aac|oga|weba|webm)$/i;
 const Snd = {
   on: new Map(), tok: 0, t: 0,
@@ -7925,9 +8081,11 @@ const Snd = {
     const id = uid(); await ST.put('images', { id, t: blob.type || ({ ogg: 'audio/ogg', opus: 'audio/ogg', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac', webm: 'audio/webm' })[(name.split('.').pop() || '').toLowerCase()] || 'audio/mpeg', e: await Crypt.enc(await blob.arrayBuffer()) });
     g.meta[id] = [0, 0, name, 'a', size]; return id;
   },
-  playing() { return [...this.on.values()].filter(x => !x.leaving).length; },
+  playing() { return [...this.on.values()].filter(x => !x.leaving && !x.done).length; },
   /* how loud a sound plays: the overall volume times that sound's own level in its gallery (the same on every page with it) */
   level(g, aid) { const l = g && g.sndVol && g.sndVol[aid]; return l == null ? 1 : l; },
+  loops(g, aid) { const n = g && g.sndLoop && g.sndLoop[aid]; return n > 0 ? n : 0; }, // 0: for as long as you stay
+  setLoops(g, aid, n) { g.sndLoop = g.sndLoop || {}; if (!n) delete g.sndLoop[aid]; else g.sndLoop[aid] = n; const x = this.on.get(aid); if (x && R.g && R.g.id === g.id) { x.n = n; x.el.loop = !n; } },
   target(aid) { return this.muted ? 0 : Math.min(1, this.vol * this.level(R.g, aid)); },
   setLevel(g, aid, v) { g.sndVol = g.sndVol || {}; if (v === 1) delete g.sndVol[aid]; else g.sndVol[aid] = v; const x = this.on.get(aid); if (x && !x.leaving && R.g && R.g.id === g.id) { clearInterval(x.fi); x.el.volume = this.target(aid); } },
   /* what should be playing now: the sounds of the page(s) on screen */
@@ -7935,9 +8093,9 @@ const Snd = {
     clearTimeout(this.t);
     this.t = setTimeout(() => {
       if (CUR.view !== 'reader' || !R.g || document.hidden) return this.want([]);
-      const ids = currentIdx().map(i => R.pages[i] && R.pages[i].id).filter(Boolean), A = R.g.audio || {};
-      this.want([...new Set(ids.flatMap(id => A[id] || []))].filter(a => isSoundId(R.g, a)));
-    }, now ? 0 : 150);
+      const shown = currentIdx().map(i => R.pages[i]).filter(Boolean);
+      this.want([...new Set(shown.flatMap(pg => pageSounds(R.g, pg.id, pg.ch)))].filter(a => isSoundId(R.g, a)));
+    }, now ? 0 : paged(R.p.mode) ? 150 : 700); // (scrolling: the page in the middle of the screen must stay there a moment, so passing pages do not make the music flicker)
   },
   fade(x, to, ms, then) {
     clearInterval(x.fi); const from = x.el.volume, t0 = performance.now();
@@ -7951,8 +8109,10 @@ const Snd = {
       if (cur) { if (cur.leaving) { cur.leaving = false; this.fade(cur, this.target(aid), 600); } continue; } // the same sound on the next page: it just goes on
       let blob; try { blob = await S.blob('images', aid); } catch (e) { blob = null; }
       if (tok !== this.tok || !blob || this.on.has(aid)) continue;
-      const url = URL.createObjectURL(blob), el = new Audio(url); el.loop = true; el.volume = 0;
-      const x = { el, url, leaving: false }; this.on.set(aid, x);
+      const url = URL.createObjectURL(blob), el = new Audio(url), n = this.loops(R.g, aid); el.loop = !n; el.volume = 0;
+      const x = { el, url, leaving: false, n, plays: 1, done: false }; this.on.set(aid, x);
+      // a set number of times: played again until then, then it stays quiet while you stay (it does not start over on the next page)
+      el.addEventListener('ended', () => { if (x.leaving || el.loop) return; if (!x.n || x.plays < x.n) { x.plays++; el.currentTime = 0; el.play().catch(() => { }); } else { x.done = true; if (CUR.view === 'reader') $('#rSound').classList.toggle('on', this.playing() > 0); } });
       el.play().then(() => this.fade(x, this.target(aid), 900)).catch(() => { });
     }
     if (CUR.view === 'reader') $('#rSound').classList.toggle('on', this.playing() > 0);
@@ -7963,8 +8123,11 @@ const Snd = {
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const x of Snd.on.values()) x.el.pause(); } else if (CUR.view === 'reader') { for (const x of Snd.on.values()) if (!x.leaving) x.el.play().catch(() => { }); Snd.follow(); } });
 /* the sounds of some pages: add (files, or ones this gallery has), take off, listen, volume */
-function soundSheet(g, pageIds, onDone, inReader) {
-  const A = () => (g.audio = g.audio || {});
+function soundSheet(g, pageIds, onDone, inReader, folders) {
+  // the sounds are set on pages (g.audio) or on folders (g.folderAudio: every page inside plays them)
+  const forFolders = !!(folders && folders.length);
+  if (forFolders) pageIds = folders;
+  const A = () => forFolders ? (g.folderAudio = g.folderAudio || {}) : (g.audio = g.audio || {});
   const draw = () => {
     const all = Object.entries(g.meta || {}).filter(([, m]) => m[3] === 'a');
     const on = new Map(); for (const pid of pageIds) for (const a of A()[pid] || []) on.set(a, (on.get(a) || 0) + 1);
@@ -7980,7 +8143,9 @@ function soundSheet(g, pageIds, onDone, inReader) {
     const level = a => h('div', { class: 'row sndlevel', style: 'gap:8px;padding-left:24px' }, h('small', { class: 'hint', style: 'flex:none' }, 'Loudness'),
       h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(Snd.level(g, a)), 'aria-label': `How loud ${name(a)} plays`, style: 'flex:1',
         oninput: e => { const v = +e.target.value; Snd.setLevel(g, a, v); if (prev && prev.__a === a) prev.volume = Math.min(1, Snd.vol * v); e.target.nextSibling.textContent = Math.round(v * 100) + '%'; clearTimeout(lvlT); lvlT = setTimeout(() => saveGallery(g), 400); } }),
-      h('small', { class: 'num hint', style: 'flex:none;width:3.2em;text-align:right' }, Math.round(Snd.level(g, a) * 100) + '%'));
+      h('small', { class: 'num hint', style: 'flex:none;width:3.2em;text-align:right' }, Math.round(Snd.level(g, a) * 100) + '%'),
+      h('select', { class: 'text small sndloops', style: 'flex:none;width:auto;padding:4px 8px', 'aria-label': `How many times ${name(a)} plays`, onchange: async e => { Snd.setLoops(g, a, +e.target.value); await saveGallery(g); } },
+        [[0, 'Loops'], [1, 'Once'], [2, '2 times'], [3, '3 times'], [5, '5 times'], [10, '10 times']].map(([v, l]) => h('option', { value: String(v), selected: Snd.loops(g, a) === v }, l))));
     const rows = [...on.keys()].flatMap(a => [h('div', { class: 'row sndrow', style: 'justify-content:space-between;gap:8px' },
       h('span', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis' }, icon('music'), ' ', h('b', {}, name(a)), pageIds.length > 1 && on.get(a) < pageIds.length ? h('small', { class: 'hint' }, ` · on ${on.get(a)} of ${pageIds.length}`) : null),
       h('div', { class: 'row', style: 'gap:6px;flex:none' },
@@ -8002,11 +8167,23 @@ function soundSheet(g, pageIds, onDone, inReader) {
     }) }, icon('search'), 'Search all sounds');
     const vol = h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(Snd.vol), 'aria-label': 'Volume', style: 'flex:1', oninput: e => Snd.setVol(+e.target.value) });
     const muteB = h('button', { class: 'iconbtn', 'aria-label': Snd.muted ? 'Sound on' : 'Mute', onclick: () => { Snd.setMute(!Snd.muted); draw(); } }, icon(Snd.muted ? 'mute' : 'volume'));
-    openSheet(pageIds.length === 1 ? 'Sounds for this page' : `Sounds for ${plural(pageIds.length, 'page')}`, h('div', { class: 'stack', id: 'snd-sheet' },
-      rows.length ? h('div', { class: 'stack', style: 'gap:6px' }, rows) : h('p', { class: 'hint' }, pageIds.length === 1 ? 'This page has no sound yet.' : 'These pages have no sound yet.'),
+    const chOf = id => g.chapters.find(c => c.id === id);
+    const title = forFolders ? (pageIds.length === 1 ? (chOf(pageIds[0]) && chOf(pageIds[0]).root ? 'Sounds for the whole gallery' : `Sounds for the folder “${(chOf(pageIds[0]) || {}).title || ''}”`) : `Sounds for ${plural(pageIds.length, 'folder')}`) : pageIds.length === 1 ? 'Sounds for this page' : `Sounds for ${plural(pageIds.length, 'page')}`;
+    // in the reader: this page, the folder it is in, or the whole gallery
+    let scopeSeg = null;
+    if (inReader && inReader.pg) {
+      const pg = inReader.pg, ch = g.chapters[pg.ch], root = g.chapters[0], cur = forFolders ? (pageIds[0] === root.id ? 'all' : 'folder') : 'page';
+      const opts2 = [['page', 'This page'], ...(ch && !ch.root ? [['folder', `Folder “${ch.title}”`]] : []), ['all', 'Whole gallery']];
+      scopeSeg = h('div', { class: 'seg', role: 'group', id: 'snd-scope', 'aria-label': 'Sounds for' }, opts2.map(([v, l]) => h('button', { 'aria-pressed': String(v === cur), onclick: () => {
+        if (v === cur) return; if (prev) { prev.pause(); prev = null; }
+        soundSheet(g, v === 'page' ? inReader.pages : [], onDone, inReader, v === 'page' ? null : [v === 'all' ? root.id : ch.id]);
+      } }, l)));
+    }
+    openSheet(title, h('div', { class: 'stack', id: 'snd-sheet' }, scopeSeg,
+      rows.length ? h('div', { class: 'stack', style: 'gap:6px' }, rows) : h('p', { class: 'hint' }, forFolders ? 'No sound here yet. A sound set here plays on every page inside, together with the page\'s own sounds.' : pageIds.length === 1 ? 'This page has no sound yet.' : 'These pages have no sound yet.'),
       h('div', { class: 'row', style: 'flex-wrap:wrap' }, addB, searchB, pick),
       inReader ? h('div', { class: 'row' }, muteB, h('small', { class: 'hint', style: 'flex:none' }, 'All sounds'), vol) : null,
-      rows.length ? h('p', { class: 'hint', style: 'margin:0' }, 'Each sound\'s loudness is the same on every page that has it.') : null,
+      rows.length ? h('p', { class: 'hint', style: 'margin:0' }, 'Each sound\'s loudness and how many times it plays are the same on every page that has it. “Loops” plays it for as long as you stay.') : null,
       h('p', { class: 'hint' }, 'While reading, a page\'s sounds loop for as long as you are on it. If the next page has the same sound, it keeps playing; otherwise one fades into the other. To put a sound on many pages at once, select them in Edit and tap Sound.')),
       () => { if (prev) { prev.pause(); prev = null; } });
   };
@@ -8758,7 +8935,7 @@ $('#rZoomLbl').addEventListener('click', () => zoomCenter(1)); $('#rZoomOpts').a
 $('#rLayers').append(icon('layers'));
 stage.addEventListener('scroll', () => { if (CUR.view === 'reader' && paged(R.p.mode) && !R.noProgress) saveProgress(); }, { passive: true });
 $('#rLock').append(icon('lock')); $('#rLock').addEventListener('click', lockNow);
-$('#rSound').append(icon('music')); $('#rSound').addEventListener('click', () => { const ids = [...new Set(currentIdx().map(i => R.pages[i] && R.pages[i].id).filter(Boolean))]; if (ids.length) soundSheet(R.g, ids, () => { Snd.follow(true); updateUI(); }, true); });
+$('#rSound').append(icon('music')); $('#rSound').addEventListener('click', () => { const ids = [...new Set(currentIdx().map(i => R.pages[i] && R.pages[i].id).filter(Boolean))]; if (ids.length) soundSheet(R.g, ids, () => { Snd.follow(true); updateUI(); }, { pg: R.pages[R.pos], pages: ids }); });
 $('#rLayers').addEventListener('click', () => {
   const pg = shownLayered(); if (!pg) return;
   const id = pg.id;

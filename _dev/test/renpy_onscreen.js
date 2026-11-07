@@ -93,6 +93,22 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await pickAdd();
   const each = await scenes();
   ok('Each on its own adds them separately', each.n === 2 + names.length, JSON.stringify(each));
+  // Art only: the scene without menus and buttons; and one tap to the gallery used last
+  await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  await p.click('#asset-art'); await p.waitForTimeout(300);
+  const artSel = await p.$$eval('#sheetBody .btile.asset[aria-pressed="true"]', a => a.map(e => e.title));
+  ok('Art only selects the scene\'s pictures, not the interface', artSel.length >= 1 && artSel.every(n => !/^gui\//.test(n)) && artSel.some(n => /bg /.test(n)), JSON.stringify(artSel));
+  const qb = await p.$eval('#asset-quick', b => b.hidden ? '' : b.innerText.trim()).catch(() => '');
+  ok('the sheet offers the gallery used last', /Add to “Scenes”/.test(qb), qb);
+  await p.click('#asset-quick'); await p.waitForTimeout(2500);
+  const q1 = await scenes();
+  ok('one tap adds the art (as one picture) to it', q1.n === each.n + 1 && q1.w === 1280, JSON.stringify(q1));
+  // the player's own quick button: art + music, one tap
+  ok('the player shows a quick-add button once a gallery was used', await p.$eval('#gamebox .gamequick', b => !b.hidden && /Scenes/.test(b.title)));
+  await p.click('#gamebox .gamequick'); await p.waitForTimeout(3500);
+  const q2 = await scenes();
+  const q2snd = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.title === 'Scenes'); const pages = g.chapters.flatMap(c => c.pages); const last = pages[pages.length - 1]; return (g.audio && g.audio[last] || []).map(a => g.meta[a][2]); });
+  ok('the quick-add button adds the scene with its music, and the game keeps running', q2.n === q1.n + 1 && q2.w === 1280 && q2snd.length >= 1 && q2.view === 'game' && q2.loaded, JSON.stringify([q2, q2snd]));
   await p.screenshot({ path: '/tmp/claude-0/shots/onscreen.png' });
   errs.splice(0, errs.length, ...errs.filter(e => !/serviceWorker/.test(e)));
   ok('no errors', errs.length === 0, errs.slice(0, 3).join(' | '));

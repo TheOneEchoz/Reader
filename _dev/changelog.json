@@ -1,5 +1,18 @@
 [
  {
+  "v": 117,
+  "name": "1.23.0-beta.19",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Ren'Py games: a Saves button in the player lists your saves, each with its picture; tap one to go there (where you are is kept in the auto-save first), or Save here in the first free slot. The game's page shows the last thing you saw on its Continue button.",
+   "Mistakes in a game itself (the grey “An exception has occurred” screen) are skipped, like its Ignore button, and the game goes on; a note says so, with Details to see or copy what went wrong. Each game's page can switch back to the game's own error screen.",
+   "Pictures on screen: “Art only” selects the scene's pictures without menus, text boxes or buttons. The gallery you added to last gets a one-tap button, in the sheet and in the player itself (the art, as one picture, with the music playing).",
+   "Sounds: each can play for as long as you stay (Loops), or once, 2, 3, 5 or 10 times. Sounds can be set on a folder or on the whole gallery (from the reader, or by selecting folders in Edit): every page inside plays them with its own.",
+   "Sounds while scrolling (vertical and horizontal modes): the page in the middle of the screen decides, once it stays there a moment, so pages you pass by do not make the music flicker."
+  ]
+ },
+ {
   "v": 116,
   "name": "1.23.0-beta.18",
   "date": "2026-11-07",
