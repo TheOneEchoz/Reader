@@ -1,6 +1,18 @@
 {
  "version": "7.5.3",
+ "loader": "index.js",
+ "python": [
+  "2.7"
+ ],
  "files": [
+  {
+   "path": "LICENSE.txt",
+   "size": 80401
+  },
+  {
+   "path": "build-log.txt",
+   "size": 357
+  },
   {
    "path": "headers.txt",
    "size": 289
@@ -54,5 +66,5 @@
    "size": 21
   }
  ],
- "total": 15956525
+ "total": 16037283
 }

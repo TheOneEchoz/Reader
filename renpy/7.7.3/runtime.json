@@ -1,6 +1,26 @@
 {
  "version": "7.7.3",
+ "loader": "index.js",
+ "python": [
+  "2.7"
+ ],
  "files": [
+  {
+   "path": "LICENSE.txt",
+   "size": 94506
+  },
+  {
+   "path": "build-log.txt",
+   "size": 29160
+  },
+  {
+   "path": "engine.zip",
+   "size": 3964644
+  },
+  {
+   "path": "game-zip-listing.txt",
+   "size": 38530
+  },
   {
    "path": "headers.txt",
    "size": 289
@@ -8,6 +28,10 @@
   {
    "path": "listing.txt",
    "size": 677
+  },
+  {
+   "path": "shell.html",
+   "size": 22257
   },
   {
    "path": "too-big.txt",
@@ -54,5 +78,5 @@
    "size": 21
   }
  ],
- "total": 16808535
+ "total": 20957632
 }
