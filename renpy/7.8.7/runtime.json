@@ -1,49 +1,12 @@
 {
  "version": "7.8.7",
  "loader": "index.js",
- "python": [
-  "2.7"
- ],
+ "python": "2.7",
+ "runtime": "renpy-7.8.7.25031702",
  "files": [
   {
-   "path": "LICENSE.txt",
-   "size": 101247
-  },
-  {
-   "path": "build-log.txt",
-   "size": 91472
-  },
-  {
    "path": "engine.zip",
-   "size": 4106836
-  },
-  {
-   "path": "game-zip-listing.txt",
-   "size": 41852
-  },
-  {
-   "path": "headers.txt",
-   "size": 289
-  },
-  {
-   "path": "listing.txt",
-   "size": 677
-  },
-  {
-   "path": "shell.html",
-   "size": 26045
-  },
-  {
-   "path": "too-big.txt",
-   "size": 0
-  },
-  {
-   "path": "web/hash.txt",
-   "size": 64
-  },
-  {
-   "path": "web/htaccess.txt",
-   "size": 735
+   "size": 4083924
   },
   {
    "path": "web/index.html",
@@ -72,11 +35,7 @@
   {
    "path": "web/pythonhome.data",
    "size": 1493625
-  },
-  {
-   "path": "web/renpyweb-version.txt",
-   "size": 21
   }
  ],
- "total": 22156140
+ "total": 21870826
 }

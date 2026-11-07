@@ -1,17 +1,17 @@
 Archive:  /tmp/out/web/game.zip
   Length      Date    Time    Name
 ---------  ---------- -----   ----
-        0  2026-11-07 15:50   game/
+        0  2026-11-07 15:56   game/
   2901056  2023-06-13 02:03   game/SourceHanSansLite.ttf
    124800  2025-11-07 02:31   game/Vazirmatn-RD-UI-Light.ttf
         0  2026-04-02 12:12   game/cache/
-       82  2026-11-07 15:50   game/cache/build_info.json
+       82  2026-11-07 15:56   game/cache/build_info.json
    722500  2026-05-15 12:54   game/cache/bytecode-312.rpyb
     24480  2026-05-16 01:28   game/cache/py3analysis.rpyb
    162058  2025-03-17 14:15   game/cache/pyanalysis.rpyb
     66641  2026-05-16 01:28   game/cache/screens.rpyb
       335  2026-04-02 12:12   game/cache/shaders.txt
-        0  2026-11-07 15:50   game/gui/
+        0  2026-11-07 15:56   game/gui/
     15491  2026-04-02 03:06   game/gui.rpy
     11870  2026-05-16 01:28   game/gui.rpyc
         0  2017-03-14 03:01   game/gui/bar/
@@ -76,7 +76,7 @@ Archive:  /tmp/out/web/game.zip
     49760  2026-05-16 01:28   game/screens.rpyc
      6150  2025-07-09 04:57   game/script.rpy
      9728  2026-05-16 01:28   game/script.rpyc
-        9  2026-11-07 15:50   game/script_version.txt
+        9  2026-11-07 15:56   game/script_version.txt
       994  2025-11-17 14:16   game/testcases.rpy
      3276  2026-05-16 01:28   game/testcases.rpyc
         0  2024-06-01 17:23   game/tl/
@@ -191,66 +191,66 @@ Archive:  /tmp/out/web/game.zip
     11147  2026-05-16 01:28   game/tl/ukrainian/script.rpyc
      8944  2026-01-12 02:51   main.py
       340  2020-06-27 20:45   progressive_download.txt
-        0  2026-11-07 15:50   renpy/
+        0  2026-11-07 15:56   renpy/
    101413  2025-11-17 14:16   renpy/LICENSE.txt
-    22270  2026-11-07 15:50   renpy/__init__.pyc
-     4126  2026-11-07 15:50   renpy/add_from.pyc
-    12905  2026-11-07 15:50   renpy/arguments.pyc
-   133211  2026-11-07 15:50   renpy/ast.pyc
-    81999  2026-11-07 15:50   renpy/atl.pyc
-    18086  2026-11-07 15:50   renpy/bootstrap.pyc
-    68376  2026-11-07 15:50   renpy/character.pyc
-    25451  2026-11-07 15:50   renpy/color.pyc
-    23751  2026-11-07 15:50   renpy/config.pyc
-     5388  2026-11-07 15:50   renpy/curry.pyc
-     1982  2026-11-07 15:50   renpy/debug.pyc
-    19672  2026-11-07 15:50   renpy/defaultstore.pyc
-     7094  2026-11-07 15:50   renpy/dump.pyc
-    11418  2026-11-07 15:50   renpy/easy.pyc
-     5943  2026-11-07 15:50   renpy/editor.pyc
-    70317  2026-11-07 15:50   renpy/error.pyc
-    40905  2026-11-07 15:50   renpy/execution.pyc
-    15773  2026-11-07 15:50   renpy/game.pyc
-    15724  2026-11-07 15:50   renpy/importer.pyc
-    55016  2026-11-07 15:50   renpy/lexer.pyc
-    48997  2026-11-07 15:50   renpy/lint.pyc
-    35916  2026-11-07 15:50   renpy/loader.pyc
-    27583  2026-11-07 15:50   renpy/loadsave.pyc
-    12142  2026-11-07 15:50   renpy/log.pyc
-    30112  2026-11-07 15:50   renpy/main.pyc
-    20426  2026-11-07 15:50   renpy/memory.pyc
-     5083  2026-11-07 15:50   renpy/minstore.pyc
-     2939  2026-11-07 15:50   renpy/object.pyc
-    20018  2026-11-07 15:50   renpy/parameter.pyc
-    61571  2026-11-07 15:50   renpy/parser.pyc
-     3296  2026-11-07 15:50   renpy/performance.pyc
-    23045  2026-11-07 15:50   renpy/persistent.pyc
-    12358  2026-11-07 15:50   renpy/preferences.pyc
+    22270  2026-11-07 15:56   renpy/__init__.pyc
+     4126  2026-11-07 15:56   renpy/add_from.pyc
+    12905  2026-11-07 15:56   renpy/arguments.pyc
+   133211  2026-11-07 15:56   renpy/ast.pyc
+    81999  2026-11-07 15:56   renpy/atl.pyc
+    18086  2026-11-07 15:56   renpy/bootstrap.pyc
+    68376  2026-11-07 15:56   renpy/character.pyc
+    25451  2026-11-07 15:56   renpy/color.pyc
+    23751  2026-11-07 15:56   renpy/config.pyc
+     5388  2026-11-07 15:56   renpy/curry.pyc
+     1982  2026-11-07 15:56   renpy/debug.pyc
+    19672  2026-11-07 15:56   renpy/defaultstore.pyc
+     7094  2026-11-07 15:56   renpy/dump.pyc
+    11418  2026-11-07 15:56   renpy/easy.pyc
+     5943  2026-11-07 15:56   renpy/editor.pyc
+    70317  2026-11-07 15:56   renpy/error.pyc
+    40905  2026-11-07 15:56   renpy/execution.pyc
+    15773  2026-11-07 15:56   renpy/game.pyc
+    15724  2026-11-07 15:56   renpy/importer.pyc
+    55016  2026-11-07 15:56   renpy/lexer.pyc
+    48997  2026-11-07 15:56   renpy/lint.pyc
+    35916  2026-11-07 15:56   renpy/loader.pyc
+    27583  2026-11-07 15:56   renpy/loadsave.pyc
+    12142  2026-11-07 15:56   renpy/log.pyc
+    30112  2026-11-07 15:56   renpy/main.pyc
+    20426  2026-11-07 15:56   renpy/memory.pyc
+     5083  2026-11-07 15:56   renpy/minstore.pyc
+     2939  2026-11-07 15:56   renpy/object.pyc
+    20018  2026-11-07 15:56   renpy/parameter.pyc
+    61571  2026-11-07 15:56   renpy/parser.pyc
+     3296  2026-11-07 15:56   renpy/performance.pyc
+    23045  2026-11-07 15:56   renpy/persistent.pyc
+    12358  2026-11-07 15:56   renpy/preferences.pyc
     30767  2025-03-17 03:05   renpy/py3analysis.pyc
-    33265  2026-11-07 15:50   renpy/pyanalysis.pyc
-    48708  2026-11-07 15:50   renpy/python.pyc
-    26083  2026-11-07 15:50   renpy/revertable.pyc
-    42682  2026-11-07 15:50   renpy/rollback.pyc
-    28292  2026-11-07 15:50   renpy/savelocation.pyc
-    13695  2026-11-07 15:50   renpy/savetoken.pyc
-     3228  2026-11-07 15:50   renpy/screenlang.pyc
-    50141  2026-11-07 15:50   renpy/script.pyc
-    18343  2026-11-07 15:50   renpy/scriptedit.pyc
-    15594  2026-11-07 15:50   renpy/statements.pyc
-     8688  2026-11-07 15:50   renpy/substitutions.pyc
-     1049  2026-11-07 15:50   renpy/types.pyc
-    57067  2026-11-07 15:50   renpy/ui.pyc
-      812  2026-11-07 15:50   renpy/util.pyc
-      254  2026-11-07 15:50   renpy/vc_version.pyc
-     7148  2026-11-07 15:50   renpy/versions.pyc
-     6288  2026-11-07 15:50   renpy/warp.pyc
-    11866  2026-11-07 15:50   renpy/webloader.pyc
+    33265  2026-11-07 15:56   renpy/pyanalysis.pyc
+    48708  2026-11-07 15:56   renpy/python.pyc
+    26083  2026-11-07 15:56   renpy/revertable.pyc
+    42682  2026-11-07 15:56   renpy/rollback.pyc
+    28292  2026-11-07 15:56   renpy/savelocation.pyc
+    13695  2026-11-07 15:56   renpy/savetoken.pyc
+     3228  2026-11-07 15:56   renpy/screenlang.pyc
+    50141  2026-11-07 15:56   renpy/script.pyc
+    18343  2026-11-07 15:56   renpy/scriptedit.pyc
+    15594  2026-11-07 15:56   renpy/statements.pyc
+     8688  2026-11-07 15:56   renpy/substitutions.pyc
+     1049  2026-11-07 15:56   renpy/types.pyc
+    57067  2026-11-07 15:56   renpy/ui.pyc
+      812  2026-11-07 15:56   renpy/util.pyc
+      254  2026-11-07 15:56   renpy/vc_version.pyc
+     7148  2026-11-07 15:56   renpy/versions.pyc
+     6288  2026-11-07 15:56   renpy/warp.pyc
+    11866  2026-11-07 15:56   renpy/webloader.pyc
         0  2026-05-16 01:27   renpy/audio/
-      789  2026-11-07 15:50   renpy/audio/__init__.pyc
-    46794  2026-11-07 15:50   renpy/audio/audio.pyc
-    22448  2026-11-07 15:50   renpy/audio/music.pyc
-     2808  2026-11-07 15:50   renpy/audio/sound.pyc
-    19186  2026-11-07 15:50   renpy/audio/webaudio.pyc
+      789  2026-11-07 15:56   renpy/audio/__init__.pyc
+    46794  2026-11-07 15:56   renpy/audio/audio.pyc
+    22448  2026-11-07 15:56   renpy/audio/music.pyc
+     2808  2026-11-07 15:56   renpy/audio/sound.pyc
+    19186  2026-11-07 15:56   renpy/audio/webaudio.pyc
         0  2026-05-15 12:54   renpy/common/
      6118  2026-01-12 02:51   renpy/common/000atl.rpy
      2086  2026-05-16 01:28   renpy/common/000atl.rpyc
@@ -377,10 +377,10 @@ Archive:  /tmp/out/web/game.zip
       464  2025-11-17 14:16   renpy/common/TwemojiCOLRv0.txt
    237868  2025-02-26 03:44   renpy/common/_OpenDyslexic3-Regular.ttf
      4381  2019-04-25 22:58   renpy/common/_OpenDyslexic3-Regular.txt
-    10869  2026-11-07 15:50   renpy/common/00db_ren.pyc
-    57680  2026-11-07 15:50   renpy/common/00layeredimage_ren.pyc
-     1442  2026-11-07 15:50   renpy/common/00sshtransition_ren.pyc
-     8883  2026-11-07 15:50   renpy/common/00textshader_ren.pyc
+    10869  2026-11-07 15:56   renpy/common/00db_ren.pyc
+    57680  2026-11-07 15:56   renpy/common/00layeredimage_ren.pyc
+     1442  2026-11-07 15:56   renpy/common/00sshtransition_ren.pyc
+     8883  2026-11-07 15:56   renpy/common/00textshader_ren.pyc
     25374  2025-11-07 02:31   renpy/common/_audio.js
      6286  2025-11-07 02:31   renpy/common/_audio_filter.js
         0  2026-04-14 13:07   renpy/common/_developer/
@@ -449,135 +449,135 @@ Archive:  /tmp/out/web/game.zip
    207617  2026-03-14 00:55   renpy/common/gamecontrollerdb.txt
       606  2014-07-04 20:19   renpy/common/squarestile.png
         0  2026-05-15 12:54   renpy/compat/
-     3067  2026-11-07 15:50   renpy/compat/__init__.pyc
-     9183  2026-11-07 15:50   renpy/compat/fixes.pyc
-    20721  2026-11-07 15:50   renpy/compat/pickle.pyc
+     3067  2026-11-07 15:56   renpy/compat/__init__.pyc
+     9183  2026-11-07 15:56   renpy/compat/fixes.pyc
+    20721  2026-11-07 15:56   renpy/compat/pickle.pyc
         0  2026-05-16 01:27   renpy/display/
-     2278  2026-11-07 15:50   renpy/display/__init__.pyc
-    23251  2026-11-07 15:50   renpy/display/anim.pyc
-   124441  2026-11-07 15:50   renpy/display/behavior.pyc
-    11638  2026-11-07 15:50   renpy/display/controller.pyc
-   137814  2026-11-07 15:50   renpy/display/core.pyc
-    22847  2026-11-07 15:50   renpy/display/displayable.pyc
-    45744  2026-11-07 15:50   renpy/display/dragdrop.pyc
-     6636  2026-11-07 15:50   renpy/display/emulator.pyc
-     7206  2026-11-07 15:50   renpy/display/error.pyc
-    25166  2026-11-07 15:50   renpy/display/focus.pyc
-     5006  2026-11-07 15:50   renpy/display/gesture.pyc
-    98389  2026-11-07 15:50   renpy/display/im.pyc
-    40237  2026-11-07 15:50   renpy/display/image.pyc
-    21160  2026-11-07 15:50   renpy/display/imagelike.pyc
-     3585  2026-11-07 15:50   renpy/display/imagemap.pyc
-     1602  2026-11-07 15:50   renpy/display/joystick.pyc
-    96813  2026-11-07 15:50   renpy/display/layout.pyc
-      694  2026-11-07 15:50   renpy/display/minigame.pyc
-    11019  2026-11-07 15:50   renpy/display/model.pyc
-     9916  2026-11-07 15:50   renpy/display/module.pyc
-    26367  2026-11-07 15:50   renpy/display/motion.pyc
-    26777  2026-11-07 15:50   renpy/display/movetransition.pyc
-    25971  2026-11-07 15:50   renpy/display/particle.pyc
-     7641  2026-11-07 15:50   renpy/display/pgrender.pyc
-    15297  2026-11-07 15:50   renpy/display/position.pyc
-     5883  2026-11-07 15:50   renpy/display/predict.pyc
-     8945  2026-11-07 15:50   renpy/display/presplash.pyc
-     3285  2026-11-07 15:50   renpy/display/scale.pyc
-    38021  2026-11-07 15:50   renpy/display/scenelists.pyc
-    52223  2026-11-07 15:50   renpy/display/screen.pyc
-    30670  2026-11-07 15:50   renpy/display/swdraw.pyc
-    53999  2026-11-07 15:50   renpy/display/transform.pyc
-    44109  2026-11-07 15:50   renpy/display/transition.pyc
-    15258  2026-11-07 15:50   renpy/display/tts.pyc
-    32907  2026-11-07 15:50   renpy/display/video.pyc
-    32967  2026-11-07 15:50   renpy/display/viewport.pyc
+     2278  2026-11-07 15:56   renpy/display/__init__.pyc
+    23251  2026-11-07 15:56   renpy/display/anim.pyc
+   124441  2026-11-07 15:56   renpy/display/behavior.pyc
+    11638  2026-11-07 15:56   renpy/display/controller.pyc
+   137814  2026-11-07 15:56   renpy/display/core.pyc
+    22847  2026-11-07 15:56   renpy/display/displayable.pyc
+    45744  2026-11-07 15:56   renpy/display/dragdrop.pyc
+     6636  2026-11-07 15:56   renpy/display/emulator.pyc
+     7206  2026-11-07 15:56   renpy/display/error.pyc
+    25166  2026-11-07 15:56   renpy/display/focus.pyc
+     5006  2026-11-07 15:56   renpy/display/gesture.pyc
+    98389  2026-11-07 15:56   renpy/display/im.pyc
+    40237  2026-11-07 15:56   renpy/display/image.pyc
+    21160  2026-11-07 15:56   renpy/display/imagelike.pyc
+     3585  2026-11-07 15:56   renpy/display/imagemap.pyc
+     1602  2026-11-07 15:56   renpy/display/joystick.pyc
+    96813  2026-11-07 15:56   renpy/display/layout.pyc
+      694  2026-11-07 15:56   renpy/display/minigame.pyc
+    11019  2026-11-07 15:56   renpy/display/model.pyc
+     9916  2026-11-07 15:56   renpy/display/module.pyc
+    26367  2026-11-07 15:56   renpy/display/motion.pyc
+    26777  2026-11-07 15:56   renpy/display/movetransition.pyc
+    25971  2026-11-07 15:56   renpy/display/particle.pyc
+     7641  2026-11-07 15:56   renpy/display/pgrender.pyc
+    15297  2026-11-07 15:56   renpy/display/position.pyc
+     5883  2026-11-07 15:56   renpy/display/predict.pyc
+     8945  2026-11-07 15:56   renpy/display/presplash.pyc
+     3285  2026-11-07 15:56   renpy/display/scale.pyc
+    38021  2026-11-07 15:56   renpy/display/scenelists.pyc
+    52223  2026-11-07 15:56   renpy/display/screen.pyc
+    30670  2026-11-07 15:56   renpy/display/swdraw.pyc
+    53999  2026-11-07 15:56   renpy/display/transform.pyc
+    44109  2026-11-07 15:56   renpy/display/transition.pyc
+    15258  2026-11-07 15:56   renpy/display/tts.pyc
+    32907  2026-11-07 15:56   renpy/display/video.pyc
+    32967  2026-11-07 15:56   renpy/display/viewport.pyc
         0  2026-05-15 12:54   renpy/exports/
-    15893  2026-11-07 15:50   renpy/exports/__init__.pyc
-     2978  2026-11-07 15:50   renpy/exports/actionexports.pyc
-      923  2026-11-07 15:50   renpy/exports/commonexports.pyc
-    14659  2026-11-07 15:50   renpy/exports/contextexports.pyc
-     5451  2026-11-07 15:50   renpy/exports/debugexports.pyc
-    56562  2026-11-07 15:50   renpy/exports/displayexports.pyc
-    10031  2026-11-07 15:50   renpy/exports/fetchexports.pyc
-     8465  2026-11-07 15:50   renpy/exports/inputexports.pyc
-     6601  2026-11-07 15:50   renpy/exports/loaderexports.pyc
-     4274  2026-11-07 15:50   renpy/exports/mediaexports.pyc
-    14737  2026-11-07 15:50   renpy/exports/menuexports.pyc
-     9016  2026-11-07 15:50   renpy/exports/persistentexports.pyc
-     9318  2026-11-07 15:50   renpy/exports/platformexports.pyc
-     5404  2026-11-07 15:50   renpy/exports/predictexports.pyc
-     5738  2026-11-07 15:50   renpy/exports/restartexports.pyc
-     9051  2026-11-07 15:50   renpy/exports/rollbackexports.pyc
-    12723  2026-11-07 15:50   renpy/exports/sayexports.pyc
-     8968  2026-11-07 15:50   renpy/exports/scriptexports.pyc
-    14504  2026-11-07 15:50   renpy/exports/statementexports.pyc
+    15893  2026-11-07 15:56   renpy/exports/__init__.pyc
+     2978  2026-11-07 15:56   renpy/exports/actionexports.pyc
+      923  2026-11-07 15:56   renpy/exports/commonexports.pyc
+    14659  2026-11-07 15:56   renpy/exports/contextexports.pyc
+     5451  2026-11-07 15:56   renpy/exports/debugexports.pyc
+    56562  2026-11-07 15:56   renpy/exports/displayexports.pyc
+    10031  2026-11-07 15:56   renpy/exports/fetchexports.pyc
+     8465  2026-11-07 15:56   renpy/exports/inputexports.pyc
+     6601  2026-11-07 15:56   renpy/exports/loaderexports.pyc
+     4274  2026-11-07 15:56   renpy/exports/mediaexports.pyc
+    14737  2026-11-07 15:56   renpy/exports/menuexports.pyc
+     9016  2026-11-07 15:56   renpy/exports/persistentexports.pyc
+     9318  2026-11-07 15:56   renpy/exports/platformexports.pyc
+     5404  2026-11-07 15:56   renpy/exports/predictexports.pyc
+     5738  2026-11-07 15:56   renpy/exports/restartexports.pyc
+     9051  2026-11-07 15:56   renpy/exports/rollbackexports.pyc
+    12723  2026-11-07 15:56   renpy/exports/sayexports.pyc
+     8968  2026-11-07 15:56   renpy/exports/scriptexports.pyc
+    14504  2026-11-07 15:56   renpy/exports/statementexports.pyc
         0  2026-05-16 01:27   renpy/gl2/
-      801  2026-11-07 15:50   renpy/gl2/__init__.pyc
-     2296  2026-11-07 15:50   renpy/gl2/gl2debug.pyc
-     1532  2026-11-07 15:50   renpy/gl2/gl2functions.pyc
-    17179  2026-11-07 15:50   renpy/gl2/gl2shadercache.pyc
-    38235  2026-11-07 15:50   renpy/gl2/live2d.pyc
-     9787  2026-11-07 15:50   renpy/gl2/live2dmotion.pyc
+      801  2026-11-07 15:56   renpy/gl2/__init__.pyc
+     2296  2026-11-07 15:56   renpy/gl2/gl2debug.pyc
+     1532  2026-11-07 15:56   renpy/gl2/gl2functions.pyc
+    17179  2026-11-07 15:56   renpy/gl2/gl2shadercache.pyc
+    38235  2026-11-07 15:56   renpy/gl2/live2d.pyc
+     9787  2026-11-07 15:56   renpy/gl2/live2dmotion.pyc
         0  2026-05-16 01:27   renpy/pygame/
-     4201  2026-11-07 15:50   renpy/pygame/__init__.pyc
-     3827  2026-11-07 15:50   renpy/pygame/compat.pyc
-    21635  2026-11-07 15:50   renpy/pygame/sysfont.pyc
-      165  2026-11-07 15:50   renpy/pygame/time.pyc
-      461  2026-11-07 15:50   renpy/pygame/version.pyc
+     4201  2026-11-07 15:56   renpy/pygame/__init__.pyc
+     3827  2026-11-07 15:56   renpy/pygame/compat.pyc
+    21635  2026-11-07 15:56   renpy/pygame/sysfont.pyc
+      165  2026-11-07 15:56   renpy/pygame/time.pyc
+      461  2026-11-07 15:56   renpy/pygame/version.pyc
         0  2026-05-15 12:54   renpy/sl2/
-      736  2026-11-07 15:50   renpy/sl2/__init__.pyc
-    97447  2026-11-07 15:50   renpy/sl2/slast.pyc
-    19856  2026-11-07 15:50   renpy/sl2/sldisplayables.pyc
-    42619  2026-11-07 15:50   renpy/sl2/slparser.pyc
-     5623  2026-11-07 15:50   renpy/sl2/slproperties.pyc
+      736  2026-11-07 15:56   renpy/sl2/__init__.pyc
+    97447  2026-11-07 15:56   renpy/sl2/slast.pyc
+    19856  2026-11-07 15:56   renpy/sl2/sldisplayables.pyc
+    42619  2026-11-07 15:56   renpy/sl2/slparser.pyc
+     5623  2026-11-07 15:56   renpy/sl2/slproperties.pyc
         0  2026-05-16 01:27   renpy/styledata/
-     1775  2026-11-07 15:50   renpy/styledata/__init__.pyc
-     2205  2026-11-07 15:50   renpy/styledata/styleutil.pyc
+     1775  2026-11-07 15:56   renpy/styledata/__init__.pyc
+     2205  2026-11-07 15:56   renpy/styledata/styleutil.pyc
         0  2026-05-15 12:54   renpy/test/
-      905  2026-11-07 15:50   renpy/test/__init__.pyc
-    73972  2026-11-07 15:50   renpy/test/testast.pyc
-    47293  2026-11-07 15:50   renpy/test/testexecution.pyc
-     8127  2026-11-07 15:50   renpy/test/testfocus.pyc
-    18894  2026-11-07 15:50   renpy/test/testkey.pyc
-     3326  2026-11-07 15:50   renpy/test/testmouse.pyc
-    33296  2026-11-07 15:50   renpy/test/testparser.pyc
-    56088  2026-11-07 15:50   renpy/test/testreporter.pyc
-     1566  2026-11-07 15:50   renpy/test/testsettings.pyc
-     1516  2026-11-07 15:50   renpy/test/types.pyc
+      905  2026-11-07 15:56   renpy/test/__init__.pyc
+    73972  2026-11-07 15:56   renpy/test/testast.pyc
+    47293  2026-11-07 15:56   renpy/test/testexecution.pyc
+     8127  2026-11-07 15:56   renpy/test/testfocus.pyc
+    18894  2026-11-07 15:56   renpy/test/testkey.pyc
+     3326  2026-11-07 15:56   renpy/test/testmouse.pyc
+    33296  2026-11-07 15:56   renpy/test/testparser.pyc
+    56088  2026-11-07 15:56   renpy/test/testreporter.pyc
+     1566  2026-11-07 15:56   renpy/test/testsettings.pyc
+     1516  2026-11-07 15:56   renpy/test/types.pyc
         0  2026-05-16 01:27   renpy/text/
-      909  2026-11-07 15:50   renpy/text/__init__.pyc
-    80145  2026-11-07 15:50   renpy/text/emoji_trie.pyc
-    14613  2026-11-07 15:50   renpy/text/extras.pyc
-    35552  2026-11-07 15:50   renpy/text/font.pyc
-    16997  2026-11-07 15:50   renpy/text/shader.pyc
-   103587  2026-11-07 15:50   renpy/text/text.pyc
+      909  2026-11-07 15:56   renpy/text/__init__.pyc
+    80145  2026-11-07 15:56   renpy/text/emoji_trie.pyc
+    14613  2026-11-07 15:56   renpy/text/extras.pyc
+    35552  2026-11-07 15:56   renpy/text/font.pyc
+    16997  2026-11-07 15:56   renpy/text/shader.pyc
+   103587  2026-11-07 15:56   renpy/text/text.pyc
         0  2026-05-03 01:45   renpy/translation/
-    48969  2026-11-07 15:50   renpy/translation/__init__.pyc
-    12392  2026-11-07 15:50   renpy/translation/dialogue.pyc
-     3050  2026-11-07 15:50   renpy/translation/extract.pyc
-    20231  2026-11-07 15:50   renpy/translation/generation.pyc
-     3375  2026-11-07 15:50   renpy/translation/merge.pyc
-     7543  2026-11-07 15:50   renpy/translation/scanstrings.pyc
+    48969  2026-11-07 15:56   renpy/translation/__init__.pyc
+    12392  2026-11-07 15:56   renpy/translation/dialogue.pyc
+     3050  2026-11-07 15:56   renpy/translation/extract.pyc
+    20231  2026-11-07 15:56   renpy/translation/generation.pyc
+     3375  2026-11-07 15:56   renpy/translation/merge.pyc
+     7543  2026-11-07 15:56   renpy/translation/scanstrings.pyc
         0  2026-05-16 01:27   renpy/uguu/
-      361  2026-11-07 15:50   renpy/uguu/__init__.pyc
+      361  2026-11-07 15:56   renpy/uguu/__init__.pyc
         0  2026-01-12 02:51   renpy/update/
-      743  2026-11-07 15:50   renpy/update/__init__.pyc
-    14952  2026-11-07 15:50   renpy/update/common.pyc
-     6288  2026-11-07 15:50   renpy/update/deferred.pyc
-     7880  2026-11-07 15:50   renpy/update/download.pyc
-     6563  2026-11-07 15:50   renpy/update/generate.pyc
-    27689  2026-11-07 15:50   renpy/update/update.pyc
+      743  2026-11-07 15:56   renpy/update/__init__.pyc
+    14952  2026-11-07 15:56   renpy/update/common.pyc
+     6288  2026-11-07 15:56   renpy/update/deferred.pyc
+     7880  2026-11-07 15:56   renpy/update/download.pyc
+     6563  2026-11-07 15:56   renpy/update/generate.pyc
+    27689  2026-11-07 15:56   renpy/update/update.pyc
      8944  2026-01-12 02:51   the_question.py
-     2491  2026-11-07 15:50   _placeholders/images/bg club.jpg
-     2546  2026-11-07 15:50   _placeholders/images/bg lecturehall.jpg
-     2452  2026-11-07 15:50   _placeholders/images/bg meadow.jpg
-     2342  2026-11-07 15:50   _placeholders/images/bg uni.jpg
-      774  2026-11-07 15:50   _placeholders/images/sylvie blue giggle.png
-      771  2026-11-07 15:50   _placeholders/images/sylvie blue normal.png
-      772  2026-11-07 15:50   _placeholders/images/sylvie blue smile.png
-      774  2026-11-07 15:50   _placeholders/images/sylvie blue surprised.png
-      887  2026-11-07 15:50   _placeholders/images/sylvie green giggle.png
-      888  2026-11-07 15:50   _placeholders/images/sylvie green normal.png
-      888  2026-11-07 15:50   _placeholders/images/sylvie green smile.png
-      888  2026-11-07 15:50   _placeholders/images/sylvie green surprised.png
-      526  2026-11-07 15:50   game/renpyweb_remote_files.txt
+     2491  2026-11-07 15:56   _placeholders/images/bg club.jpg
+     2546  2026-11-07 15:56   _placeholders/images/bg lecturehall.jpg
+     2452  2026-11-07 15:56   _placeholders/images/bg meadow.jpg
+     2342  2026-11-07 15:56   _placeholders/images/bg uni.jpg
+      774  2026-11-07 15:56   _placeholders/images/sylvie blue giggle.png
+      771  2026-11-07 15:56   _placeholders/images/sylvie blue normal.png
+      772  2026-11-07 15:56   _placeholders/images/sylvie blue smile.png
+      774  2026-11-07 15:56   _placeholders/images/sylvie blue surprised.png
+      887  2026-11-07 15:56   _placeholders/images/sylvie green giggle.png
+      888  2026-11-07 15:56   _placeholders/images/sylvie green normal.png
+      888  2026-11-07 15:56   _placeholders/images/sylvie green smile.png
+      888  2026-11-07 15:56   _placeholders/images/sylvie green surprised.png
+      526  2026-11-07 15:56   game/renpyweb_remote_files.txt
 ---------                     -------
  18386547                     578 files

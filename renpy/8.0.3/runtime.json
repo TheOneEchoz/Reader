@@ -1,37 +1,12 @@
 {
  "version": "8.0.3",
  "loader": "index.js",
- "python": [
-  "3.9"
- ],
+ "python": "2.7",
+ "runtime": "renpy-7.5.3.22090602",
  "files": [
   {
-   "path": "LICENSE.txt",
-   "size": 80401
-  },
-  {
-   "path": "build-log.txt",
-   "size": 357
-  },
-  {
-   "path": "headers.txt",
-   "size": 289
-  },
-  {
-   "path": "listing.txt",
-   "size": 677
-  },
-  {
-   "path": "too-big.txt",
-   "size": 0
-  },
-  {
-   "path": "web/hash.txt",
-   "size": 64
-  },
-  {
-   "path": "web/htaccess.txt",
-   "size": 735
+   "path": "engine.zip",
+   "size": 2496110
   },
   {
    "path": "web/index.html",
@@ -60,11 +35,7 @@
   {
    "path": "web/pythonhome.data",
    "size": 1493625
-  },
-  {
-   "path": "web/renpyweb-version.txt",
-   "size": 21
   }
  ],
- "total": 16037283
+ "total": 18450849
 }

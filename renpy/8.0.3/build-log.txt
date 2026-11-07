@@ -5,4 +5,3 @@ usage: renpy.py [--savedir DIRECTORY] [--trace LEVEL] [--version] [--compile]
                 [-h]
                 basedir command
 renpy.py: error: Command web_build is unknown.
-web_build failed: 2

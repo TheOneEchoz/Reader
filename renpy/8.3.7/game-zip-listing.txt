@@ -1,16 +1,16 @@
 Archive:  /tmp/out/web/game.zip
   Length      Date    Time    Name
 ---------  ---------- -----   ----
-        0  2026-11-07 15:51   game/
+        0  2026-11-07 15:57   game/
   2901056  2023-06-13 02:03   game/SourceHanSansLite.ttf
         0  2025-02-28 13:39   game/cache/
-       81  2026-11-07 15:51   game/cache/build_info.json
-   407040  2026-11-07 15:51   game/cache/bytecode-39.rpyb
+       82  2026-11-07 15:57   game/cache/build_info.json
+   407036  2026-11-07 15:57   game/cache/bytecode-39.rpyb
     80747  2025-03-17 14:11   game/cache/py3analysis.rpyb
    162146  2025-03-17 12:37   game/cache/pyanalysis.rpyb
    135997  2025-03-17 14:11   game/cache/screens.rpyb
       335  2025-02-28 13:39   game/cache/shaders.txt
-        0  2026-11-07 15:50   game/gui/
+        0  2026-11-07 15:56   game/gui/
     15364  2023-06-13 02:11   game/gui.rpy
     25088  2025-03-17 14:11   game/gui.rpyc
         0  2017-03-14 03:01   game/gui/bar/
@@ -75,7 +75,7 @@ Archive:  /tmp/out/web/game.zip
    101936  2025-03-17 14:11   game/screens.rpyc
      6150  2024-06-29 18:11   game/script.rpy
     16494  2025-03-17 14:11   game/script.rpyc
-        9  2026-11-07 15:51   game/script_version.txt
+        9  2026-11-07 15:57   game/script_version.txt
         0  2024-06-01 17:23   game/tl/
         0  2025-03-17 02:58   game/tl/None/
     20653  2025-03-17 02:58   game/tl/None/common.rpym
@@ -188,76 +188,76 @@ Archive:  /tmp/out/web/game.zip
     16703  2025-03-17 14:11   game/tl/ukrainian/script.rpyc
      8944  2025-01-03 00:03   main.py
       340  2020-06-27 20:45   progressive_download.txt
-        0  2026-11-07 15:50   renpy/
+        0  2026-11-07 15:56   renpy/
    101247  2025-03-17 02:58   renpy/LICENSE.txt
     20638  2025-03-17 02:58   renpy/__init__.py
-        0  2026-11-07 15:51   renpy/__pycache__/
-    15127  2026-11-07 15:51   renpy/__pycache__/__init__.cpython-39.pyc
-     2259  2026-11-07 15:51   renpy/__pycache__/add_from.cpython-39.pyc
-     8795  2026-11-07 15:51   renpy/__pycache__/arguments.cpython-39.pyc
-    68033  2026-11-07 15:51   renpy/__pycache__/ast.cpython-39.pyc
-    48122  2026-11-07 15:51   renpy/__pycache__/atl.cpython-39.pyc
-     8642  2026-11-07 15:51   renpy/__pycache__/bootstrap.cpython-39.pyc
-    36204  2026-11-07 15:51   renpy/__pycache__/character.cpython-39.pyc
-    15869  2026-11-07 15:51   renpy/__pycache__/color.cpython-39.pyc
-    15744  2026-11-07 15:51   renpy/__pycache__/config.cpython-39.pyc
-     3673  2026-11-07 15:51   renpy/__pycache__/curry.cpython-39.pyc
-     1343  2026-11-07 15:51   renpy/__pycache__/debug.cpython-39.pyc
-     9229  2026-11-07 15:51   renpy/__pycache__/defaultstore.cpython-39.pyc
-     3964  2026-11-07 15:51   renpy/__pycache__/dump.cpython-39.pyc
-     6142  2026-11-07 15:51   renpy/__pycache__/easy.cpython-39.pyc
-     4838  2026-11-07 15:51   renpy/__pycache__/editor.cpython-39.pyc
-     4643  2026-11-07 15:51   renpy/__pycache__/error.cpython-39.pyc
-    20232  2026-11-07 15:51   renpy/__pycache__/execution.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/__pycache__/
+    15127  2026-11-07 15:57   renpy/__pycache__/__init__.cpython-39.pyc
+     2259  2026-11-07 15:57   renpy/__pycache__/add_from.cpython-39.pyc
+     8795  2026-11-07 15:57   renpy/__pycache__/arguments.cpython-39.pyc
+    68033  2026-11-07 15:57   renpy/__pycache__/ast.cpython-39.pyc
+    48122  2026-11-07 15:57   renpy/__pycache__/atl.cpython-39.pyc
+     8642  2026-11-07 15:57   renpy/__pycache__/bootstrap.cpython-39.pyc
+    36204  2026-11-07 15:57   renpy/__pycache__/character.cpython-39.pyc
+    15869  2026-11-07 15:57   renpy/__pycache__/color.cpython-39.pyc
+    15744  2026-11-07 15:57   renpy/__pycache__/config.cpython-39.pyc
+     3673  2026-11-07 15:57   renpy/__pycache__/curry.cpython-39.pyc
+     1343  2026-11-07 15:57   renpy/__pycache__/debug.cpython-39.pyc
+     9229  2026-11-07 15:57   renpy/__pycache__/defaultstore.cpython-39.pyc
+     3964  2026-11-07 15:57   renpy/__pycache__/dump.cpython-39.pyc
+     6142  2026-11-07 15:57   renpy/__pycache__/easy.cpython-39.pyc
+     4838  2026-11-07 15:57   renpy/__pycache__/editor.cpython-39.pyc
+     4643  2026-11-07 15:57   renpy/__pycache__/error.cpython-39.pyc
+    20232  2026-11-07 15:57   renpy/__pycache__/execution.cpython-39.pyc
    129466  2024-07-17 00:32   renpy/__pycache__/exports.cpython-39.pyc
-    10334  2026-11-07 15:51   renpy/__pycache__/game.cpython-39.pyc
-    33404  2026-11-07 15:51   renpy/__pycache__/lexer.cpython-39.pyc
-    28371  2026-11-07 15:51   renpy/__pycache__/lint.cpython-39.pyc
-    23307  2026-11-07 15:51   renpy/__pycache__/loader.cpython-39.pyc
-    18510  2026-11-07 15:51   renpy/__pycache__/loadsave.cpython-39.pyc
-     6970  2026-11-07 15:51   renpy/__pycache__/log.cpython-39.pyc
-    11960  2026-11-07 15:51   renpy/__pycache__/main.cpython-39.pyc
-    12486  2026-11-07 15:51   renpy/__pycache__/memory.cpython-39.pyc
-     4328  2026-11-07 15:51   renpy/__pycache__/minstore.cpython-39.pyc
-     2131  2026-11-07 15:51   renpy/__pycache__/object.cpython-39.pyc
-    12689  2026-11-07 15:51   renpy/__pycache__/parameter.cpython-39.pyc
-    30779  2026-11-07 15:51   renpy/__pycache__/parser.cpython-39.pyc
-     2053  2026-11-07 15:51   renpy/__pycache__/performance.cpython-39.pyc
-    12726  2026-11-07 15:51   renpy/__pycache__/persistent.cpython-39.pyc
-     7924  2026-11-07 15:51   renpy/__pycache__/preferences.cpython-39.pyc
-    17213  2026-11-07 15:51   renpy/__pycache__/py2analysis.cpython-39.pyc
-    18740  2026-11-07 15:51   renpy/__pycache__/py3analysis.cpython-39.pyc
-      545  2026-11-07 15:51   renpy/__pycache__/pyanalysis.cpython-39.pyc
-    25587  2026-11-07 15:51   renpy/__pycache__/python.cpython-39.pyc
-    18045  2026-11-07 15:51   renpy/__pycache__/revertable.cpython-39.pyc
-    23228  2026-11-07 15:51   renpy/__pycache__/rollback.cpython-39.pyc
-    16593  2026-11-07 15:51   renpy/__pycache__/savelocation.cpython-39.pyc
-     7398  2026-11-07 15:51   renpy/__pycache__/savetoken.cpython-39.pyc
-     2158  2026-11-07 15:51   renpy/__pycache__/screenlang.cpython-39.pyc
-    23414  2026-11-07 15:51   renpy/__pycache__/script.cpython-39.pyc
-     9039  2026-11-07 15:51   renpy/__pycache__/scriptedit.cpython-39.pyc
-    12040  2026-11-07 15:51   renpy/__pycache__/statements.cpython-39.pyc
-     5894  2026-11-07 15:51   renpy/__pycache__/substitutions.cpython-39.pyc
-    35411  2026-11-07 15:51   renpy/__pycache__/ui.cpython-39.pyc
-      621  2026-11-07 15:51   renpy/__pycache__/util.cpython-39.pyc
-      234  2026-11-07 15:51   renpy/__pycache__/vc_version.cpython-39.pyc
-     4061  2026-11-07 15:51   renpy/__pycache__/versions.cpython-39.pyc
-     3260  2026-11-07 15:51   renpy/__pycache__/warp.cpython-39.pyc
-     6592  2026-11-07 15:51   renpy/__pycache__/webloader.cpython-39.pyc
+    10334  2026-11-07 15:57   renpy/__pycache__/game.cpython-39.pyc
+    33404  2026-11-07 15:57   renpy/__pycache__/lexer.cpython-39.pyc
+    28371  2026-11-07 15:57   renpy/__pycache__/lint.cpython-39.pyc
+    23307  2026-11-07 15:57   renpy/__pycache__/loader.cpython-39.pyc
+    18510  2026-11-07 15:57   renpy/__pycache__/loadsave.cpython-39.pyc
+     6970  2026-11-07 15:57   renpy/__pycache__/log.cpython-39.pyc
+    11960  2026-11-07 15:57   renpy/__pycache__/main.cpython-39.pyc
+    12486  2026-11-07 15:57   renpy/__pycache__/memory.cpython-39.pyc
+     4328  2026-11-07 15:57   renpy/__pycache__/minstore.cpython-39.pyc
+     2131  2026-11-07 15:57   renpy/__pycache__/object.cpython-39.pyc
+    12689  2026-11-07 15:57   renpy/__pycache__/parameter.cpython-39.pyc
+    30779  2026-11-07 15:57   renpy/__pycache__/parser.cpython-39.pyc
+     2053  2026-11-07 15:57   renpy/__pycache__/performance.cpython-39.pyc
+    12726  2026-11-07 15:57   renpy/__pycache__/persistent.cpython-39.pyc
+     7924  2026-11-07 15:57   renpy/__pycache__/preferences.cpython-39.pyc
+    17213  2026-11-07 15:57   renpy/__pycache__/py2analysis.cpython-39.pyc
+    18740  2026-11-07 15:57   renpy/__pycache__/py3analysis.cpython-39.pyc
+      545  2026-11-07 15:57   renpy/__pycache__/pyanalysis.cpython-39.pyc
+    25587  2026-11-07 15:57   renpy/__pycache__/python.cpython-39.pyc
+    18045  2026-11-07 15:57   renpy/__pycache__/revertable.cpython-39.pyc
+    23228  2026-11-07 15:57   renpy/__pycache__/rollback.cpython-39.pyc
+    16593  2026-11-07 15:57   renpy/__pycache__/savelocation.cpython-39.pyc
+     7398  2026-11-07 15:57   renpy/__pycache__/savetoken.cpython-39.pyc
+     2158  2026-11-07 15:57   renpy/__pycache__/screenlang.cpython-39.pyc
+    23414  2026-11-07 15:57   renpy/__pycache__/script.cpython-39.pyc
+     9039  2026-11-07 15:57   renpy/__pycache__/scriptedit.cpython-39.pyc
+    12040  2026-11-07 15:57   renpy/__pycache__/statements.cpython-39.pyc
+     5894  2026-11-07 15:57   renpy/__pycache__/substitutions.cpython-39.pyc
+    35411  2026-11-07 15:57   renpy/__pycache__/ui.cpython-39.pyc
+      621  2026-11-07 15:57   renpy/__pycache__/util.cpython-39.pyc
+      234  2026-11-07 15:57   renpy/__pycache__/vc_version.cpython-39.pyc
+     4061  2026-11-07 15:57   renpy/__pycache__/versions.cpython-39.pyc
+     3260  2026-11-07 15:57   renpy/__pycache__/warp.cpython-39.pyc
+     6592  2026-11-07 15:57   renpy/__pycache__/webloader.cpython-39.pyc
      3277  2025-02-16 22:11   renpy/add_from.py
     11919  2025-01-03 00:03   renpy/arguments.py
     73722  2025-03-17 02:58   renpy/ast.py
     72720  2025-03-17 02:58   renpy/atl.py
         0  2025-03-17 02:58   renpy/audio/
      1601  2025-03-17 02:58   renpy/audio/__init__.py
-        0  2026-11-07 15:51   renpy/audio/__pycache__/
-      712  2026-11-07 15:51   renpy/audio/__pycache__/__init__.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/audio/__pycache__/
+      712  2026-11-07 15:57   renpy/audio/__pycache__/__init__.cpython-39.pyc
      5432  2023-09-19 02:34   renpy/audio/__pycache__/androidhw.cpython-39.pyc
-    25369  2026-11-07 15:51   renpy/audio/__pycache__/audio.cpython-39.pyc
+    25369  2026-11-07 15:57   renpy/audio/__pycache__/audio.cpython-39.pyc
      5308  2023-09-19 02:34   renpy/audio/__pycache__/ioshw.cpython-39.pyc
-    16106  2026-11-07 15:51   renpy/audio/__pycache__/music.cpython-39.pyc
-     1927  2026-11-07 15:51   renpy/audio/__pycache__/sound.cpython-39.pyc
-    13784  2026-11-07 15:51   renpy/audio/__pycache__/webaudio.cpython-39.pyc
+    16106  2026-11-07 15:57   renpy/audio/__pycache__/music.cpython-39.pyc
+     1927  2026-11-07 15:57   renpy/audio/__pycache__/sound.cpython-39.pyc
+    13784  2026-11-07 15:57   renpy/audio/__pycache__/webaudio.cpython-39.pyc
     38850  2025-03-17 02:58   renpy/audio/audio.py
     19519  2025-03-17 02:58   renpy/audio/music.py
      2981  2025-01-03 00:03   renpy/audio/sound.py
@@ -395,10 +395,10 @@ Archive:  /tmp/out/web/game.zip
       305  2024-01-28 03:08   renpy/common/TwemojiCOLRv0.txt
    237868  2025-02-26 03:44   renpy/common/_OpenDyslexic3-Regular.ttf
      4381  2019-04-25 22:58   renpy/common/_OpenDyslexic3-Regular.txt
-        0  2026-11-07 15:51   renpy/common/__pycache__/
-     8058  2026-11-07 15:51   renpy/common/__pycache__/00db_ren.cpython-39.pyc
-      951  2026-11-07 15:51   renpy/common/__pycache__/00sshtransition_ren.cpython-39.pyc
-     8154  2026-11-07 15:51   renpy/common/__pycache__/00textshader_ren.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/common/__pycache__/
+     8058  2026-11-07 15:57   renpy/common/__pycache__/00db_ren.cpython-39.pyc
+      951  2026-11-07 15:57   renpy/common/__pycache__/00sshtransition_ren.cpython-39.pyc
+     8154  2026-11-07 15:57   renpy/common/__pycache__/00textshader_ren.cpython-39.pyc
     25158  2025-03-17 02:58   renpy/common/_audio.js
      6285  2025-03-17 02:58   renpy/common/_audio_filter.js
         0  2025-03-17 02:58   renpy/common/_developer/
@@ -468,10 +468,10 @@ Archive:  /tmp/out/web/game.zip
       606  2014-07-04 20:19   renpy/common/squarestile.png
         0  2025-03-17 03:13   renpy/compat/
      6899  2025-03-17 02:58   renpy/compat/__init__.py
-        0  2026-11-07 15:51   renpy/compat/__pycache__/
-     4331  2026-11-07 15:51   renpy/compat/__pycache__/__init__.cpython-39.pyc
-     5546  2026-11-07 15:51   renpy/compat/__pycache__/fixes.cpython-39.pyc
-     7709  2026-11-07 15:51   renpy/compat/__pycache__/pickle.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/compat/__pycache__/
+     4331  2026-11-07 15:57   renpy/compat/__pycache__/__init__.cpython-39.pyc
+     5546  2026-11-07 15:57   renpy/compat/__pycache__/fixes.cpython-39.pyc
+     7709  2026-11-07 15:57   renpy/compat/__pycache__/pickle.cpython-39.pyc
      7142  2025-03-17 02:58   renpy/compat/fixes.py
     10661  2025-03-17 02:58   renpy/compat/pickle.py
     44646  2025-03-17 02:58   renpy/config.py
@@ -480,42 +480,42 @@ Archive:  /tmp/out/web/game.zip
     13937  2025-03-17 02:58   renpy/defaultstore.py
         0  2025-03-17 02:58   renpy/display/
      3462  2025-03-17 02:58   renpy/display/__init__.py
-        0  2026-11-07 15:51   renpy/display/__pycache__/
-     2193  2026-11-07 15:51   renpy/display/__pycache__/__init__.cpython-39.pyc
-    15212  2026-11-07 15:51   renpy/display/__pycache__/anim.cpython-39.pyc
-    61099  2026-11-07 15:51   renpy/display/__pycache__/behavior.cpython-39.pyc
-     6042  2026-11-07 15:51   renpy/display/__pycache__/controller.cpython-39.pyc
-    65088  2026-11-07 15:51   renpy/display/__pycache__/core.cpython-39.pyc
-    15141  2026-11-07 15:51   renpy/display/__pycache__/displayable.cpython-39.pyc
-    29414  2026-11-07 15:51   renpy/display/__pycache__/dragdrop.cpython-39.pyc
-     3333  2026-11-07 15:51   renpy/display/__pycache__/emulator.cpython-39.pyc
-     3970  2026-11-07 15:51   renpy/display/__pycache__/error.cpython-39.pyc
-    14353  2026-11-07 15:51   renpy/display/__pycache__/focus.cpython-39.pyc
-     2964  2026-11-07 15:51   renpy/display/__pycache__/gesture.cpython-39.pyc
-    57162  2026-11-07 15:51   renpy/display/__pycache__/im.cpython-39.pyc
-    24438  2026-11-07 15:51   renpy/display/__pycache__/image.cpython-39.pyc
-    12629  2026-11-07 15:51   renpy/display/__pycache__/imagelike.cpython-39.pyc
-     5312  2026-11-07 15:51   renpy/display/__pycache__/imagemap.cpython-39.pyc
-     1219  2026-11-07 15:51   renpy/display/__pycache__/joystick.cpython-39.pyc
-    56933  2026-11-07 15:51   renpy/display/__pycache__/layout.cpython-39.pyc
-      646  2026-11-07 15:51   renpy/display/__pycache__/minigame.cpython-39.pyc
-     7835  2026-11-07 15:51   renpy/display/__pycache__/model.cpython-39.pyc
-     6821  2026-11-07 15:51   renpy/display/__pycache__/module.cpython-39.pyc
-    17215  2026-11-07 15:51   renpy/display/__pycache__/motion.cpython-39.pyc
-    17782  2026-11-07 15:51   renpy/display/__pycache__/movetransition.cpython-39.pyc
-    15058  2026-11-07 15:51   renpy/display/__pycache__/particle.cpython-39.pyc
-     4876  2026-11-07 15:51   renpy/display/__pycache__/pgrender.cpython-39.pyc
-     3379  2026-11-07 15:51   renpy/display/__pycache__/predict.cpython-39.pyc
-     4941  2026-11-07 15:51   renpy/display/__pycache__/presplash.cpython-39.pyc
-     2411  2026-11-07 15:51   renpy/display/__pycache__/scale.cpython-39.pyc
-    20903  2026-11-07 15:51   renpy/display/__pycache__/scenelists.cpython-39.pyc
-    30681  2026-11-07 15:51   renpy/display/__pycache__/screen.cpython-39.pyc
-    17004  2026-11-07 15:51   renpy/display/__pycache__/swdraw.cpython-39.pyc
-    29595  2026-11-07 15:51   renpy/display/__pycache__/transform.cpython-39.pyc
-    27961  2026-11-07 15:51   renpy/display/__pycache__/transition.cpython-39.pyc
-     8016  2026-11-07 15:51   renpy/display/__pycache__/tts.cpython-39.pyc
-    16055  2026-11-07 15:51   renpy/display/__pycache__/video.cpython-39.pyc
-    13418  2026-11-07 15:51   renpy/display/__pycache__/viewport.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/display/__pycache__/
+     2193  2026-11-07 15:57   renpy/display/__pycache__/__init__.cpython-39.pyc
+    15212  2026-11-07 15:57   renpy/display/__pycache__/anim.cpython-39.pyc
+    61099  2026-11-07 15:57   renpy/display/__pycache__/behavior.cpython-39.pyc
+     6042  2026-11-07 15:57   renpy/display/__pycache__/controller.cpython-39.pyc
+    65088  2026-11-07 15:57   renpy/display/__pycache__/core.cpython-39.pyc
+    15141  2026-11-07 15:57   renpy/display/__pycache__/displayable.cpython-39.pyc
+    29414  2026-11-07 15:57   renpy/display/__pycache__/dragdrop.cpython-39.pyc
+     3333  2026-11-07 15:57   renpy/display/__pycache__/emulator.cpython-39.pyc
+     3970  2026-11-07 15:57   renpy/display/__pycache__/error.cpython-39.pyc
+    14353  2026-11-07 15:57   renpy/display/__pycache__/focus.cpython-39.pyc
+     2964  2026-11-07 15:57   renpy/display/__pycache__/gesture.cpython-39.pyc
+    57162  2026-11-07 15:57   renpy/display/__pycache__/im.cpython-39.pyc
+    24438  2026-11-07 15:57   renpy/display/__pycache__/image.cpython-39.pyc
+    12629  2026-11-07 15:57   renpy/display/__pycache__/imagelike.cpython-39.pyc
+     5312  2026-11-07 15:57   renpy/display/__pycache__/imagemap.cpython-39.pyc
+     1219  2026-11-07 15:57   renpy/display/__pycache__/joystick.cpython-39.pyc
+    56933  2026-11-07 15:57   renpy/display/__pycache__/layout.cpython-39.pyc
+      646  2026-11-07 15:57   renpy/display/__pycache__/minigame.cpython-39.pyc
+     7835  2026-11-07 15:57   renpy/display/__pycache__/model.cpython-39.pyc
+     6821  2026-11-07 15:57   renpy/display/__pycache__/module.cpython-39.pyc
+    17215  2026-11-07 15:57   renpy/display/__pycache__/motion.cpython-39.pyc
+    17782  2026-11-07 15:57   renpy/display/__pycache__/movetransition.cpython-39.pyc
+    15058  2026-11-07 15:57   renpy/display/__pycache__/particle.cpython-39.pyc
+     4876  2026-11-07 15:57   renpy/display/__pycache__/pgrender.cpython-39.pyc
+     3379  2026-11-07 15:57   renpy/display/__pycache__/predict.cpython-39.pyc
+     4941  2026-11-07 15:57   renpy/display/__pycache__/presplash.cpython-39.pyc
+     2411  2026-11-07 15:57   renpy/display/__pycache__/scale.cpython-39.pyc
+    20903  2026-11-07 15:57   renpy/display/__pycache__/scenelists.cpython-39.pyc
+    30681  2026-11-07 15:57   renpy/display/__pycache__/screen.cpython-39.pyc
+    17004  2026-11-07 15:57   renpy/display/__pycache__/swdraw.cpython-39.pyc
+    29595  2026-11-07 15:57   renpy/display/__pycache__/transform.cpython-39.pyc
+    27961  2026-11-07 15:57   renpy/display/__pycache__/transition.cpython-39.pyc
+     8016  2026-11-07 15:57   renpy/display/__pycache__/tts.cpython-39.pyc
+    16055  2026-11-07 15:57   renpy/display/__pycache__/video.cpython-39.pyc
+    13418  2026-11-07 15:57   renpy/display/__pycache__/viewport.cpython-39.pyc
     18166  2025-01-03 00:03   renpy/display/anim.py
     90829  2025-03-17 02:58   renpy/display/behavior.py
      8029  2025-01-03 00:03   renpy/display/controller.py
@@ -557,26 +557,26 @@ Archive:  /tmp/out/web/game.zip
     30358  2025-03-17 02:58   renpy/execution.py
         0  2025-03-17 02:58   renpy/exports/
     11946  2025-03-17 02:58   renpy/exports/__init__.py
-        0  2026-11-07 15:51   renpy/exports/__pycache__/
-    12890  2026-11-07 15:51   renpy/exports/__pycache__/__init__.cpython-39.pyc
-     2176  2026-11-07 15:51   renpy/exports/__pycache__/actionexports.cpython-39.pyc
-      802  2026-11-07 15:51   renpy/exports/__pycache__/commonexports.cpython-39.pyc
-    11013  2026-11-07 15:51   renpy/exports/__pycache__/contextexports.cpython-39.pyc
-     3055  2026-11-07 15:51   renpy/exports/__pycache__/debugexports.cpython-39.pyc
-    38909  2026-11-07 15:51   renpy/exports/__pycache__/displayexports.cpython-39.pyc
-     7065  2026-11-07 15:51   renpy/exports/__pycache__/fetchexports.cpython-39.pyc
-     5109  2026-11-07 15:51   renpy/exports/__pycache__/inputexports.cpython-39.pyc
-     5256  2026-11-07 15:51   renpy/exports/__pycache__/loaderexports.cpython-39.pyc
-     3139  2026-11-07 15:51   renpy/exports/__pycache__/mediaexports.cpython-39.pyc
-     8638  2026-11-07 15:51   renpy/exports/__pycache__/menuexports.cpython-39.pyc
-     4177  2026-11-07 15:51   renpy/exports/__pycache__/persistentexports.cpython-39.pyc
-     7261  2026-11-07 15:51   renpy/exports/__pycache__/platformexports.cpython-39.pyc
-     4025  2026-11-07 15:51   renpy/exports/__pycache__/predictexports.cpython-39.pyc
-     3895  2026-11-07 15:51   renpy/exports/__pycache__/restartexports.cpython-39.pyc
-     6475  2026-11-07 15:51   renpy/exports/__pycache__/rollbackexports.cpython-39.pyc
-     9467  2026-11-07 15:51   renpy/exports/__pycache__/sayexports.cpython-39.pyc
-     5116  2026-11-07 15:51   renpy/exports/__pycache__/scriptexports.cpython-39.pyc
-    10036  2026-11-07 15:51   renpy/exports/__pycache__/statementexports.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/exports/__pycache__/
+    12890  2026-11-07 15:57   renpy/exports/__pycache__/__init__.cpython-39.pyc
+     2176  2026-11-07 15:57   renpy/exports/__pycache__/actionexports.cpython-39.pyc
+      802  2026-11-07 15:57   renpy/exports/__pycache__/commonexports.cpython-39.pyc
+    11013  2026-11-07 15:57   renpy/exports/__pycache__/contextexports.cpython-39.pyc
+     3055  2026-11-07 15:57   renpy/exports/__pycache__/debugexports.cpython-39.pyc
+    38909  2026-11-07 15:57   renpy/exports/__pycache__/displayexports.cpython-39.pyc
+     7065  2026-11-07 15:57   renpy/exports/__pycache__/fetchexports.cpython-39.pyc
+     5109  2026-11-07 15:57   renpy/exports/__pycache__/inputexports.cpython-39.pyc
+     5256  2026-11-07 15:57   renpy/exports/__pycache__/loaderexports.cpython-39.pyc
+     3139  2026-11-07 15:57   renpy/exports/__pycache__/mediaexports.cpython-39.pyc
+     8638  2026-11-07 15:57   renpy/exports/__pycache__/menuexports.cpython-39.pyc
+     4177  2026-11-07 15:57   renpy/exports/__pycache__/persistentexports.cpython-39.pyc
+     7261  2026-11-07 15:57   renpy/exports/__pycache__/platformexports.cpython-39.pyc
+     4025  2026-11-07 15:57   renpy/exports/__pycache__/predictexports.cpython-39.pyc
+     3895  2026-11-07 15:57   renpy/exports/__pycache__/restartexports.cpython-39.pyc
+     6475  2026-11-07 15:57   renpy/exports/__pycache__/rollbackexports.cpython-39.pyc
+     9467  2026-11-07 15:57   renpy/exports/__pycache__/sayexports.cpython-39.pyc
+     5116  2026-11-07 15:57   renpy/exports/__pycache__/scriptexports.cpython-39.pyc
+    10036  2026-11-07 15:57   renpy/exports/__pycache__/statementexports.cpython-39.pyc
      2870  2025-03-17 02:58   renpy/exports/actionexports.py
      1598  2025-03-17 02:58   renpy/exports/commonexports.py
     10771  2025-03-17 02:58   renpy/exports/contextexports.py
@@ -598,19 +598,19 @@ Archive:  /tmp/out/web/game.zip
     12363  2025-03-17 02:58   renpy/game.py
         0  2025-03-17 02:58   renpy/gl/
       508  2025-03-17 02:58   renpy/gl/__init__.py
-        0  2026-11-07 15:51   renpy/gl/__pycache__/
-      731  2026-11-07 15:51   renpy/gl/__pycache__/__init__.cpython-39.pyc
-     1313  2026-11-07 15:51   renpy/gl/__pycache__/glfunctions.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/gl/__pycache__/
+      731  2026-11-07 15:57   renpy/gl/__pycache__/__init__.cpython-39.pyc
+     1313  2026-11-07 15:57   renpy/gl/__pycache__/glfunctions.cpython-39.pyc
      1462  2025-03-17 02:58   renpy/gl/glfunctions.py
         0  2025-03-17 12:17   renpy/gl2/
       554  2025-03-17 02:58   renpy/gl2/__init__.py
-        0  2026-11-07 15:51   renpy/gl2/__pycache__/
-      670  2026-11-07 15:51   renpy/gl2/__pycache__/__init__.cpython-39.pyc
-     1531  2026-11-07 15:51   renpy/gl2/__pycache__/gl2debug.cpython-39.pyc
-     1501  2026-11-07 15:51   renpy/gl2/__pycache__/gl2functions.cpython-39.pyc
-     9281  2026-11-07 15:51   renpy/gl2/__pycache__/gl2shadercache.cpython-39.pyc
-    19755  2026-11-07 15:51   renpy/gl2/__pycache__/live2d.cpython-39.pyc
-     6046  2026-11-07 15:51   renpy/gl2/__pycache__/live2dmotion.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/gl2/__pycache__/
+      670  2026-11-07 15:57   renpy/gl2/__pycache__/__init__.cpython-39.pyc
+     1531  2026-11-07 15:57   renpy/gl2/__pycache__/gl2debug.cpython-39.pyc
+     1501  2026-11-07 15:57   renpy/gl2/__pycache__/gl2functions.cpython-39.pyc
+     9281  2026-11-07 15:57   renpy/gl2/__pycache__/gl2shadercache.cpython-39.pyc
+    19755  2026-11-07 15:57   renpy/gl2/__pycache__/live2d.cpython-39.pyc
+     6046  2026-11-07 15:57   renpy/gl2/__pycache__/live2dmotion.cpython-39.pyc
      2520  2025-01-03 00:03   renpy/gl2/gl2debug.py
      1703  2025-01-02 23:59   renpy/gl2/gl2functions.py
     13442  2025-03-17 02:58   renpy/gl2/gl2shadercache.py
@@ -643,12 +643,12 @@ Archive:  /tmp/out/web/game.zip
     11781  2025-03-17 02:58   renpy/scriptedit.py
         0  2025-03-17 02:58   renpy/sl2/
       448  2025-03-17 02:58   renpy/sl2/__init__.py
-        0  2026-11-07 15:51   renpy/sl2/__pycache__/
-      664  2026-11-07 15:51   renpy/sl2/__pycache__/__init__.cpython-39.pyc
-    51601  2026-11-07 15:51   renpy/sl2/__pycache__/slast.cpython-39.pyc
-     9924  2026-11-07 15:51   renpy/sl2/__pycache__/sldisplayables.cpython-39.pyc
-    26151  2026-11-07 15:51   renpy/sl2/__pycache__/slparser.cpython-39.pyc
-     5012  2026-11-07 15:51   renpy/sl2/__pycache__/slproperties.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/sl2/__pycache__/
+      664  2026-11-07 15:57   renpy/sl2/__pycache__/__init__.cpython-39.pyc
+    51601  2026-11-07 15:57   renpy/sl2/__pycache__/slast.cpython-39.pyc
+     9924  2026-11-07 15:57   renpy/sl2/__pycache__/sldisplayables.cpython-39.pyc
+    26151  2026-11-07 15:57   renpy/sl2/__pycache__/slparser.cpython-39.pyc
+     5012  2026-11-07 15:57   renpy/sl2/__pycache__/slproperties.cpython-39.pyc
     81049  2025-03-17 02:58   renpy/sl2/slast.py
     15027  2025-03-17 02:58   renpy/sl2/sldisplayables.py
     31894  2025-03-17 02:58   renpy/sl2/slparser.py
@@ -656,21 +656,21 @@ Archive:  /tmp/out/web/game.zip
     14475  2025-03-17 02:58   renpy/statements.py
         0  2025-03-17 02:58   renpy/styledata/
      2781  2025-03-17 02:58   renpy/styledata/__init__.py
-        0  2026-11-07 15:51   renpy/styledata/__pycache__/
-     1589  2026-11-07 15:51   renpy/styledata/__pycache__/__init__.cpython-39.pyc
-     1412  2026-11-07 15:51   renpy/styledata/__pycache__/styleutil.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/styledata/__pycache__/
+     1589  2026-11-07 15:57   renpy/styledata/__pycache__/__init__.cpython-39.pyc
+     1412  2026-11-07 15:57   renpy/styledata/__pycache__/styleutil.cpython-39.pyc
      2438  2025-01-03 00:03   renpy/styledata/styleutil.py
      9685  2025-03-17 02:58   renpy/substitutions.py
         0  2025-03-17 02:58   renpy/test/
      1617  2025-03-17 02:58   renpy/test/__init__.py
-        0  2026-11-07 15:51   renpy/test/__pycache__/
-      727  2026-11-07 15:51   renpy/test/__pycache__/__init__.cpython-39.pyc
-    14391  2026-11-07 15:51   renpy/test/__pycache__/testast.cpython-39.pyc
-     3453  2026-11-07 15:51   renpy/test/__pycache__/testexecution.cpython-39.pyc
-     2829  2026-11-07 15:51   renpy/test/__pycache__/testfocus.cpython-39.pyc
-     6583  2026-11-07 15:51   renpy/test/__pycache__/testkey.cpython-39.pyc
-     2156  2026-11-07 15:51   renpy/test/__pycache__/testmouse.cpython-39.pyc
-     3515  2026-11-07 15:51   renpy/test/__pycache__/testparser.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/test/__pycache__/
+      727  2026-11-07 15:57   renpy/test/__pycache__/__init__.cpython-39.pyc
+    14391  2026-11-07 15:57   renpy/test/__pycache__/testast.cpython-39.pyc
+     3453  2026-11-07 15:57   renpy/test/__pycache__/testexecution.cpython-39.pyc
+     2829  2026-11-07 15:57   renpy/test/__pycache__/testfocus.cpython-39.pyc
+     6583  2026-11-07 15:57   renpy/test/__pycache__/testkey.cpython-39.pyc
+     2156  2026-11-07 15:57   renpy/test/__pycache__/testmouse.cpython-39.pyc
+     3515  2026-11-07 15:57   renpy/test/__pycache__/testparser.cpython-39.pyc
     13172  2025-01-03 00:03   renpy/test/testast.py
      5109  2025-03-17 02:58   renpy/test/testexecution.py
      4299  2025-01-03 00:03   renpy/test/testfocus.py
@@ -679,13 +679,13 @@ Archive:  /tmp/out/web/game.zip
      5271  2025-01-03 00:03   renpy/test/testparser.py
         0  2025-03-17 02:58   renpy/text/
      1679  2025-03-17 02:58   renpy/text/__init__.py
-        0  2026-11-07 15:51   renpy/text/__pycache__/
-      801  2026-11-07 15:51   renpy/text/__pycache__/__init__.cpython-39.pyc
-    25141  2026-11-07 15:51   renpy/text/__pycache__/emoji_trie.cpython-39.pyc
-    12929  2026-11-07 15:51   renpy/text/__pycache__/extras.cpython-39.pyc
-    22287  2026-11-07 15:51   renpy/text/__pycache__/font.cpython-39.pyc
-    11049  2026-11-07 15:51   renpy/text/__pycache__/shader.cpython-39.pyc
-    51935  2026-11-07 15:51   renpy/text/__pycache__/text.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/text/__pycache__/
+      801  2026-11-07 15:57   renpy/text/__pycache__/__init__.cpython-39.pyc
+    25141  2026-11-07 15:57   renpy/text/__pycache__/emoji_trie.cpython-39.pyc
+    12929  2026-11-07 15:57   renpy/text/__pycache__/extras.cpython-39.pyc
+    22287  2026-11-07 15:57   renpy/text/__pycache__/font.cpython-39.pyc
+    11049  2026-11-07 15:57   renpy/text/__pycache__/shader.cpython-39.pyc
+    51935  2026-11-07 15:57   renpy/text/__pycache__/text.cpython-39.pyc
     36333  2025-01-02 23:59   renpy/text/emoji_trie.py
     21661  2025-03-17 02:58   renpy/text/extras.py
     29323  2025-03-17 02:58   renpy/text/font.py
@@ -693,13 +693,13 @@ Archive:  /tmp/out/web/game.zip
     89470  2025-03-17 02:58   renpy/text/text.py
         0  2025-03-17 02:58   renpy/translation/
     32029  2025-03-17 02:58   renpy/translation/__init__.py
-        0  2026-11-07 15:51   renpy/translation/__pycache__/
-    22663  2026-11-07 15:51   renpy/translation/__pycache__/__init__.cpython-39.pyc
-     7106  2026-11-07 15:51   renpy/translation/__pycache__/dialogue.cpython-39.pyc
-     1916  2026-11-07 15:51   renpy/translation/__pycache__/extract.cpython-39.pyc
-    11161  2026-11-07 15:51   renpy/translation/__pycache__/generation.cpython-39.pyc
-     1968  2026-11-07 15:51   renpy/translation/__pycache__/merge.cpython-39.pyc
-     4500  2026-11-07 15:51   renpy/translation/__pycache__/scanstrings.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/translation/__pycache__/
+    22663  2026-11-07 15:57   renpy/translation/__pycache__/__init__.cpython-39.pyc
+     7106  2026-11-07 15:57   renpy/translation/__pycache__/dialogue.cpython-39.pyc
+     1916  2026-11-07 15:57   renpy/translation/__pycache__/extract.cpython-39.pyc
+    11161  2026-11-07 15:57   renpy/translation/__pycache__/generation.cpython-39.pyc
+     1968  2026-11-07 15:57   renpy/translation/__pycache__/merge.cpython-39.pyc
+     4500  2026-11-07 15:57   renpy/translation/__pycache__/scanstrings.cpython-39.pyc
     10647  2025-01-03 00:03   renpy/translation/dialogue.py
      2905  2025-01-03 00:03   renpy/translation/extract.py
     15158  2025-01-03 00:03   renpy/translation/generation.py
@@ -707,17 +707,17 @@ Archive:  /tmp/out/web/game.zip
      6281  2025-03-17 02:58   renpy/translation/scanstrings.py
         0  2025-03-17 02:58   renpy/uguu/
       233  2025-03-17 02:58   renpy/uguu/__init__.py
-        0  2026-11-07 15:51   renpy/uguu/__pycache__/
-      303  2026-11-07 15:51   renpy/uguu/__pycache__/__init__.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/uguu/__pycache__/
+      303  2026-11-07 15:57   renpy/uguu/__pycache__/__init__.cpython-39.pyc
     43995  2025-03-17 02:58   renpy/ui.py
         0  2025-03-17 02:58   renpy/update/
      1516  2025-03-17 02:58   renpy/update/__init__.py
-        0  2026-11-07 15:51   renpy/update/__pycache__/
-      616  2026-11-07 15:51   renpy/update/__pycache__/__init__.cpython-39.pyc
-    10249  2026-11-07 15:51   renpy/update/__pycache__/common.cpython-39.pyc
-     4970  2026-11-07 15:51   renpy/update/__pycache__/download.cpython-39.pyc
-     3816  2026-11-07 15:51   renpy/update/__pycache__/generate.cpython-39.pyc
-    16308  2026-11-07 15:51   renpy/update/__pycache__/update.cpython-39.pyc
+        0  2026-11-07 15:57   renpy/update/__pycache__/
+      616  2026-11-07 15:57   renpy/update/__pycache__/__init__.cpython-39.pyc
+    10249  2026-11-07 15:57   renpy/update/__pycache__/common.cpython-39.pyc
+     4970  2026-11-07 15:57   renpy/update/__pycache__/download.cpython-39.pyc
+     3816  2026-11-07 15:57   renpy/update/__pycache__/generate.cpython-39.pyc
+    16308  2026-11-07 15:57   renpy/update/__pycache__/update.cpython-39.pyc
     10015  2025-01-03 00:03   renpy/update/common.py
      6648  2025-01-03 00:03   renpy/update/download.py
      5305  2025-01-03 00:03   renpy/update/generate.py
@@ -728,18 +728,18 @@ Archive:  /tmp/out/web/game.zip
      5698  2025-01-03 00:03   renpy/warp.py
      9339  2025-01-03 00:03   renpy/webloader.py
      8944  2025-01-03 00:03   the_question.py
-     2491  2026-11-07 15:51   _placeholders/images/bg club.jpg
-     2546  2026-11-07 15:51   _placeholders/images/bg lecturehall.jpg
-     2452  2026-11-07 15:51   _placeholders/images/bg meadow.jpg
-     2342  2026-11-07 15:51   _placeholders/images/bg uni.jpg
-      774  2026-11-07 15:51   _placeholders/images/sylvie blue giggle.png
-      771  2026-11-07 15:51   _placeholders/images/sylvie blue normal.png
-      772  2026-11-07 15:51   _placeholders/images/sylvie blue smile.png
-      774  2026-11-07 15:51   _placeholders/images/sylvie blue surprised.png
-      887  2026-11-07 15:51   _placeholders/images/sylvie green giggle.png
-      888  2026-11-07 15:51   _placeholders/images/sylvie green normal.png
-      888  2026-11-07 15:51   _placeholders/images/sylvie green smile.png
-      888  2026-11-07 15:51   _placeholders/images/sylvie green surprised.png
-      526  2026-11-07 15:51   game/renpyweb_remote_files.txt
+     2491  2026-11-07 15:57   _placeholders/images/bg club.jpg
+     2546  2026-11-07 15:57   _placeholders/images/bg lecturehall.jpg
+     2452  2026-11-07 15:57   _placeholders/images/bg meadow.jpg
+     2342  2026-11-07 15:57   _placeholders/images/bg uni.jpg
+      774  2026-11-07 15:57   _placeholders/images/sylvie blue giggle.png
+      771  2026-11-07 15:57   _placeholders/images/sylvie blue normal.png
+      772  2026-11-07 15:57   _placeholders/images/sylvie blue smile.png
+      774  2026-11-07 15:57   _placeholders/images/sylvie blue surprised.png
+      887  2026-11-07 15:57   _placeholders/images/sylvie green giggle.png
+      888  2026-11-07 15:57   _placeholders/images/sylvie green normal.png
+      888  2026-11-07 15:57   _placeholders/images/sylvie green smile.png
+      888  2026-11-07 15:57   _placeholders/images/sylvie green surprised.png
+      526  2026-11-07 15:57   game/renpyweb_remote_files.txt
 ---------                     -------
- 19479138                     740 files
+ 19479135                     740 files
