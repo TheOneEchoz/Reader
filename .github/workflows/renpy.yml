@@ -26,10 +26,43 @@ jobs:
           SDL_AUDIODRIVER: dummy
         run: |
           set -u
-          mkdir -p /tmp/fix
+          mkdir -p renpy/test
+          # engine files assembled from the SDK the way Ren'Py's web build does it
+          manual() { # manual <sdk> <runtime dir> <out zip>
+            python3 - "$1" "$2" "$3" <<'PY'
+          import os, sys, zipfile, re, json
+          sdk, d, out = sys.argv[1:4]
+          rt = json.load(open(os.path.join(d, 'runtime.json'))) if os.path.exists(os.path.join(d, 'runtime.json')) else {}
+          py3 = os.path.exists(os.path.join(d, 'web', 'renpy.js'))
+          tag = None
+          if py3:
+              js = open(os.path.join(d, 'web', 'renpy.js'), errors='ignore').read()
+              m = re.search(r'/lib/python3\.(\d+)/', js); tag = 'cpython-3' + m.group(1)
+          z = zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
+          base = os.path.join(sdk, 'renpy')
+          for root, dirs, files in os.walk(base):
+              dirs.sort(); rel_root = os.path.relpath(root, sdk)
+              for f in sorted(files):
+                  rel = os.path.join(rel_root, f).replace(os.sep, '/')
+                  src = os.path.join(root, f)
+                  if f.endswith(('.pyx', '.pxd', '.pxi', '~')) or '/.' in rel: continue
+                  if py3:
+                      if '__pycache__' in rel:
+                          if f.endswith('.' + tag + '.pyc'):
+                              z.write(src, rel.replace('__pycache__/', '').replace('.' + tag + '.pyc', '.pyc'))
+                          continue
+                      if f.endswith(('.py', '.pyc', '.pyo')): continue
+                  else:
+                      if '__pycache__' in rel or f.endswith('.pyc'): continue
+                  z.write(src, rel)
+          z.write(os.path.join(sdk, 'renpy.py'), 'main.py')
+          z.close()
+          PY
+          }
           for v in $(grep -v '^#' renpy/versions.txt | tr -d '\r' | grep .); do
             d=$PWD/renpy/$v
-            [ -f "$d/engine.zip" ] && continue
+            check=0; case " 8.5.3 7.8.7 8.1.3 " in *" $v "*) check=1;; esac
+            [ -f "$d/engine.zip" ] && [ -f "$d/engine-source.txt" ] && [ $check = 0 -o -f "$PWD/renpy/test/$v.done" ] && continue
             mkdir -p "$d"; log="$d/build-log.txt"; : > "$log"
             echo "== $v" | tee -a "$log"
             rm -rf /tmp/sdk && mkdir /tmp/sdk
@@ -43,47 +76,58 @@ jobs:
             [ $ok = 1 ] || { echo "no SDK download" >> "$log"; continue; }
             sdk=$(find /tmp/sdk -maxdepth 1 -mindepth 1 -type d | head -1)
             curl -fsSL -o /tmp/web.zip "https://www.renpy.org/dl/$v/renpy-$v-web.zip" && unzip -q -o /tmp/web.zip -d "$sdk" || { echo "no web download" >> "$log"; continue; }
-            # the runtime itself (refresh, in case an earlier run kept only part of it)
             rm -rf "$d/web" && cp -r "$sdk/web" "$d/web" && rm -f "$d/web/index.html.symbols"
             cp "$sdk/LICENSE.txt" "$d/LICENSE.txt" 2>/dev/null || true
-            # let Ren'Py build its demo game for the web
             rm -rf /tmp/out && mkdir -p /tmp/out
-            ( cd "$sdk" && timeout 900 xvfb-run -a ./renpy.sh launcher web_build the_question --destination /tmp/out/web ) >> "$log" 2>&1 || echo "web_build failed: $?" >> "$log"
+            ( cd "$sdk" && timeout 900 xvfb-run -a ./renpy.sh launcher web_build the_question --destination /tmp/out/web ) 2>&1 | tr '\r' '\n' | grep -v "Creating package" >> "$log" || true
+            rm -f "$d/engine.zip"
             if [ -f /tmp/out/web/game.zip ]; then
               unzip -l /tmp/out/web/game.zip > "$d/game-zip-listing.txt"
               cp /tmp/out/web/index.html "$d/shell.html"
               rm -rf /tmp/eng && mkdir /tmp/eng && unzip -q /tmp/out/web/game.zip -d /tmp/eng
-              mkdir -p /tmp/fix/$v && cp /tmp/out/web/game.zip /tmp/fix/$v/the_question-web-game.zip
-              rm -rf /tmp/eng/game && ( cd /tmp/eng && zip -qr -9 "$d/engine.zip" . )
+              [ $check = 1 ] && cp /tmp/out/web/game.zip "renpy/test/the_question-$v-web.zip"
+              rm -rf /tmp/eng/game /tmp/eng/_placeholders /tmp/eng/progressive_download.txt
+              find /tmp/eng -maxdepth 1 -name '*.py' ! -name main.py -delete
+              ( cd /tmp/eng && zip -qr -9 "$d/engine.zip" . )
+              echo "built by Ren'Py's web build (the_question, with the game removed)" > "$d/engine-source.txt"
+              manual "$sdk" "$d" /tmp/manual.zip
+              python3 -c "
+          import zipfile,sys
+          a=set(n.rstrip('/') for n in zipfile.ZipFile('$d/engine.zip').namelist()); b=set(n.rstrip('/') for n in zipfile.ZipFile('/tmp/manual.zip').namelist())
+          print('only in Ren\'Py build:', sorted(a-b)[:200]); print('only in assembled:', sorted(b-a)[:200])" > "$d/assembled-vs-built.txt"
+            else
+              manual "$sdk" "$d" "$d/engine.zip"
+              echo "assembled from the SDK's renpy/ folder (no command-line web build in this version)" > "$d/engine-source.txt"
             fi
-            # and as a normal PC download, like the games people have (test fixture)
-            if [ "$v" = "8.5.3" ] || [ "$v" = "7.8.7" ] || [ "$v" = "8.1.3" ]; then
-              ( cd "$sdk" && timeout 900 xvfb-run -a ./renpy.sh launcher distribute the_question --package pc --destination /tmp/out/dist ) >> "$log" 2>&1 || echo "distribute failed: $?" >> "$log"
-              cp /tmp/out/dist/*.zip /tmp/fix/$v/ 2>/dev/null || true
+            if [ $check = 1 ]; then
+              ( cd "$sdk" && timeout 900 xvfb-run -a ./renpy.sh launcher distribute the_question --package pc --destination /tmp/out/dist ) 2>&1 | tr '\r' '\n' | grep -v "Writing the" >> "$log" || true
+              for z in /tmp/out/dist/*.zip; do
+                [ -f "$z" ] || continue
+                rm -rf /tmp/pc && mkdir /tmp/pc && unzip -q "$z" -d /tmp/pc
+                find /tmp/pc -mindepth 2 -maxdepth 2 -type d -name lib -exec rm -rf {} +   # the bundled Python binaries are not needed for the tests
+                ( cd /tmp/pc && zip -qr -9 "$OLDPWD/renpy/test/the_question-$v-pc-nolib.zip" . )
+              done
+              touch "renpy/test/$v.done"
             fi
-            python3 - "$d" "$v" "$sdk" <<'PY'
-          import json, os, sys, glob, re
-          d, v, sdk = sys.argv[1:4]
+            python3 - "$d" "$v" <<'PY'
+          import json, os, sys, re
+          d, v = sys.argv[1:3]
           files = []
           for root, _, names in os.walk(d):
               for n in names:
                   p = os.path.join(root, n); rel = os.path.relpath(p, d)
-                  if rel == 'runtime.json': continue
+                  if rel in ('runtime.json',) or rel.endswith('.txt') or rel == 'shell.html': continue
                   files.append({'path': rel, 'size': os.path.getsize(p)})
           files.sort(key=lambda f: f['path'])
-          py = sorted(set(re.findall(r'python(\d\.\d+)', ' '.join(glob.glob(sdk + '/lib/**/python*', recursive=True)))))
-          gen = 'renpy.js' if os.path.exists(os.path.join(d, 'web', 'renpy.js')) else 'index.js'
-          json.dump({'version': v, 'loader': gen, 'python': py, 'files': files, 'total': sum(f['size'] for f in files)}, open(os.path.join(d, 'runtime.json'), 'w'), indent=1)
+          w = os.path.join(d, 'web'); py3 = os.path.exists(os.path.join(w, 'renpy.js'))
+          if py3:
+              m = re.search(r'/lib/python(3\.\d+)/', open(os.path.join(w, 'renpy.js'), errors='ignore').read()); py = m.group(1) if m else '3'
+          else: py = '2.7'
+          rv = open(os.path.join(w, 'renpyweb-version.txt')).read().strip() if os.path.exists(os.path.join(w, 'renpyweb-version.txt')) else 'renpy-' + v
+          json.dump({'version': v, 'loader': 'renpy.js' if py3 else 'index.js', 'python': py, 'runtime': rv, 'files': files, 'total': sum(f['size'] for f in files)}, open(os.path.join(d, 'runtime.json'), 'w'), indent=1)
           PY
-            rm -f "$d/listing.txt" "$d/too-big.txt" "$d/error.txt"
-            find "$d" -type f -size +95M -print -delete >> "$log"
+            rm -f "$d/headers.txt"
+            find "$d" renpy/test -type f -size +95M -print -delete >> "$log"
           done
           git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
-          git add renpy && git commit -qm "Ren'Py web runtimes and engines" && git push || echo "nothing to commit"
-          # fixtures on their own branch (not part of the site)
-          if [ -n "$(ls /tmp/fix)" ]; then
-            git fetch -q origin renpy-test && git checkout -q renpy-test || git checkout -q --orphan renpy-test
-            git rm -rq --cached . >/dev/null 2>&1 || true; find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-            cp -r /tmp/fix/* . && find . -type f -size +95M -delete
-            git add -A && git commit -qm "Ren'Py test fixtures" && git push -f origin renpy-test || true
-          fi
+          git add -A renpy && git commit -qm "Ren'Py web runtimes and engines" && git push || echo "nothing to commit"
