@@ -1,6 +1,6 @@
 {
- "version": 108,
- "name": "1.23.0-beta.10",
+ "version": 109,
+ "name": "1.23.0-beta.11",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: a camera button while playing takes a picture of the screen and keeps it in the game's own screenshots gallery (made the first time).",
-  "Mods can be switched while playing: the mods button saves the game, starts it again with the mods you chose and puts you back where you were.",
-  "Big games (over 300 MB) load their pictures and sounds as the story needs them, using Ren'Py's own look-ahead, instead of reading the whole game into memory at the start: they open much faster and use far less memory. A game's page has a setting for this (Automatic, As needed, All at the start). Picture sizes are measured once, the first time."
+  "Pictures on screen: the pictures you select are now put together into one picture, drawn as they are in the game (each in its place, in front of or behind the others). Make a gallery, Add to a gallery and Use as the cover use that one picture; View shows it first. “Each on its own” keeps them separate.",
+  "The camera button is gone: Pictures on screen does that job.",
+  "RPG Maker MV and MZ games (and other games made as a web page) can be added like a Ren'Py game: drop the game's folder or ZIP, or use Add → Add a game. They play sealed inside the app with nothing to download; the Windows player that comes with them is left out.",
+  "Their saves are kept encrypted with the game (and shared with your other devices when sync is on). Saves from playing on a computer (the save folder) are picked up when adding the game, or with Import saves on its page."
  ]
 }

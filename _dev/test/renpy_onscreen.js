@@ -56,19 +56,31 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const after = await p.evaluate(async id => ({ by: (await S.gal(id)).game.coverBy, view: CUR.view, box: !!document.getElementById('gamebox'), loaded: GAME.loaded }), gid);
   ok('choosing the cover from the game keeps the game running', after.view === 'game' && after.box && after.loaded, JSON.stringify(after));
   ok('and the cover changed', after.by === 'user', JSON.stringify(after));
-  // add to a gallery: make one first, then add the on-screen pictures to it
-  await p.evaluate(async () => { const g = newGallery('Scenes'); Tree.ensureRoot(g); await S.putGal ? 0 : 0; const mk = () => new Promise(r => { const c = document.createElement('canvas'); c.width = 50; c.height = 50; c.toBlob(bl => r({ name: 'x.png', get: async () => new File([bl], 'x.png', { type: 'image/png' }) })); }); await importInto(g, [{ title: 'Scenes', chId: g.chapters[0].id, items: [await mk()] }], () => { }, () => false); });
+  // add to a gallery: the selected pictures go in as ONE picture, drawn as they are on screen
+  await p.evaluate(async () => { const g = newGallery('Scenes'); Tree.ensureRoot(g); const mk = () => new Promise(r => { const c = document.createElement('canvas'); c.width = 50; c.height = 50; c.toBlob(bl => r({ name: 'x.png', get: async () => new File([bl], 'x.png', { type: 'image/png' }) })); }); await importInto(g, [{ title: 'Scenes', chId: g.chapters[0].id, items: [await mk()] }], () => { }, () => false); });
   await p.evaluate(() => closeSheet()); await p.waitForTimeout(800);
+  const pickAdd = async () => {
+    await p.click('#asset-addto'); await p.waitForSelector('#asset-where');
+    await p.evaluate(() => { const s = $('#asset-where'); s.value = [...s.options].find(o => /^Scenes/.test(o.textContent)).value; });
+    await p.click('#sheetBody button:has-text("Add them")');
+    for (let k = 0; k < 40 && await p.$('#asset-where'); k++) await p.waitForTimeout(500);
+    await p.waitForTimeout(800);
+  };
+  const scenes = () => p.evaluate(async () => { const g = (await S.gals()).find(x => x.title === 'Scenes'); const pages = g.chapters.flatMap(c => c.pages); const last = pages[pages.length - 1]; const bm = await createImageBitmap(await S.blob('images', last)); return { n: pages.length, w: bm.width, h: bm.height, view: CUR.view, loaded: GAME.loaded }; });
   await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  ok('the sheet offers Together (chosen) or Each on its own', await p.$eval('#asset-together button[aria-pressed="true"]', b => /Together/.test(b.innerText)));
+  // the background and the text box: one picture of the screen's size
+  await p.$$eval('#sheetBody .btile.asset', a => a.filter(e => /bg |textbox/.test(e.title)).forEach(e => e.click()));
+  await pickAdd();
+  const one = await scenes();
+  ok('the selected pictures become one picture, the size of the screen', one.n === 2 && one.w === 1280 && one.h === 720 && one.view === 'game' && one.loaded, JSON.stringify(one));
+  // Each on its own: one picture per file again
+  await p.click('#gamebox .gamepics'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  await p.click('#asset-together button:has-text("Each on its own")');
   await p.click('#sheetBody button:has-text("Select all")');
-  await p.click('#asset-addto'); await p.waitForSelector('#asset-where');
-  await p.evaluate(() => { const s = $('#asset-where'); s.value = [...s.options].find(o => /^Scenes/.test(o.textContent)).value; });
-  await p.click('#sheetBody button:has-text("Add them")');
-  for (let k = 0; k < 30 && await p.$('#sheet.open, #sheet:not([hidden]) #asset-where'); k++) await p.waitForTimeout(500);
-  await p.waitForTimeout(1000);
-  console.log('TOAST', await p.evaluate(() => [...document.querySelectorAll('.toast, #toast')].map(e => e.innerText).join(' | ')));
-  const gal = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.title === 'Scenes'); return { n: g.chapters.reduce((a, c) => a + c.pages.length, 0), view: CUR.view, loaded: GAME.loaded }; });
-  ok('Add to a gallery puts them in, and the game keeps running', gal.n >= 1 + names.length && gal.view === 'game' && gal.loaded, JSON.stringify(gal));
+  await pickAdd();
+  const each = await scenes();
+  ok('Each on its own adds them separately', each.n === 2 + names.length, JSON.stringify(each));
   await p.screenshot({ path: '/tmp/claude-0/shots/onscreen.png' });
   errs.splice(0, errs.length, ...errs.filter(e => !/serviceWorker/.test(e)));
   ok('no errors', errs.length === 0, errs.slice(0, 3).join(' | '));

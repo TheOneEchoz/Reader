@@ -529,10 +529,7 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gameexit:hover,#gamebox .gameexit:focus-visible{opacity:1}
 #gamebox .gamelock{left:48px}
 #gamebox .gamepics{left:88px}
-#gamebox .gamecam{left:128px}
-#gamebox .gamemods{left:168px}
-.shotflash{position:fixed;inset:0;background:#fff;z-index:175;pointer-events:none;animation:shotflash .45s ease-out forwards}
-@keyframes shotflash{from{opacity:.75}to{opacity:0}}
+#gamebox .gamemods{left:128px}
 body.gaming #sheet{z-index:95}
 body.gaming{overflow:hidden}
 </style>
@@ -676,7 +673,6 @@ const ICONS = {
   tools: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   variants: '<rect x="3" y="3" width="11" height="14" rx="1.5"/><rect x="10" y="7" width="11" height="14" rx="1.5"/><path d="M13 12h5M15.5 9.5v5"/>',
   bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
-  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>',
   tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>',
   undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/>', redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/>',
@@ -1628,7 +1624,7 @@ async function handleDrop(files) {
     const t = dropTarget(), tg = t && await S.gal(t.id);
     const { games, rest } = await rpyGamesIn(files).catch(() => ({ games: [], rest: files }));
     const whole = gm => gm.found.items.some(it => { const r = it.path.slice(gm.found.root.length); return /^renpy\//i.test(r) || /^[^/]+\.(exe|sh|py)$/i.test(r); });
-    if (isGame(tg) && !games.some(whole)) return addModFrom(tg.id, files);
+    if (isRenpy(tg) && !games.some(whole)) return addModFrom(tg.id, files);
     if (games.length) { await rpyAddSheet(games, isGame(tg) ? null : dropTarget(), isGame(tg) && games.length === 1 ? { update: tg.id } : {}); if (!rest.some(f => isImgFile(f) || isZipFile(f))) return; files = rest; }
   }
   if (!files.some(f => isImgFile(f) || isZipFile(f))) return toast('Those files are not ZIP, CBZ, PDF or images, so nothing was added.', 3500);
@@ -1716,7 +1712,7 @@ function openAddSheet(existing, folder) {
   const chooseGame = async () => {
     const files = await pickFiles({ folder: true }); if (!files.length) return;
     const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
-    if (!games.length) return toast('No Ren\'Py game was found in that folder. Choose the folder that has the game\'s “game” folder inside.', 4500);
+    if (!games.length) return toast('No game was found in that folder. Choose the game\'s own folder (for Ren\'Py, the one with the “game” folder inside; for RPG Maker, the one with index.html or www).', 5000);
     closeSheet(); rpyAddSheet(games, existing ? { id: existing.id, folder: folder ? folder.id : null } : null);
   };
   const choose = async kind => {
@@ -1756,7 +1752,7 @@ function openAddSheet(existing, folder) {
     existing ? null : h('button', { class: 'bigopt', onclick: createEmpty }, icon('plus'), h('div', {}, h('b', {}, 'Create an empty gallery'), h('span', {}, 'Start from nothing. Make your own chapters and add images to each one from anywhere on your phone.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('folder') }, icon('folder'), h('div', {}, h('b', {}, 'Choose a folder'), h('span', {}, folderOK ? 'Images in subfolders become chapters. CBZ/ZIP files inside also count as chapters.' : 'Your browser may not support picking folders. Try the options below.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
-    EXP ? h('button', { class: 'bigopt picks', id: 'add-game', onclick: chooseGame }, icon('play'), h('div', {}, h('b', {}, 'Add a Ren\'Py game'), h('span', {}, 'Choose the game\'s folder (with its “game” folder inside). You can also drop a game folder or its ZIP on the window.'))) : null,
+    EXP ? h('button', { class: 'bigopt picks', id: 'add-game', onclick: chooseGame }, icon('play'), h('div', {}, h('b', {}, 'Add a game'), h('span', {}, 'A Ren\'Py or RPG Maker MV/MZ game: choose the game\'s folder. You can also drop a game folder or its ZIP on the window.'))) : null,
     h('button', { class: 'bigopt picks', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP, CBZ or PDF files'), h('span', {}, 'Each page of a PDF becomes a picture. Folders inside a ZIP become chapters. Picking several files makes one chapter per file.')))
   );
   openSheet(folder ? `Add pages to “${folder.title}”` : existing ? 'Add pages to this gallery' : 'Add a gallery', h('div', { class: 'stack' },
@@ -1797,6 +1793,83 @@ function rpyFind(items) {
   }
   if (root === null) return null;
   return { root, items: items.filter(it => it.path.startsWith(root)) };
+}
+/* ---------- HTML games: RPG Maker MV and MZ, and other games made as a web page ----------
+   Kept like a Ren'Py game (files encrypted in pieces), stored under "game/" + the path from the folder with index.html. */
+const HTML_KIND = { rmmv: 'RPG Maker MV', rmmz: 'RPG Maker MZ', html: 'a web page (HTML)' };
+const gameKind = g => !g || !g.game ? '' : g.game.engine === 'html' ? (g.game.kind === 'rmmv' ? 'RPG Maker MV game' : g.game.kind === 'rmmz' ? 'RPG Maker MZ game' : 'HTML game') : 'Ren\'Py game';
+const isRenpy = g => isGame(g) && g.game.engine !== 'html';
+// what is left out of an HTML game: the Windows/Mac player (NW.js) that comes with it
+const htmlSkip = rel => /^(locales|swiftshader|lib|pnacl)\//i.test(rel) || /^[^/]+\.(exe|dll|pak|dat|bin|so|dylib|nexe)$/i.test(rel) || /^(credits\.html|natives_blob\.bin|snapshot_blob\.bin|v8_context_snapshot\.bin)$/i.test(rel) || hiddenPath(rel);
+function htmlFind(items) {
+  let best = null;
+  for (const it of items) {
+    if (!/(^|\/)index\.html?$/i.test(it.path)) continue;
+    const root = it.path.slice(0, it.path.length - it.path.split('/').pop().length), depth = root.split('/').length - 1;
+    if (depth > 3) continue;
+    const has = re => items.some(x => x.path.startsWith(root) && re.test(x.path.slice(root.length)));
+    const kind = has(/^js\/rmmz_core\.js$/i) ? 'rmmz' : has(/^js\/rpg_core\.js$/i) ? 'rmmv' : has(/\.js$/i) ? 'html' : null;
+    if (!kind) continue;
+    const score = (kind === 'html' ? 0 : 10) - depth;
+    if (!best || score > best.score) best = { root, kind, score, index: it.path.slice(root.length) };
+  }
+  if (!best) return null;
+  return { root: best.root, kind: best.kind, index: best.index, items: items.filter(it => it.path.startsWith(best.root)) };
+}
+function htmlTitle(found, fallback) {
+  const segs = found.root.replace(/\/$/, '').split('/').filter(Boolean);
+  while (segs.length && /^(www|game|html|web|dist|build)$/i.test(segs[segs.length - 1])) segs.pop();
+  return rpyTitle((segs.join('/') || fallback || 'Game') + '/', fallback);
+}
+/* an HTML game's saves made by the Windows/Mac player (save/ folder), turned into what the game keeps in the browser */
+async function htmlLocalSaves(found, kind) {
+  const rel = it => it.path.slice(found.root.length), out = {};
+  const files = found.items.filter(it => /^save\/[^/]+\.(rpgsave|rmmzsave)$/i.test(rel(it)));
+  if (!files.length) return out;
+  let gameId = 0;
+  if (kind === 'rmmz') { const sys = found.items.find(it => /^data\/system\.json$/i.test(rel(it))); try { gameId = JSON.parse(new TextDecoder().decode(await (await sys.blob()).arrayBuffer())).advanced.gameId; } catch (e) { } }
+  for (const it of files) {
+    const name = rel(it).split('/').pop().replace(/\.[^.]+$/, ''), u8 = new Uint8Array(await (await it.blob()).arrayBuffer());
+    if (/\.rpgsave$/i.test(it.path)) { // MV: the same text the browser version keeps under "RPG File1", "RPG Global", "RPG Config"
+      const key = /^file(\d+)$/i.test(name) ? 'RPG File' + name.slice(4) : /^global$/i.test(name) ? 'RPG Global' : /^config$/i.test(name) ? 'RPG Config' : null;
+      if (key) out['ls/' + encodeURIComponent(key)] = new TextDecoder().decode(u8);
+    } else { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); out['lf/' + encodeURIComponent(`rmmzsave.${gameId}.${name}`)] = JSON.stringify(t); }
+  }
+  return out;
+}
+async function htmlImport(found, title, kind, onProg = () => { }, cancelled = () => false, withSaves = true) {
+  const rel = it => it.path.slice(found.root.length);
+  const files = found.items.filter(it => !htmlSkip(rel(it)) && !/^save\//i.test(rel(it)));
+  const total = files.reduce((n, it) => n + it.size, 0) || 1; let done = 0;
+  const g = newGallery(title); Tree.ensureRoot(g);
+  const list = [], made = [];
+  try {
+    for (const it of files) {
+      if (cancelled()) throw new Error('Stopped.');
+      const blob = await it.blob(), c = [];
+      for (let off = 0; off < blob.size || (off === 0 && !c.length); off += RPY_CHUNK) {
+        const part = await blob.slice(off, off + RPY_CHUNK).arrayBuffer(); const id = await rpyPut(part); c.push(id); made.push(id);
+        done += part.byteLength; onProg(done, total); if (!blob.size) break;
+      }
+      list.push({ p: 'game/' + rel(it), s: blob.size, c, t: it.mtime || 0 });
+    }
+    const sv = {};
+    if (withSaves) for (const [p, text] of Object.entries(await htmlLocalSaves(found, kind).catch(() => ({})))) { const buf = Crypt.te.encode(text).buffer; const id = await rpyPut(buf); made.push(id); sv[p] = { s: buf.byteLength, c: [id], t: Date.now() }; }
+    // cover: the title screen picture, or the biggest picture
+    const pics = found.items.filter(it => /\.(png|jpe?g|webp)$/i.test(it.path) && it.size < 30e6 && !htmlSkip(rel(it)));
+    const rank = it => { const r = rel(it).toLowerCase(); return /^img\/titles1\//.test(r) ? 0 : /(title|cover|splash|key_?art|logo)[^/]*$/.test(r) ? 1 : /^img\/(pictures|parallaxes)\//.test(r) ? 2 : /^icon\//.test(r) ? 6 : 3; };
+    let cov = null;
+    for (const it of pics.sort((a, b) => rank(a) - rank(b) || b.size - a.size).slice(0, 6)) { try { const blob = await it.blob(), t = await makeThumb(blob); if (t.w >= 64) { cov = { blob, t, name: it.path.split('/').pop() }; break; } } catch (e) { } }
+    cov = cov || await drawnCover(title, HTML_KIND[kind]);
+    const cid = uid(); await S.putBlob('images', cid, cov.blob); await S.putBlob('thumbs', cid, cov.t.thumb); made.push(cid);
+    g.meta[cid] = [cov.t.w, cov.t.h, cov.name]; g.cover = cid; g.customCover = cid;
+    const listId = await rpyPutJSON(list), svId = await rpyPutJSON(sv); made.push(listId, svId);
+    const segs = found.root.replace(/\/$/, '').split('/');
+    g.game = { engine: 'html', kind, index: found.index || 'index.html', list: listId, sv: svId, files: list.length, size: list.reduce((n, f) => n + f.s, 0), addedAt: Date.now(),
+      root: (/^www$/i.test(segs[segs.length - 1] || '') ? segs[segs.length - 2] : segs[segs.length - 1]) || null };
+    await saveGallery(g);
+    return g;
+  } catch (e) { await ST.delMany('images', made).catch(() => { }); await ST.delMany('thumbs', made).catch(() => { }); throw e; }
 }
 function rpyTitle(root, fallback) {
   let t = (root.replace(/\/$/, '').split('/').pop() || fallback || 'Game').trim();
@@ -1930,10 +2003,14 @@ async function rpyGamesIn(files) {
   const games = [], rest = [];
   const tops = new Map();
   for (const f of files) { const p = (f.relPath || f.webkitRelativePath || '').replace(/\\/g, '/'); if (p.includes('/')) { const t = p.split('/')[0]; if (!tops.has(t)) tops.set(t, []); tops.get(t).push(f); } else rest.push(f); }
-  for (const [t, list] of tops) { const found = rpyFind(list.map(fileItem)); if (found) games.push({ found, title: rpyTitle(found.root, t) }); else rest.push(...list); }
+  for (const [t, list] of tops) { const its = list.map(fileItem), found = rpyFind(its); if (found) { games.push({ found, title: rpyTitle(found.root, t) }); continue; } const hf = htmlFind(its); if (hf) games.push({ found: hf, html: hf.kind, title: htmlTitle(hf, t) }); else rest.push(...list); }
   for (const f of rest.slice()) {
     if (!/\.zip$/i.test(f.name)) continue;
-    try { const found = rpyFind(await zipItems(f)); if (found) { games.push({ found, title: rpyTitle(found.root, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); } } catch (e) { }
+    try {
+      const its = await zipItems(f), found = rpyFind(its);
+      if (found) { games.push({ found, title: rpyTitle(found.root, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); }
+      else { const hf = htmlFind(its); if (hf) { games.push({ found: hf, html: hf.kind, title: htmlTitle(hf, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); } }
+    } catch (e) { }
   }
   return { games, rest };
 }
@@ -1945,14 +2022,14 @@ async function rpyCover(found) {
   for (const it of list) { try { const blob = await it.blob(), t = await makeThumb(blob); if (t.w >= 64) return { blob, t, name: it.path.split('/').pop() }; } catch (e) { } }
   return null;
 }
-async function drawnCover(title) {
+async function drawnCover(title, kindLabel) {
   const c = document.createElement('canvas'); c.width = 600; c.height = 800; const x = c.getContext('2d');
   const gr = x.createLinearGradient(0, 0, 0, 800); gr.addColorStop(0, '#2a2140'); gr.addColorStop(1, '#0f1012'); x.fillStyle = gr; x.fillRect(0, 0, 600, 800);
   x.fillStyle = '#fff'; x.font = 'bold 54px sans-serif'; x.textAlign = 'center';
   const words = title.split(/\s+/), lines = []; let line = '';
   for (const w of words) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > 520 && line) { lines.push(line); line = w; } else line = t; } lines.push(line);
   lines.slice(0, 5).forEach((l, i) => x.fillText(l, 300, 360 + i * 66 - (lines.length - 1) * 33));
-  x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '28px sans-serif'; x.fillText("Ren'Py game", 300, 720);
+  x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '28px sans-serif'; x.fillText(kindLabel || "Ren'Py game", 300, 720);
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .9));
   return { blob, t: await makeThumb(blob), name: 'cover.jpg' };
 }
@@ -2009,6 +2086,7 @@ async function rpyUpdateGame(oldId, ng, modPaths = []) {
   await rpyPutJSON(osv, old.game.sv); gone.push(ng.game.sv);
   const N = ng.game, before = old.game.ver;
   Object.assign(old.game, { ver: N.ver, py: N.py, how: N.how, rt: N.rt, list: N.list, files: list.length, size: list.reduce((n, f) => n + f.s, 0), root: N.root || old.game.root, saveDir: N.saveDir || old.game.saveDir, updatedAt: Date.now(), prevVer: before || null });
+  if (N.engine === 'html') Object.assign(old.game, { engine: 'html', kind: N.kind, index: N.index });
   delete old.game.ana; old.updatedAt = Date.now();
   await saveGallery(old);
   // the new copy's own records (its cover, its gallery entry) and the old files go
@@ -2020,19 +2098,19 @@ async function rpyUpdateGame(oldId, ng, modPaths = []) {
 async function rpyAddSheet(games, target, opt = {}) {
   const rows = [];
   const inLib = (await S.gals()).filter(isGame);
-  for (const gm of games) { gm.det = await rpyVersion(gm.found).catch(() => ({})); gm.pick = rpyChoose(gm.det); }
+  for (const gm of games) { if (gm.html) { gm.det = {}; gm.pick = { rt: null }; continue; } gm.det = await rpyVersion(gm.found).catch(() => ({})); gm.pick = rpyChoose(gm.det); }
   const reg = await RPY.reg();
   const status = h('div', { class: 'progress', hidden: true }), lbl = h('div', { class: 'num' }), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
   status.append(lbl, bar);
   for (const [i, gm] of games.entries()) {
-    const files = gm.found.items.filter(it => /^game\//i.test(it.path.slice(gm.found.root.length))), size = files.reduce((n, it) => n + it.size, 0);
+    const files = gm.html ? gm.found.items.filter(it => !htmlSkip(it.path.slice(gm.found.root.length))) : gm.found.items.filter(it => /^game\//i.test(it.path.slice(gm.found.root.length))), size = files.reduce((n, it) => n + it.size, 0);
     gm.name = h('input', { class: 'text', id: 'game-name-' + i, autocomplete: 'off', value: gm.title });
-    const d = gm.det, made = d.v ? `Made with Ren'Py ${d.v}.` : d.py ? `Made with Ren'Py ${d.py === '2.7' ? '7' : '8'} (the exact version was not found).` : 'The Ren\'Py version was not found.';
-    const plays = `It will play with Ren'Py ${gm.pick.rt}${reg[gm.pick.rt] && reg[gm.pick.rt].done ? ', which is already downloaded.' : ` (about ${rpyRuntime(gm.pick.rt).mb} MB, downloaded once after asking you).`}`;
-    const inSaves = gm.found.items.filter(it => /^game\/saves\/[^/]*\.save$/i.test(it.path.slice(gm.found.root.length))).length;
+    const d = gm.det, made = gm.html ? `Made with ${HTML_KIND[gm.html]}.` : d.v ? `Made with Ren'Py ${d.v}.` : d.py ? `Made with Ren'Py ${d.py === '2.7' ? '7' : '8'} (the exact version was not found).` : 'The Ren\'Py version was not found.';
+    const plays = gm.html ? 'It plays in the app: there is nothing to download.' : `It will play with Ren'Py ${gm.pick.rt}${reg[gm.pick.rt] && reg[gm.pick.rt].done ? ', which is already downloaded.' : ` (about ${rpyRuntime(gm.pick.rt).mb} MB, downloaded once after asking you).`}`;
+    const inSaves = gm.found.items.filter(it => (gm.html ? /^save\/[^/]*\.(rpgsave|rmmzsave)$/i : /^game\/saves\/[^/]*\.save$/i).test(it.path.slice(gm.found.root.length)) && !/(global|config)\./i.test(it.path)).length;
     gm.withSaves = true;
     // the same game already in the library: update it (saves, mods, cover and folder stay) or add it again
-    const same = opt.update ? inLib.filter(x => x.id === opt.update) : inLib.filter(x => gameKey(x.title) === gameKey(gm.title) || (x.game.root && gameKey(rpyTitle(x.game.root)) === gameKey(gm.title)));
+    const same = opt.update ? inLib.filter(x => x.id === opt.update) : inLib.filter(x => (x.game.engine === 'html') === !!gm.html).filter(x => gameKey(x.title) === gameKey(gm.title) || (x.game.root && gameKey(rpyTitle(x.game.root)) === gameKey(gm.title)));
     gm.upd = same.length ? same[0].id : null;
     const updNote = h('p', { class: 'hint', style: 'margin:0', hidden: !gm.upd }, 'Its files are replaced by these. Its saves, mods, cover, name and folder stay.');
     const updSeg = same.length ? h('div', { class: 'stack', style: 'gap:6px' },
@@ -2040,7 +2118,7 @@ async function rpyAddSheet(games, target, opt = {}) {
         h('button', { 'aria-pressed': String(v === gm.upd), onclick: e => { gm.upd = v; $$('button', e.currentTarget.parentNode).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); updNote.hidden = !v; if (window.__updLbl) window.__updLbl(); } }, l))),
       h('p', { class: 'hint', style: 'margin:0' }, `“${same[0].title}” (${same[0].game.ver ? 'Ren\'Py ' + same[0].game.ver + ', ' : ''}added ${new Date(same[0].game.updatedAt || same[0].game.addedAt).toLocaleDateString()}) is already in your library.`)) : null;
     const savesSw = inSaves ? h('button', { class: 'switch', role: 'switch', id: 'game-saves-' + i, 'aria-checked': 'true', 'aria-label': 'Include the saves in the game folder', onclick: e => { gm.withSaves = !gm.withSaves; e.currentTarget.setAttribute('aria-checked', String(gm.withSaves)); } }) : null;
-    gm.mods = likelyMods(files.map(it => ({ p: it.path.slice(gm.found.root.length), t: it.mtime || 0 })));
+    gm.mods = gm.html ? [] : likelyMods(files.map(it => ({ p: it.path.slice(gm.found.root.length), t: it.mtime || 0 })));
     gm.modOn = new Set(gm.mods.map(x => x.p));
     const modRows = gm.mods.map(x => { const sw = h('button', { class: 'switch', role: 'switch', 'aria-checked': 'true', 'aria-label': `Keep ${x.p.slice(5)} as a mod`, onclick: e => { const on = !gm.modOn.has(x.p); if (on) gm.modOn.add(x.p); else gm.modOn.delete(x.p); e.currentTarget.setAttribute('aria-checked', String(on)); } });
       return h('div', { class: 'row', style: 'justify-content:space-between;gap:10px' }, h('span', {}, h('b', {}, x.p.slice(5)), h('small', { class: 'hint', style: 'display:block' }, `Looks like a mod, by ${x.why}. Keep it as a mod you can switch off?`)), sw); });
@@ -2071,7 +2149,7 @@ async function rpyAddSheet(games, target, opt = {}) {
       for (const [j, gm] of games.entries()) {
         if (cancel) break;
         lbl.textContent = 'Reading…';
-        const g = await rpyImport(gm.found, gm.name.value.trim() || gm.title, gm.det, gm.pick.rt, (d, t) => { lbl.textContent = `${games.length > 1 ? `Game ${j + 1} of ${games.length}: ` : ''}${mb(d)} of ${mb(t)}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel, gm.withSaves);
+        const g = gm.html ? await htmlImport(gm.found, gm.name.value.trim() || gm.title, gm.html, (d, t) => { lbl.textContent = `${games.length > 1 ? `Game ${j + 1} of ${games.length}: ` : ''}${mb(d)} of ${mb(t)}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel, gm.withSaves) : await rpyImport(gm.found, gm.name.value.trim() || gm.title, gm.det, gm.pick.rt, (d, t) => { lbl.textContent = `${games.length > 1 ? `Game ${j + 1} of ${games.length}: ` : ''}${mb(d)} of ${mb(t)}`; bar.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel, gm.withSaves);
         if (gm.upd) { lbl.textContent = 'Updating…'; const u = await rpyUpdateGame(gm.upd, g, [...gm.modOn]); u.updated = true; made.push(u); continue; }
         for (const p of gm.modOn) await splitIntoMod(g.id, [p], p.slice(5).replace(/\.rpa$/i, ''));
         if (into) await placeGame(g.id, into.gal, into.ch);
@@ -2083,19 +2161,77 @@ async function rpyAddSheet(games, target, opt = {}) {
     if (!made.length) return;
     toast(made.length === 1 ? (made[0].updated ? `“${made[0].title}” updated. Its saves, mods and cover were kept.` : `“${made[0].title}” added.`) : `${made.length} games added.`, 3500);
     if (made.length === 1) go('detail', { id: made[0].id }); else if (into) go('detail', { id: into.gal, folder: into.ch }); else go('library');
-    const missing = [...new Set(made.map(g => g.game.rt))].filter(v => !(reg[v] && reg[v].done));
+    const missing = [...new Set(made.map(g => g.game.rt))].filter(Boolean).filter(v => !(reg[v] && reg[v].done));
     for (const v of missing) await rpyAskDownload(v, made.length === 1 ? `To play “${made[0].title}”, the app needs Ren'Py ${v}.` : `Some of these games need Ren'Py ${v}.`);
-    for (const g of made.filter(x => !x.updated)) { const ls = await localSaves(g).catch(() => null); if (ls) await offerLocalSaves(g.id, ls); }
+    for (const g of made.filter(x => !x.updated && isRenpy(x))) { const ls = await localSaves(g).catch(() => null); if (ls) await offerLocalSaves(g.id, ls); }
     if (CUR.view === 'detail') render(CUR.view, CUR.params);
   } }, icon('plus'), h('span', {}, games.length === 1 ? 'Add the game' : `Add ${games.length} games`));
   window.__updLbl = () => { if (games.length === 1) btn.lastChild.textContent = games[0].upd ? 'Update the game' : 'Add the game'; }; window.__updLbl();
-  openSheet(games.length === 1 ? (opt.update ? 'Update the game' : 'Add a Ren\'Py game') : `Add ${games.length} Ren'Py games`, h('div', { class: 'stack' },
+  openSheet(games.length === 1 ? (opt.update ? 'Update the game' : games[0].html ? `Add ${HTML_KIND[games[0].html].replace(/^a web page.*/, 'an HTML')} game` : 'Add a Ren\'Py game') : `Add ${games.length} games`, h('div', { class: 'stack' },
     rows, btn, status,
     h('p', { class: 'hint' }, 'Only the game\'s own files are copied, encrypted, into your library; its launchers are left out. Games stay on this device: they are not sent to your other devices. Saves are kept encrypted with the game.')), () => { cancel = true; });
   setTimeout(() => btn.focus(), 60);
 }
 
 /* ---------- the game's page ---------- */
+/* the page of an HTML game (RPG Maker MV/MZ, or a game made as a web page) */
+async function renderHtmlGameDetail(v, g) {
+  const id = g.id, G = g.game;
+  const saves = (await rpyGetJSON(G.sv)) || {};
+  const slot = p => /^ls\/RPG%20File\d+$/.test(p) || /^lf\/rmmzsave\.[^/]*\.file\d+$/.test(p) || /^(ls|lf)\/.*save/i.test(p) && !/(global|config)/i.test(p);
+  const nSaves = Object.keys(saves).filter(slot).length, svSize = Object.values(saves).reduce((n, x) => n + x.s, 0);
+  let armed = false;
+  const del = h('button', { class: 'btn danger', onclick: async () => {
+    if (!armed) { armed = true; del.textContent = 'Tap again to delete the game and its saves'; setTimeout(() => { armed = false; if (del.isConnected) del.textContent = 'Delete the game'; }, 4000); return; }
+    del.disabled = true; await withBusyGame(() => purgeGallery(g)); Sync.deleted(id); toast(`“${g.title}” deleted.`); go('library', {}, true);
+  } }, icon('trash'), 'Delete the game');
+  const name = h('input', { class: 'text', id: 'game-title', value: g.title, autocomplete: 'off' });
+  name.addEventListener('change', async () => { const t = name.value.trim(); if (!t) return; const cur = await S.gal(id); cur.title = t; await saveGallery(cur); toast('Renamed.'); });
+  const importB = h('button', { class: 'btn small', id: 'game-import-saves', onclick: async () => {
+    const files = await pickFiles({ folder: true }); if (!files.length) return;
+    const its = files.map(fileItem), root = (its.find(it => /(^|\/)save\/[^/]+\.(rpgsave|rmmzsave)$/i.test(it.path)) || {}).path;
+    if (!root) return toast('No RPG Maker saves (.rpgsave or .rmmzsave) were found there. Pick the game\'s folder, or its save folder\'s parent.', 4500);
+    const r0 = root.replace(/save\/[^/]+$/i, '');
+    const got = await htmlLocalSaves({ root: r0, items: its.filter(it => it.path.startsWith(r0)) }, G.kind);
+    if (G.kind === 'rmmz') { // the save's game id comes from this copy of the game
+      const sys = (await gameFileList(g)).find(f => /^game\/(.*\/)?data\/system\.json$/i.test(f.p));
+      try { const gid0 = JSON.parse(new TextDecoder().decode(await rpyRead(sys.c, sys.s))).advanced.gameId; for (const k of Object.keys(got)) { const nk = k.replace(/^lf\/rmmzsave\.[^.]*\./, `lf/rmmzsave.${gid0}.`); if (nk !== k) { got[nk] = got[k]; delete got[k]; } } } catch (e) { }
+    }
+    const n = Object.keys(got).filter(slot).length; if (!Object.keys(got).length) return toast('Nothing to import there.');
+    const cur = await S.gal(id), idx = (await rpyGetJSON(cur.game.sv)) || {};
+    const files2 = []; for (const [p, f] of Object.entries(idx)) files2.push({ p, buf: await rpyRead(f.c, f.s) });
+    for (const [p, text] of Object.entries(got)) { const i = files2.findIndex(f => f.p === p); const f = { p, buf: Crypt.te.encode(text).buffer }; if (i >= 0) files2[i] = f; else files2.push(f); }
+    await persistSaves(id, files2, { allowEmpty: true }); toast(`${plural(n, 'save')} imported.`); renderDetail(id);
+  } }, icon('download'), 'Import saves');
+  v.replaceChildren(h('div', { class: 'wrap' },
+    h('header', { class: 'appbar' }, h('button', { class: 'iconbtn', 'aria-label': 'Back', onclick: () => G.at ? back('detail', { id: G.at.gal, folder: G.at.ch }) : back('library') }, icon('back')), h('div', { class: 'grow' }),
+      h('button', { class: 'btn ghost small', id: 'game-move', onclick: () => moveGameSheet(id) }, icon('move'), 'Move')),
+    h('div', { class: 'hero' }, h('div', { class: 'cover' }, thumbImg(coverId(g), 'Cover')),
+      h('div', {}, h('h1', {}, g.title), h('div', { class: 'sub num' }, `${gameKind(g)} · ${mb(G.size)}`), h('div', { class: 'sub' }, `Made with ${HTML_KIND[G.kind] || 'HTML'}. Plays in the app; nothing to download.`),
+        h('div', { class: 'sub' }, g.lastReadAt ? ago(g.lastReadAt).replace('Read', 'Played') : 'Not played yet'))),
+    h('div', { class: 'stack' },
+      EXP ? h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'game-play', style: 'flex:1', onclick: () => go('game', { id }) }, icon('play'), 'Play'))
+        : h('div', { class: 'banner' }, 'Games can be played in the experimental version of the app for now.'),
+      h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'label' }, 'Saves'),
+        h('p', { class: 'hint', style: 'margin:0' }, (nSaves ? `${plural(nSaves, 'saved game')} · ${mb(svSize)}, kept encrypted with the game.` : 'No saved games yet. Saves you make in the game are kept here, encrypted.') + (Sync.st.enabled && !Sync.st.noGameSaves ? ' With sync on, they are shared with your other devices that have this game too.' : '')),
+        h('div', { class: 'row', style: 'flex-wrap:wrap' }, G.kind !== 'html' ? importB : null,
+          Object.keys(saves).length ? h('button', { class: 'btn ghost small', onclick: async () => {
+            if (!(await askYes('Delete all saves?', `Every saved game and setting of “${g.title}” will be deleted. This cannot be undone.`, 'Delete saves'))) return;
+            await persistSaves(id, [], { allowEmpty: true }); renderDetail(id);
+          } }, 'Delete all saves') : null),
+        G.kind !== 'html' ? h('p', { class: 'hint', style: 'margin:0' }, 'Saves from playing on a computer are in the game\'s save folder (www\\save for MV, save for MZ). Pick the game\'s folder to import them.') : null),
+      h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'field' }, h('label', { class: 'label', for: 'game-title' }, 'Name'), name),
+        h('p', { class: 'hint', style: 'margin:0' }, `${plural(G.files, 'file')}. Games stay on this device: they are not sent to your other devices.`), h('div', {}, del)),
+      h('div', { class: 'row', style: 'flex-wrap:wrap' },
+        h('button', { class: 'btn', id: 'game-assets', style: 'flex:1', onclick: () => openAssets(id) }, icon('image'), 'See the game\'s pictures'),
+        h('button', { class: 'btn ghost', id: 'game-adjust', onclick: () => adjustCover(id) }, icon('edit'), 'Adjust the cover'),
+        EXP ? h('button', { class: 'btn ghost', id: 'game-update', onclick: async () => {
+          const files = await pickFiles({ folder: true }); if (!files.length) return;
+          const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
+          if (games.length !== 1) return toast(games.length ? 'Choose the folder of one game.' : 'No game was found in that folder.', 4500);
+          rpyAddSheet(games, null, { update: id });
+        } }, icon('download'), 'Update the game') : null))));
+}
 async function renderGameDetail(v, g) {
   const id = g.id, G = g.game, reg = await RPY.reg(), ready = !!(reg[G.rt] && reg[G.rt].done);
   const saves = (await rpyGetJSON(G.sv)) || {}, nSaves = Object.keys(saves).filter(p => /\.save$/i.test(p) && !/\/sync\//.test(p)).length, svSize = Object.values(saves).reduce((n, s) => n + s.s, 0);
@@ -2300,6 +2436,7 @@ function rpyBoot(SCRIPTS, LOADER) {
     else if (m.t === 'shot') shot(m.any);
     else if (m.t === 'autosave') autosave();
     else if (m.t === 'onscreen') onscreen();
+    else if (m.t === 'compose') compose(m.picks || []);
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
   });
   window.addEventListener('error', e => fail(e.message));
@@ -2321,25 +2458,52 @@ function rpyBoot(SCRIPTS, LOADER) {
   }
   /* the picture files of what is on screen now, by layer (master: backgrounds and characters; screens: the interface) */
   async function onscreen() {
-    let layers = null;
+    // each thing on screen (in drawing order, back to front) with the picture files it is made of: [layer, index, files]
+    let ents = null;
     const py = [
-      '_tkb = {}',
-      'for _l, _es in renpy.game.context().scene_lists.layers.items():',
-      '    _fs = []',
-      '    def _cb(d, _fs=_fs):',
-      '        _fn = getattr(d, "filename", None)',
-      '        if _fn is not None and hasattr(_fn, "lower") and _fn not in _fs:',
-      '            _fs.append(_fn)',
-      '    for _sle in _es:',
+      '_tkb = []',
+      '_tsl = renpy.game.context().scene_lists',
+      'for _l in list(renpy.config.layers) + [x for x in _tsl.layers if x not in renpy.config.layers]:',
+      '    for _i, _sle in enumerate(_tsl.layers.get(_l, [])):',
+      '        _fs = []',
+      '        def _cb(d, _fs=_fs):',
+      '            _fn = getattr(d, "filename", None)',
+      '            if _fn is not None and hasattr(_fn, "lower") and _fn not in _fs:',
+      '                _fs.append(_fn)',
       '        try:',
       '            _sle.displayable.visit_all(_cb)',
       '        except Exception:',
       '            pass',
-      '    if _fs:',
-      '        _tkb[_l] = _fs',
+      '        if _fs:',
+      '            _tkb.append([_l, _i, _fs])',
       'result = _tkb'].join('\n');
-    try { if (window.renpy_exec) layers = await window.renpy_exec(py); } catch (e) { layers = null; }
-    post({ t: 'onscreenres', layers });
+    try { if (window.renpy_exec) ents = await window.renpy_exec(py); } catch (e) { ents = null; }
+    post({ t: 'onscreenres', ents });
+  }
+  /* some of the things on screen drawn together into one picture, each where and as it is shown (picks: [[layer, index]]) */
+  async function compose(picks) {
+    let buf = null;
+    const py = [
+      '_tsl = renpy.game.context().scene_lists',
+      '_tds = []',
+      'for _l, _i in ' + JSON.stringify(picks) + ':',
+      '    _es = _tsl.layers.get(_l, [])',
+      '    if _i < len(_es):',
+      '        _tds.append(_es[_i].displayable)',
+      '_tf = renpy.display.layout.Fixed()',
+      'for _d in _tds:',
+      '    _tf.add(_d)',
+      '_trv = renpy.render(_tf, renpy.config.screen_width, renpy.config.screen_height, 0, 0)',
+      '_tsurf = renpy.display.draw.screenshot(_trv)',
+      'import pygame_sdl2',
+      'pygame_sdl2.image.save(_tsurf, "/tmp/tkbcomp.png")',
+      'result = True'].join('\n');
+    try {
+      try { FS.unlink('/tmp/tkbcomp.png'); } catch (e) { }
+      if (window.renpy_exec) await window.renpy_exec(py);
+      buf = FS.readFile('/tmp/tkbcomp.png').buffer; FS.unlink('/tmp/tkbcomp.png');
+    } catch (e) { buf = null; }
+    post({ t: 'composeres', buf }, buf ? [buf] : []);
   }
   /* save to Ren'Py's newest auto-save slot now (the app is being hidden, closed or left), and hand the saves over at once */
   async function autosave() {
@@ -2351,7 +2515,7 @@ function rpyBoot(SCRIPTS, LOADER) {
 }
 /* ask the game to save to its auto-save now; resolves when the saves are stored (or after a few seconds) */
 function gameAutosave() {
-  if (!GAME.frame || !GAME.loaded) return Promise.resolve(false);
+  if (!GAME.frame || !GAME.loaded || (GAME.g && GAME.g.game.engine === 'html')) return Promise.resolve(false);
   if (GAME.saving) return GAME.saving;
   GAME.saving = new Promise(res => {
     const t = setTimeout(() => done(false), 6000);
@@ -2361,14 +2525,6 @@ function gameAutosave() {
   });
   return GAME.saving;
 }
-/* the gallery that keeps a game's screenshots (made the first time) */
-async function gameShotGallery(gid) {
-  const gm = await S.gal(gid);
-  let sg = (await S.gals()).find(x => x.shotsOf === gid);
-  if (!sg) { sg = newGallery(`${gm.title} — screenshots`); sg.shotsOf = gid; Tree.ensureRoot(sg); await saveGallery(sg); }
-  Tree.ensureRoot(sg); return sg;
-}
-function flashShot() { const f = h('div', { class: 'shotflash' }); document.body.append(f); setTimeout(() => f.remove(), 450); }
 /* switching mods while playing: Ren'Py reads its scripts once at the start, so the game is saved, started again with the new mods,
    and put back where it was (like Continue) */
 async function liveMods(gid) {
@@ -2481,6 +2637,7 @@ async function openGame(id, cont) {
   const g = await S.gal(id);
   if (!isGame(g)) return go('library', {}, true);
   if (!EXP) { toast('Games can be played in the experimental version of the app for now.', 3500); return back('detail', { id }); }
+  if (g.game.engine === 'html') return openHtmlGame(id, g);
   const v = g.game.rt;
   if (!(await RPY.has(v)) && !(await rpyAskDownload(v, `To play “${g.title}”, the app needs Ren'Py ${v}.`))) return back('detail', { id });
   if (CUR.view !== 'game' || CUR.params.id !== id) return;
@@ -2494,26 +2651,22 @@ async function openGame(id, cont) {
   const lockB = h('button', { class: 'gameexit gamelock', 'aria-label': 'Lock the app (the game is saved to the auto-save first)', title: 'Lock (saved to the auto-save)', onclick: async () => { lockB.disabled = true; if (GAME.loaded) await gameAutosave(); lockNow(); } }, icon('lock'));
   const picsB = h('button', { class: 'gameexit gamepics', 'aria-label': 'Pictures on screen', title: 'Pictures on screen', onclick: async () => {
     if (!GAME.loaded) return;
-    const layers = await new Promise(res => { GAME.onScreen = l => { GAME.onScreen = null; res(l); }; frame.contentWindow.postMessage({ t: 'onscreen' }, '*'); setTimeout(() => { if (GAME.onScreen) { GAME.onScreen = null; res(null); } }, 8000); });
-    if (!layers) return toast('The game could not say what is on screen.');
-    const names = [...(layers.master || []), ...Object.entries(layers).filter(([l]) => l !== 'master').flatMap(([, v]) => v)];
+    const ents = await new Promise(res => { GAME.onScreen = l => { GAME.onScreen = null; res(l); }; frame.contentWindow.postMessage({ t: 'onscreen' }, '*'); setTimeout(() => { if (GAME.onScreen) { GAME.onScreen = null; res(null); } }, 8000); });
+    if (!ents) return toast('The game could not say what is on screen.');
+    // the scene first (backgrounds and characters), then the rest (the interface)
+    const order = [...ents.filter(e => e[0] === 'master'), ...ents.filter(e => e[0] !== 'master')];
+    const names = [...new Set(order.flatMap(e => e[2]))];
     if (!names.length) return toast('No pictures are on screen right now.');
-    openAssets(id, { only: [...new Set(names)], inGame: true, title: 'Pictures on screen' });
+    // the chosen pictures, drawn together as they are on screen: everything on screen that uses one of them, in drawing order
+    const compose = sel => new Promise((res, rej) => {
+      const want = new Set(sel.map(n => n.toLowerCase())), picks = ents.filter(e => e[2].some(f => want.has(f.toLowerCase()))).map(e => [e[0], e[1]]);
+      GAME.onCompose = b => { GAME.onCompose = null; b ? res(new Uint8Array(b)) : rej(new Error('The game could not draw them.')); };
+      frame.contentWindow.postMessage({ t: 'compose', picks }, '*'); setTimeout(() => { if (GAME.onCompose) { GAME.onCompose = null; rej(new Error('The game did not answer.')); } }, 10000);
+    });
+    openAssets(id, { only: names, inGame: true, title: 'Pictures on screen', compose });
   } }, icon('image'));
-  const camB = h('button', { class: 'gameexit gamecam', 'aria-label': 'Take a picture of the screen', title: 'Take a picture', onclick: async () => {
-    if (!GAME.loaded || camB.disabled) return; camB.disabled = true;
-    try {
-      const buf = await new Promise(res => { GAME.onShot = b => { GAME.onShot = null; res(b); }; frame.contentWindow.postMessage({ t: 'shot', any: true }, '*'); setTimeout(() => { if (GAME.onShot) { GAME.onShot = null; res(null); } }, 10000); });
-      if (!buf) return toast('The picture could not be taken.');
-      const sg = await gameShotGallery(id);
-      const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ').replace(/:/g, '-');
-      await importInto(sg, [{ title: sg.title, chId: sg.chapters[0].id, items: [{ name: `${stamp}.png`, get: async () => new Blob([buf], { type: 'image/png' }) }] }], () => { }, () => false);
-      flashShot(); toast(`Picture saved to “${sg.title}”.`, 2500);
-    } catch (e) { toast('The picture could not be saved: ' + (e.message || e)); }
-    finally { camB.disabled = false; }
-  } }, icon('camera'));
   const modsB = (g.game.mods || []).length ? h('button', { class: 'gameexit gamemods', 'aria-label': 'Mods', title: 'Mods', onclick: () => GAME.loaded && liveMods(id) }, icon('layers')) : null;
-  const box = h('div', { id: 'gamebox' }, load, exit, lockB, picsB, camB, modsB);
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB, picsB, modsB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
   document.body.classList.add('gaming'); document.body.append(box);
@@ -2569,7 +2722,9 @@ async function openGame(id, cont) {
         GAME.loaded = true; load.hidden = true; frame.focus();
         if (!['user', 'menu'].includes(g.game.coverBy)) menuCover();
       } else if (m.t === 'onscreenres') {
-        if (GAME.onScreen) GAME.onScreen(m.layers);
+        if (GAME.onScreen) GAME.onScreen(m.ents);
+      } else if (m.t === 'composeres') {
+        if (GAME.onCompose) GAME.onCompose(m.buf);
       } else if (m.t === 'autosaved') {
         if (GAME.onAutosaved) GAME.onAutosaved(m.ok);
       } else if (m.t === 'shotres') {
@@ -2604,6 +2759,243 @@ async function openGame(id, cont) {
   // the frame may only ever show the page made here: if the game tries to go to a web page, it is stopped
   frame.addEventListener('load', () => { if (++GAME.loads > 1 && GAME.frame === frame) { toast('The game tried to open a web page, so it was stopped.', 4500); back('detail', { id }); } });
   frame.srcdoc = rpyDoc(html, rt.loader); box.prepend(frame);
+}
+
+/* ---------- playing an HTML game (RPG Maker MV/MZ, or any game made as a web page) ----------
+   Sealed like Ren'Py: the page runs in a frame that cannot reach the network or this app's data. Every file it asks for
+   (scripts, data, pictures, sounds) is answered from the encrypted copy; what it keeps in the browser (its saves) is kept
+   here, encrypted with the game. */
+async function openHtmlGame(id, g) {
+  if (CUR.view !== 'game' || CUR.params.id !== id) return;
+  closeGame();
+  const lbl = h('div', { class: 'num' }, 'Opening…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  const load = h('div', { class: 'gameload', role: 'status' }, h('div', { class: 'gamecover' }, thumbImg(coverId(g), '')), h('b', {}, g.title), h('div', { class: 'progress' }, lbl, bar));
+  const frame = h('iframe', { title: g.title, sandbox: 'allow-scripts', allow: 'autoplay; gamepad; fullscreen', referrerpolicy: 'no-referrer' });
+  const exit = h('button', { class: 'gameexit', 'aria-label': 'Leave the game', title: 'Leave', onclick: async () => { exit.disabled = true; await new Promise(r => setTimeout(r, 500)); await gameSaveChain; back('detail', { id }); } }, icon('x'));
+  const lockB = h('button', { class: 'gameexit gamelock', 'aria-label': 'Lock the app', title: 'Lock', onclick: async () => { lockB.disabled = true; await gameSaveChain; lockNow(); } }, icon('lock'));
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB);
+  Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
+  clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
+  document.body.classList.add('gaming'); document.body.append(box);
+  let list, saves;
+  try { [list, saves] = await Promise.all([gameFileList(g, 'on'), rpyGetJSON(g.game.sv)]); if (!list) throw new Error('The game\'s file list is missing.'); }
+  catch (e) { lbl.textContent = 'Could not open the game: ' + (e.message || e); return; }
+  if (GAME.frame !== frame) return;
+  GAME.list = list;
+  const byPath = new Map(list.filter(f => /^game\//i.test(f.p)).map(f => [f.p.slice(5).toLowerCase(), f]));
+  const indexF = byPath.get(String(g.game.index || 'index.html').toLowerCase()) || byPath.get('index.html');
+  if (!indexF) { lbl.textContent = 'Could not open the game: its index.html is missing.'; return; }
+  const html = new TextDecoder().decode(await rpyRead(indexF.c, indexF.s));
+  const base = (g.game.index || 'index.html').includes('/') ? g.game.index.replace(/[^/]+$/, '') : '';
+  g.lastReadAt = Date.now(); saveGallery(g).catch(() => { });
+  GAME.onMsg = async e => {
+    if (!GAME.frame || e.source !== GAME.frame.contentWindow) return;
+    const m = e.data || {}, win = GAME.frame.contentWindow;
+    try {
+      if (m.t === 'hello') {
+        const store = {};
+        for (const [p, f] of Object.entries(saves || {})) { if (!/^(ls|lf)\//.test(p)) continue; try { store[p] = new TextDecoder().decode(await rpyRead(f.c, f.s)); } catch (x) { } }
+        win.postMessage({ t: 'boot', files: [...byPath.entries()].map(([k, f]) => [k, f.s]), store, base }, '*');
+      } else if (m.t === 'file') {
+        const f = byPath.get(String(m.p).toLowerCase());
+        if (!f) return win.postMessage({ q: m.q, buf: null }, '*');
+        const u = await rpyRead(f.c, f.s), buf = u.buffer || u; win.postMessage({ q: m.q, buf }, '*', [buf]);
+      } else if (m.t === 'progress') {
+        lbl.textContent = `Opening the game · ${m.done} of ${m.total}`; bar.firstChild.style.width = (100 * m.done / Math.max(1, m.total)) + '%';
+      } else if (m.t === 'loaded') {
+        GAME.loaded = true; load.hidden = true; frame.focus();
+      } else if (m.t === 'store') {
+        persistSaves(id, Object.entries(m.store || {}).map(([p, text]) => ({ p, buf: Crypt.te.encode(text).buffer })), { allowEmpty: true });
+      } else if (m.t === 'error') {
+        console.warn('game:', m.msg);
+        if (!GAME.loaded) lbl.textContent = 'The game could not start: ' + m.msg;
+      }
+    } catch (x) { console.error(x); }
+  };
+  window.addEventListener('message', GAME.onMsg);
+  GAME.onHide = () => { };
+  frame.addEventListener('load', () => { if (++GAME.loads > 1 && GAME.frame === frame) { toast('The game tried to open a web page, so it was stopped.', 4500); back('detail', { id }); } });
+  frame.srcdoc = htmlDoc(html, base); box.prepend(frame);
+}
+/* the game's page, sealed: its scripts and style sheets are taken out and loaded by htmlBoot, from the app */
+function htmlDoc(html, base) {
+  const items = [], css = [];
+  html = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (m, attrs, code) => {
+    const src = (attrs.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i) || []).slice(1).find(x => x != null);
+    const type = (attrs.match(/\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i) || []).slice(1).find(x => x != null) || '';
+    if (type && !/javascript|module|^text\/babel$/i.test(type)) return m; // data blocks stay
+    items.push(src != null ? { src, module: /module/i.test(type) } : { code, module: /module/i.test(type) }); return '';
+  });
+  html = html.replace(/<link\b[^>]*>/gi, m => { if (!/\brel\s*=\s*["']?stylesheet/i.test(m)) return /\brel\s*=\s*["']?(icon|apple-touch-icon|manifest|preload|prefetch)/i.test(m) ? '' : m; const href = (m.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i) || []).slice(1).find(x => x != null); if (href) css.push(href); return ''; });
+  html = html.replace(/<meta\b[^>]*http-equiv[^>]*>/gi, '');
+  const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; connect-src blob: data:; img-src blob: data:; media-src blob: data:; style-src 'unsafe-inline' blob:; font-src blob: data:; worker-src blob:; form-action 'none'";
+  const head = `<meta http-equiv="Content-Security-Policy" content="${csp}"><base href="https://game.invalid/${base}"><script>try{Object.defineProperty(Navigator.prototype,'serviceWorker',{get:function(){return undefined},configurable:true})}catch(e){}<\/script><script>(${htmlBoot.toString()})(${JSON.stringify(items).replace(/<\//g, '<\\/')}, ${JSON.stringify(css)});<\/script>`;
+  if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, m => m + head); else html = head + html;
+  return html;
+}
+/* Runs inside the sealed frame of an HTML game, before the game's own scripts. */
+function htmlBoot(ITEMS, CSS) {
+  const P = window.parent, post = (m, t) => P.postMessage(m, '*', t || []);
+  const waiting = new Map(); let seq = 0;
+  const ask = m => new Promise(res => { const q = ++seq; waiting.set(q, res); post(Object.assign({ q }, m)); });
+  const fail = e => post({ t: 'error', msg: String((e && e.message) || e) });
+  const ORIGIN = 'https://game.invalid/';
+  let FILES = new Map(), BASE = '';
+  // a URL the game uses -> the path of one of its files (or null for anything else)
+  const pathOf = u => {
+    if (u == null) return null; u = String(u); if (/^(blob|data|about|javascript):/i.test(u)) return null;
+    let url; try { url = new URL(u, document.baseURI); } catch (e) { return null; }
+    if (url.origin + '/' !== ORIGIN) return null;
+    let p; try { p = decodeURIComponent(url.pathname.slice(1)); } catch (e) { p = url.pathname.slice(1); }
+    p = p.replace(/\/{2,}/g, '/'); return p.toLowerCase();
+  };
+  const has = p => p != null && FILES.has(p);
+  const mime = p => { const x = (p.split('.').pop() || '').toLowerCase(); return ({ js: 'text/javascript', mjs: 'text/javascript', json: 'application/json', css: 'text/css', html: 'text/html', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', ogg: 'audio/ogg', m4a: 'audio/mp4', mp3: 'audio/mpeg', wav: 'audio/wav', webm: 'video/webm', mp4: 'video/mp4', wasm: 'application/wasm', ttf: 'font/ttf', otf: 'font/otf', woff: 'font/woff', woff2: 'font/woff2', txt: 'text/plain' })[x] || 'application/octet-stream'; };
+  const bufs = new Map(), urls = new Map(); let PENDING = 0; // scripts the game added that have not run yet
+  const getBuf = p => { if (!bufs.has(p)) bufs.set(p, ask({ t: 'file', p }).then(r => { bufs.delete(p); return r.buf; })); return bufs.get(p); };
+  const blobURL = async p => { if (urls.has(p)) return urls.get(p); const b = await getBuf(p); if (!b) return null; const u = URL.createObjectURL(new Blob([b], { type: mime(p) })); urls.set(p, u); return u; };
+  /* what the game keeps in the browser: kept by the app (as its saves) */
+  const STORE = {}; let storeT = 0;
+  const saveSoon = () => { clearTimeout(storeT); storeT = setTimeout(() => post({ t: 'store', store: Object.assign({}, STORE) }), 300); };
+  const mkStorage = (prefix, keep) => {
+    const keys = () => Object.keys(STORE).filter(k => k.startsWith(prefix)).map(k => decodeURIComponent(k.slice(prefix.length)));
+    const o = {
+      getItem: k => { const v = STORE[prefix + encodeURIComponent(k)]; return v === undefined ? null : v; },
+      setItem: (k, v) => { STORE[prefix + encodeURIComponent(k)] = String(v); if (keep) saveSoon(); },
+      removeItem: k => { delete STORE[prefix + encodeURIComponent(k)]; if (keep) saveSoon(); },
+      clear: () => { keys().forEach(k => delete STORE[prefix + encodeURIComponent(k)]); if (keep) saveSoon(); },
+      key: i => keys()[i] ?? null,
+      get length() { return keys().length; },
+    };
+    return new Proxy(o, { get: (t, k) => k in t ? t[k] : typeof k === 'string' ? t.getItem(k) : undefined, set: (t, k, v) => { t.setItem(k, v); return true; }, deleteProperty: (t, k) => { t.removeItem(k); return true; } });
+  };
+  try { Object.defineProperty(window, 'localStorage', { configurable: true, value: mkStorage('ls/', true) }); } catch (e) { }
+  try { Object.defineProperty(window, 'sessionStorage', { configurable: true, value: mkStorage('ss/', false) }); } catch (e) { }
+  // localforage (RPG Maker MZ keeps its saves with it): the same, by the game's key
+  const forage = {
+    getItem: (k, cb) => { const v = STORE['lf/' + encodeURIComponent(k)]; const r = v === undefined ? null : JSON.parse(v); if (cb) cb(null, r); return Promise.resolve(r); },
+    setItem: (k, v, cb) => { STORE['lf/' + encodeURIComponent(k)] = JSON.stringify(v); saveSoon(); if (cb) cb(null, v); return Promise.resolve(v); },
+    removeItem: (k, cb) => { delete STORE['lf/' + encodeURIComponent(k)]; saveSoon(); if (cb) cb(null); return Promise.resolve(); },
+    keys: cb => { const r = Object.keys(STORE).filter(k => k.startsWith('lf/')).map(k => decodeURIComponent(k.slice(3))); if (cb) cb(null, r); return Promise.resolve(r); },
+    length: cb => forage.keys().then(r => { if (cb) cb(null, r.length); return r.length; }),
+    clear: cb => { Object.keys(STORE).filter(k => k.startsWith('lf/')).forEach(k => delete STORE[k]); saveSoon(); if (cb) cb(null); return Promise.resolve(); },
+    iterate: (fn) => forage.keys().then(ks => { let i = 0; for (const k of ks) { const r = fn(JSON.parse(STORE['lf/' + encodeURIComponent(k)]), k, ++i); if (r !== undefined) return r; } }),
+    config: () => true, ready: cb => { if (cb) cb(); return Promise.resolve(); }, driver: () => 'tankobon', setDriver: () => Promise.resolve(), supports: () => true,
+    createInstance: () => forage, dropInstance: () => Promise.resolve(), defineDriver: () => Promise.resolve(),
+    INDEXEDDB: 'asyncStorage', LOCALSTORAGE: 'localStorageWrapper', WEBSQL: 'webSQLStorage',
+  };
+  const isForageLib = p => /(^|\/)localforage(\.min)?\.js$/i.test(p);
+  /* files asked for by XMLHttpRequest and fetch */
+  const RealXHR = window.XMLHttpRequest;
+  function XHR() {
+    const x = this; this.readyState = 0; this.status = 0; this.statusText = ''; this.response = null; this.responseText = ''; this.responseType = ''; this.responseURL = '';
+    this.timeout = 0; this.withCredentials = false; this._l = {}; this.upload = { addEventListener() { }, removeEventListener() { } };
+    this._fire = (type, ev) => { const e = ev || { type, target: x, currentTarget: x, lengthComputable: false, loaded: 0, total: 0 }; try { if (typeof x['on' + type] === 'function') x['on' + type](e); } catch (err) { setTimeout(() => { throw err; }); } (x._l[type] || []).slice().forEach(f => { try { f.call(x, e); } catch (err) { setTimeout(() => { throw err; }); } }); };
+  }
+  XHR.UNSENT = 0; XHR.OPENED = 1; XHR.HEADERS_RECEIVED = 2; XHR.LOADING = 3; XHR.DONE = 4;
+  Object.assign(XHR.prototype, {
+    open(method, url) { this._m = method; this._u = url; this._p = pathOf(url); this.readyState = 1; this._fire('readystatechange'); },
+    setRequestHeader() { }, overrideMimeType(t) { this._mt = t; }, getAllResponseHeaders() { return this.status === 200 ? 'content-type: ' + mime(this._p || '') + '\r\n' : ''; },
+    getResponseHeader(n) { return this.status === 200 && /content-type/i.test(n) ? mime(this._p || '') : null; },
+    addEventListener(t, f) { (this._l[t] = this._l[t] || []).push(f); }, removeEventListener(t, f) { this._l[t] = (this._l[t] || []).filter(g => g !== f); },
+    abort() { this._aborted = true; },
+    send() {
+      const x = this, p = this._p;
+      const done = buf => {
+        if (x._aborted) return;
+        x.responseURL = String(x._u);
+        if (!buf) { x.status = 404; x.statusText = 'Not Found'; x.readyState = 4; x._fire('readystatechange'); x._fire('load'); x._fire('loadend'); return; }
+        x.status = 200; x.statusText = 'OK';
+        const rt = x.responseType || '';
+        if (rt === 'arraybuffer') x.response = buf;
+        else if (rt === 'blob') x.response = new Blob([buf], { type: mime(p) });
+        else { const t = new TextDecoder().decode(buf); if (rt === 'json') { try { x.response = JSON.parse(t); } catch (e) { x.response = null; } } else { x.response = t; x.responseText = t; } }
+        x.readyState = 4; x._fire('readystatechange'); const ev = { type: 'load', target: x, currentTarget: x, lengthComputable: true, loaded: buf.byteLength, total: buf.byteLength }; x._fire('progress', Object.assign({}, ev, { type: 'progress' })); x._fire('load', ev); x._fire('loadend', ev);
+      };
+      if (p == null) { setTimeout(() => { x.readyState = 4; x._fire('readystatechange'); x._fire('error'); x._fire('loadend'); }); return; }
+      if (!has(p)) { setTimeout(() => done(null)); return; }
+      getBuf(p).then(b => done(b ? b.slice(0) : null), () => done(null));
+    },
+  });
+  window.XMLHttpRequest = XHR;
+  const realFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const u = typeof input === 'string' ? input : input && input.url, p = pathOf(u);
+    if (p == null) return realFetch(input, init);
+    const b = has(p) ? await getBuf(p) : null;
+    if (!b) return new Response('', { status: 404, statusText: 'Not Found' });
+    return new Response(b.slice(0), { status: 200, headers: { 'Content-Type': mime(p) } });
+  };
+  /* pictures, sounds, videos and scripts given by address: the address is swapped for the file's */
+  const hookSrc = (proto, prop) => {
+    const d = Object.getOwnPropertyDescriptor(proto, prop); if (!d || !d.set) return;
+    Object.defineProperty(proto, prop, { configurable: true, enumerable: d.enumerable, get: function () { return this.__tkbSrc != null ? this.__tkbSrc : d.get.call(this); },
+      set: function (v) {
+        const p = pathOf(v);
+        if (p == null || !FILES.size) { this.__tkbSrc = null; return d.set.call(this, v); }
+        this.__tkbSrc = new URL(String(v), document.baseURI).href;
+        if (urls.has(p)) return d.set.call(this, urls.get(p));
+        if (!has(p)) return d.set.call(this, 'data:,missing'); // (fires its error, like a missing file)
+        const el = this, want = (this.__tkbWant = {}); blobURL(p).then(u => { if (el.__tkbWant === want) d.set.call(el, u || 'data:,missing'); });
+      } });
+  };
+  hookSrc(HTMLImageElement.prototype, 'src'); hookSrc(HTMLMediaElement.prototype, 'src'); hookSrc(HTMLSourceElement.prototype, 'src');
+  { const sd = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+    Object.defineProperty(HTMLScriptElement.prototype, 'src', { configurable: true, get: function () { return this.__tkbSrc || sd.get.call(this); }, set: function (v) {
+      const p = pathOf(v); if (p == null) return sd.set.call(this, v);
+      this.__tkbSrc = new URL(String(v), document.baseURI).href;
+      if (!this.__tkbPend) { this.__tkbPend = 1; PENDING++; const end = () => { if (this.__tkbPend === 1) { this.__tkbPend = 2; PENDING--; } }; this.addEventListener('load', end); this.addEventListener('error', end); setTimeout(end, 15000); }
+      if (isForageLib(p)) { window.localforage = forage; return sd.set.call(this, URL.createObjectURL(new Blob(['/* localforage: kept by Tankobon */'], { type: 'text/javascript' }))); }
+      if (urls.has(p)) return sd.set.call(this, urls.get(p));
+      const el = this; blobURL(p).then(u => sd.set.call(el, u || 'data:text/javascript,'));
+    } }); }
+  { const ae = Element.prototype.setAttribute; Element.prototype.setAttribute = function (n, v) { if (/^src$/i.test(n) && (this instanceof HTMLImageElement || this instanceof HTMLMediaElement || this instanceof HTMLScriptElement || this instanceof HTMLSourceElement)) { this.src = v; return; } return ae.call(this, n, v); }; }
+  if (window.FontFace) { const RF = window.FontFace; window.FontFace = function (family, source, desc) { if (typeof source === 'string') source = source.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (m, q, u) => { const p = pathOf(u); return p != null && urls.has(p) ? `url("${urls.get(p)}")` : m; }); return new RF(family, source, desc); }; window.FontFace.prototype = RF.prototype; }
+  // the game may only show its own page: no leaving, no new windows
+  window.open = () => null;
+  try { Object.defineProperty(window, 'require', { configurable: true, value: undefined }); } catch (e) { }
+  /* start: get the file list and saves, load scripts, style sheets and fonts first (they are needed at once), then run the page's scripts in order */
+  async function start(m) {
+    FILES = new Map(m.files); BASE = m.base || ''; Object.assign(STORE, m.store || {});
+    const early = [...FILES.keys()].filter(p => /\.(js|mjs|css|ttf|otf|woff2?)$/i.test(p) && p.startsWith(BASE.toLowerCase()));
+    let n = 0; const total = early.length;
+    for (let i = 0; i < early.length; i += 8) { await Promise.all(early.slice(i, i + 8).map(p => isForageLib(p) ? null : blobURL(p))); n = Math.min(total, i + 8); post({ t: 'progress', done: n, total }); }
+    // style sheets, with the files they point to
+    for (const href of CSS) {
+      const p = pathOf(href); if (p == null || !has(p)) continue;
+      const dir = new URL(href, document.baseURI).href.replace(/[^/]*$/, '');
+      let text = new TextDecoder().decode(await getBuf(p));
+      const refs = [...text.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)].map(x => x[2]);
+      for (const r of refs) { const rp = pathOf(new URL(r, dir).href); if (rp != null && has(rp)) await blobURL(rp); }
+      text = text.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (mm, q, r) => { const rp = pathOf(new URL(r, dir).href); return rp != null && urls.has(rp) ? `url("${urls.get(rp)}")` : mm; });
+      const st = document.createElement('style'); st.textContent = text; document.head.appendChild(st);
+    }
+    for (const it of ITEMS) {
+      await new Promise(res => {
+        const s = document.createElement('script'); if (it.module) s.type = 'module';
+        if (it.src != null) {
+          const p = pathOf(it.src);
+          if (p != null && isForageLib(p)) { window.localforage = forage; return res(); }
+          s.onload = s.onerror = () => res(); s.src = it.src; document.body.appendChild(s);
+        } else { s.textContent = it.code; document.body.appendChild(s); res(); }
+      });
+    }
+    // scripts the page's scripts added themselves (RPG Maker's plugins) run before the page counts as loaded, as in a browser
+    for (let k = 0; k < 300 && PENDING > 0; k++) await new Promise(r => setTimeout(r, 50));
+    post({ t: 'loaded' });
+    // the page "finished loading" now, for games that wait for it
+    try { document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true })); } catch (e) { }
+    if (realLoaded) try { window.dispatchEvent(new Event('load')); } catch (e) { } // (otherwise the real one is still to come)
+  }
+  let realLoaded = false; window.addEventListener('load', () => { realLoaded = true; }, { once: true });
+  window.addEventListener('message', e => {
+    if (e.source !== P) return; const m = e.data || {};
+    if (m.t === 'boot') start(m).catch(fail);
+    else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
+  });
+  window.addEventListener('error', e => { if (e && e.message) fail(e.message); });
+  document.addEventListener('DOMContentLoaded', () => post({ t: 'hello' }), { once: true });
+  if (document.readyState !== 'loading') post({ t: 'hello' });
 }
 
 /* ---------- reading a stored game file, and Ren'Py archives (.rpa) inside it ---------- */
@@ -2848,18 +3240,26 @@ async function openAssets(gid, opts = {}) {
   const io = new IntersectionObserver(ents => { for (const e of ents) if (e.isIntersecting) { io.unobserve(e.target); queue.push(e.target._load); pump(); } }, { root: $('#sheetBody'), rootMargin: '300px' });
   // more pictures are added as you scroll down; nothing already shown moves
   const more = new IntersectionObserver(ents => { if (ents.some(e => e.isIntersecting)) addPage(); }, { root: $('#sheetBody'), rootMargin: '600px' });
+  let together = !!opts.compose;
+  // what the actions use: the selected pictures, or (on screen, together) one picture of them drawn as they are in the game
+  const chosenPics = () => { const c = pics.filter(p => sel.has(p)); if (!(together && c.length)) return c; const names = c.map(p => p.name); let got = null; return [{ name: 'scene.png', size: 0, together: true, read: () => (got = got || opts.compose(names)) }]; };
   const count = h('b', { class: 'num' }), coverB = h('button', { class: 'btn small', id: 'asset-cover', onclick: () => useCover() }, icon('image'), 'Use as the cover');
+  const togetherSeg = opts.compose ? h('div', { class: 'seg', role: 'group', id: 'asset-together', 'aria-label': 'Selected pictures' }, [[true, 'Together, as one picture'], [false, 'Each on its own']].map(([v, l]) =>
+    h('button', { 'aria-pressed': String(v === together), onclick: e => { together = v; $$('button', togetherSeg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); bar(); } }, l))) : null;
   const galB = h('button', { class: 'btn primary small', id: 'asset-gallery', onclick: () => askName() }, icon('plus'), 'Make a gallery');
   const addB = h('button', { class: 'btn small', id: 'asset-addto', onclick: () => askWhere() }, icon('folder'), 'Add to a gallery');
   const tiles = new Map();
   const view = at => assetViewer(list, at, { isSel: p => sel.has(p), toggle: p => { if (sel.has(p)) sel.delete(p); else sel.add(p); const b = tiles.get(p); if (b) b.setAttribute('aria-pressed', String(sel.has(p))); bar(); }, cover: p => coverFrom(p) });
-  const viewB = h('button', { class: 'btn ghost small', id: 'asset-view', onclick: () => { const i = list.findIndex(p => sel.has(p)); view(i < 0 ? 0 : i); } }, icon('full'), 'View');
+  const viewB = h('button', { class: 'btn ghost small', id: 'asset-view', onclick: () => {
+    if (together && sel.size) { const [one] = chosenPics(); return assetViewer([one], 0, { isSel: () => true, toggle: () => { }, cover: p => coverFrom(p) }); }
+    const i = list.findIndex(p => sel.has(p)); view(i < 0 ? 0 : i);
+  } }, icon('full'), 'View');
   const allB = h('button', { class: 'btn ghost small', onclick: () => { list.forEach(p => sel.add(p)); grid.querySelectorAll('.btile').forEach(b => b.setAttribute('aria-pressed', 'true')); bar(); } }, 'Select all');
   const noneB = h('button', { class: 'btn ghost small', onclick: () => { sel.clear(); grid.querySelectorAll('.btile').forEach(b => b.setAttribute('aria-pressed', 'false')); bar(); } }, 'Clear');
   const barEl = h('div', { class: 'assetbar' });
   const bar = () => {
-    count.textContent = sel.size ? `${plural(sel.size, 'picture')} selected` : 'Tap pictures to select them';
-    coverB.disabled = sel.size !== 1; galB.disabled = !sel.size; addB.disabled = !sel.size; noneB.hidden = !sel.size;
+    count.textContent = sel.size ? `${plural(sel.size, 'picture')} selected${together && sel.size > 1 ? ' (as one picture)' : ''}` : 'Tap pictures to select them';
+    coverB.disabled = together ? !sel.size : sel.size !== 1; galB.disabled = !sel.size; addB.disabled = !sel.size; noneB.hidden = !sel.size;
     viewB.disabled = !list.length;
     if (!barEl.querySelector('#asset-name, #asset-where')) barEl.replaceChildren(count, h('span', { class: 'grow' }), viewB, noneB, allB, coverB, addB, galB);
   };
@@ -2943,7 +3343,7 @@ async function openAssets(gid, opts = {}) {
     try { await setGameCover(gid, out, pic.name.split('/').pop(), 'user', whole); toast('Cover changed.'); if (!opts.inGame) render(CUR.view, CUR.params); }
     catch (e) { toast('That picture could not be used.'); }
   }
-  const useCover = () => { const [pic] = sel; coverFrom(pic); };
+  const useCover = () => { const [pic] = chosenPics(); coverFrom(pic); };
   async function askWhere() {
     const gals = (await S.gals()).filter(x => !isGame(x)).sort((a, b) => natural(a.title, b.title));
     if (!gals.length) return toast('There are no galleries yet: use Make a gallery.');
@@ -2953,7 +3353,7 @@ async function openAssets(gid, opts = {}) {
       go1.disabled = true; prog.hidden = false; busy++;
       try {
         const [galId, chId] = where.value.split('|'), dest = await S.gal(galId);
-        const chosen = pics.filter(p => sel.has(p));
+        const chosen = chosenPics();
         const items = chosen.map(p => { const n = p.name.split('/').pop(); return { name: n, get: async () => new Blob([await p.read()], { type: MIME[(n.split('.').pop() || '').toLowerCase()] || 'image/png' }) }; });
         const r = await importInto(dest, [{ title: g0.title, chId, items }], (d, t) => { lbl.textContent = `Adding picture ${d.toLocaleString()} of ${t.toLocaleString()}`; barI.firstChild.style.width = (100 * d / t) + '%'; }, () => cancel);
         closeSheet(); toast(`${plural(r.done - r.skipped, 'picture')} added to “${dest.title}”.`, 3000);
@@ -2961,7 +3361,7 @@ async function openAssets(gid, opts = {}) {
       finally { busy = Math.max(0, busy - 1); }
     } }, icon('plus'), 'Add them');
     barEl.replaceChildren(h('div', { class: 'stack', style: 'gap:8px;flex:1' },
-      h('div', { class: 'field' }, h('label', { class: 'label', for: 'asset-where' }, `Add ${plural(sel.size, 'picture')} to`), where),
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'asset-where' }, `Add ${plural(chosenPics().length, 'picture')} to`), where),
       h('div', { class: 'row' }, go1, h('button', { class: 'btn ghost small', onclick: () => { barEl.replaceChildren(); bar(); } }, 'Back')), prog));
   }
   function askName() {
@@ -2970,7 +3370,7 @@ async function openAssets(gid, opts = {}) {
     const go1 = h('button', { class: 'btn primary small', onclick: async () => {
       go1.disabled = true; prog.hidden = false; busy++;
       try {
-        const chosen = pics.filter(p => sel.has(p));
+        const chosen = chosenPics();
         // folders of the game become chapters (the folder they all share is left out)
         const dirs = chosen.map(p => p.name.split('/').slice(0, -1));
         let common = dirs[0] || []; for (const d of dirs) { let k = 0; while (k < common.length && d[k] === common[k]) k++; common = common.slice(0, k); }
@@ -2983,13 +3383,13 @@ async function openAssets(gid, opts = {}) {
       finally { busy = Math.max(0, busy - 1); }
     } }, icon('plus'), 'Make it');
     barEl.replaceChildren(h('div', { class: 'stack', style: 'gap:8px;flex:1' },
-      h('div', { class: 'field' }, h('label', { class: 'label', for: 'asset-name' }, `Gallery name · ${plural(sel.size, 'picture')}`), name),
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'asset-name' }, `Gallery name · ${plural(chosenPics().length, 'picture')}`), name),
       h('div', { class: 'row' }, go1, h('button', { class: 'btn ghost small', onclick: () => { barEl.replaceChildren(); bar(); } }, 'Back')), prog));
     setTimeout(() => name.focus(), 30);
   }
   openSheet(opts.title || 'The game\'s pictures', h('div', { class: 'stack' },
     opts.only ? null : h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: async () => { const g = await S.gal(gid); g.game.coverBy = 'auto'; await saveGallery(g); closeSheet(); toast('The main menu will be the cover after you play next time.', 3500); } }, icon('image'), 'Use the main menu as the cover'),
-    opts.only ? null : find, opts.only ? null : sortSeg, note, grid, sentinel, barEl), () => { cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
+    opts.only ? null : find, opts.only ? null : sortSeg, togetherSeg, note, grid, sentinel, barEl), () => { cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
   $('#sheetBody').style.overflowAnchor = 'none'; // pictures arriving must not move the place you scrolled to
   bar(); more.observe(sentinel);
   try {
@@ -3481,7 +3881,7 @@ async function gameTiles(F) {
     const gg = await S.gal(id); if (!isGame(gg)) continue;
     out.push(h('button', { class: 'btile', 'aria-label': `Game ${gg.title}`, onclick: () => go('detail', { id }) },
       h('span', { class: 'bthumb' }, lazyThumb(coverId(gg)), h('span', { class: 'bchip' }, 'GAME')),
-      h('span', { class: 'bcap' }, h('b', {}, gg.title), h('span', { class: 'num' }, `Ren'Py game · ${mb(gg.game.size)}`))));
+      h('span', { class: 'bcap' }, h('b', {}, gg.title), h('span', { class: 'num' }, `${gameKind(gg)} · ${mb(gg.game.size)}`))));
   }
   return out;
 }
@@ -3799,7 +4199,7 @@ async function renderLibrary() {
 function card(g, tq) {
   const tag = tq ? tagLabel(tq) : null;
   const pi = progressInfo(g), tp = totalPages(g);
-  const meta = isGame(g) ? `Ren'Py game · ${mb(g.game.size)}` : pi ? `${chLabel(g, pi.ci)} · p. ${pi.page + 1}` : `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`;
+  const meta = isGame(g) ? `${gameKind(g)} · ${mb(g.game.size)}` : pi ? `${chLabel(g, pi.ci)} · p. ${pi.page + 1}` : `${chCount(g) ? plural(chCount(g), 'chapter') + ' · ' : ''}${plural(tp, 'page')}`;
   return h('article', { class: 'card' }, h('div', { class: 'cwrap' },
     h('button', { class: 'cover', 'aria-label': tag ? `Pages tagged ${tag} in ${g.title}` : `Open ${g.title}`, onclick: () => go('detail', { id: g.id, ...tqParams(tq) }) }, thumbImg(coverId(g)),
       isGame(g) ? h('span', { class: 'chip' }, 'GAME') : g.sample ? h('span', { class: 'chip' }, 'SAMPLE') : (chCount(g) > 0 ? h('span', { class: 'chip num' }, `${chCount(g)} CH`) : null)),
@@ -4057,7 +4457,7 @@ function openStorage() {
 async function renderDetail(id, folderId, tq) {
   const v = $('#v-detail'); const g = await S.gal(id);
   if (!g) return go('library', {}, true);
-  if (isGame(g)) return renderGameDetail(v, g);
+  if (isGame(g)) return g.game.engine === 'html' ? renderHtmlGameDetail(v, g) : renderGameDetail(v, g);
   if (tq) return renderTagged(v, g, tq, folderId, await accountTagNames());
   const chs = g.chapters, fi = Math.max(0, folderId ? chs.findIndex(c => c.id === folderId) : 0), F = chs[fi], atRoot = fi === 0;
   const p = effPrefs(g), pi = progressInfo(g), tp = totalPages(g), nums = Tree.nums(chs);

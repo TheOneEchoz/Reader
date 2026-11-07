@@ -1,4 +1,4 @@
-// Taking a picture while playing (it goes to the game's screenshots gallery), and switching mods while playing:
+// Switching mods while playing:
 // the game is saved, started again with the new mods and put back where it was.
 const { chromium } = require('/home/claude/tankobon/test/node_modules/playwright');
 const fs = require('fs'), path = require('path');
@@ -31,11 +31,6 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const box = await (await p.$('#gamebox iframe')).boundingBox();
   for (let k = 0; k < 4; k++) { await p.mouse.click(box.x + box.width * 0.057, box.y + box.height * 0.40); await p.waitForTimeout(3000); if (await fr.evaluate(() => window.renpy_exec('result = renpy.get_screen("main_menu") is None')).catch(() => false)) break; }
   for (let k = 0; k < 3; k++) { await p.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6); await p.waitForTimeout(1200); }
-  await p.click('#gamebox .gamecam'); await p.waitForTimeout(2500);
-  await p.click('#gamebox .gamecam'); await p.waitForTimeout(2500);
-  const sg = await p.evaluate(async gid => { const s = (await S.gals()).find(x => x.shotsOf === gid); if (!s) return null; const pid = s.chapters[0].pages[0]; const bl = await S.blob('images', pid); const bm = await createImageBitmap(bl); return { title: s.title, n: s.chapters.reduce((a, c) => a + c.pages.length, 0), w: bm.width, h: bm.height, size: bl.size }; }, gid);
-  ok('the camera saves pictures of the screen to the game\'s screenshots gallery', sg && sg.n === 2 && /screenshots/.test(sg.title) && sg.w >= 1280 && sg.size > 100000, JSON.stringify(sg));
-  ok('the game keeps running', await p.evaluate(() => GAME.loaded && CUR.view === 'game'));
   const v1 = await fr.evaluate(() => window.renpy_exec('result = [getattr(store, "tkb_mod", "off"), str(renpy.game.context().current)]')).catch(e => String(e));
   // switch the mod off while playing
   await p.click('#gamebox .gamemods'); await p.waitForSelector('#livemods');
