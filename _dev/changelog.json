@@ -1,5 +1,14 @@
 [
  {
+  "v": 120,
+  "name": "1.23.0-beta.22",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing a missing picture (also one named after a variable): “Search the game's pictures” opens all the game's pictures, already searched by the picture's name, to choose the one it should be. The fix makes the missing name show that picture; Try it plays the scene again with it."
+  ]
+ },
+ {
   "v": 119,
   "name": "1.23.0-beta.21",
   "date": "2026-11-08",

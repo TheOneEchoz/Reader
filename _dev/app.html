@@ -2722,7 +2722,7 @@ async function addFixBlock(gid, key, block, modId) { // the file of small fixes:
 }
 /* fix one error: the right name (from the running game's own names, closest spelling first), the line it is on, and the fix,
    which goes into the game's "Fixes" mod; "Try it" plays the scene again with the fix */
-async function fixSheet(gid, err, byHand) {
+async function fixSheet(gid, err, byHand, pickedFile) {
   const g = await S.gal(gid), P = parseGameError(err);
   if (!P.kind || byHand) return fixByHand(gid, err, P);
   const codes = {
@@ -2731,6 +2731,7 @@ async function fixSheet(gid, err, byHand) {
     label: 'result = sorted(str(l) for l in renpy.get_all_labels() if not str(l).startswith("_"))',
     image: 'result = sorted(set(" ".join(t) if isinstance(t, tuple) else str(t) for t in renpy.list_images()))' };
   codes.dynimg = codes.name;
+  const FILES0 = await gameFileList(g, 'on');
   const all = (await gamePy(codes[P.kind])) || [];
   let works = new Set();
   if (P.kind === 'dynimg') {
@@ -2748,11 +2749,17 @@ async function fixSheet(gid, err, byHand) {
   }
   const ranked = all.filter(x => x !== P.name).map(x => [x, nameLikeness(P.name, x) + (works.has(x) ? 0.6 : 0)]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0.45).slice(0, 8).map(x => x[0]);
   // the script line, when the game has its script (.rpy)
-  const files = await gameFileList(g, 'on');
+  const files = FILES0;
   const srcPath = P.file ? P.file.replace(/\.rpyc$/i, '.rpy') : null, src = srcPath ? files.find(f => f.p.toLowerCase() === srcPath.toLowerCase()) : null;
   const text = src ? new TextDecoder().decode(await rpyRead(src.c, src.s)) : null, lines = text ? text.split('\n') : null;
   const word = new RegExp(`(?<![A-Za-z0-9_])${P.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_])`, 'g');
-  let choice = ranked[0] || '', everywhere = false;
+  let choice = pickedFile ? '' : ranked[0] || '', everywhere = false;
+  // the picture name the game looked for ("mox4dawn 0"), and the word it starts with, to search the game's pictures
+  const want = P.kind === 'dynimg' ? ((err.short || '').match(/could not find image\. \('([^']+)'\)/) || [])[1] || null : P.kind === 'image' ? P.name : null;
+  const searchFor = (want || P.tpl || '').split(/[\s\[]/)[0].replace(/\d+$/, '').trim();
+  const pickB = want ? h('button', { class: 'btn small', id: 'fix-search', onclick: () => openAssets(gid, { pick: p0 => fixSheet(gid, err, false, p0.name), query: searchFor, title: `Which picture should “${want}” be?` }) }, icon('search'), pickedFile ? 'Choose another picture' : 'Search the game\'s pictures') : null;
+  const pickedBox = pickedFile ? h('div', { class: 'row', style: 'gap:10px', id: 'fix-picked' }, h('img', { class: 'contshot', style: 'width:96px;height:auto;max-height:72px;object-fit:contain', alt: '' }), h('span', {}, 'Chosen picture: ', h('code', {}, pickedFile))) : null;
+  if (pickedBox) { const f = files.find(x => x.p.toLowerCase() === ('game/' + pickedFile).toLowerCase()); const im = pickedBox.querySelector('img'); (async () => { try { const pics = await rpyPictures(files); const p0 = pics.find(x => x.name === pickedFile); if (p0) im.src = URL.createObjectURL(new Blob([await p0.read()])); } catch (e) { } })(); }
   const custom = h('input', { class: 'text', id: 'fix-custom', autocomplete: 'off', placeholder: 'Or type the right name', oninput: e => { choice = e.target.value.trim(); $$('input[name=fixpick]').forEach(r => r.checked = false); paint(); } });
   const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null)) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
   const preview = h('pre', { class: 'errlog', id: 'fix-preview' });
@@ -2762,6 +2769,8 @@ async function fixSheet(gid, err, byHand) {
   // a picture made from a variable: the script files where that picture's name is written
   const tplFiles = P.kind === 'dynimg' ? (await Promise.all(files.filter(f => /^game\/.*\.rpy$/i.test(f.p) && f.s < 8e6).map(async f => { const t = new TextDecoder().decode(await rpyRead(f.c, f.s)); return t.includes(P.tpl) ? { f, t } : null; }))).filter(Boolean) : [];
   const plan = () => {
+    // a picture chosen from the game's pictures: the missing picture name is made to show it
+    if (pickedFile && want) return { block: `image ${want} = ${JSON.stringify(pickedFile)}`, key: 'image ' + want, label: `“${want}” will show ${pickedFile}. (Only that name: if the game later looks for another one, like “${want.replace(/\d+$/, n => +n + 1)}”, fix that one too.)` };
     if (!choice) return null;
     if (P.kind === 'dynimg') {
       const fixed = P.tpl.split('[' + P.name + ']').join('[' + choice + ']');
@@ -2781,7 +2790,7 @@ async function fixSheet(gid, err, byHand) {
     const pl = plan(); how.textContent = pl ? pl.label : 'Choose the right name.';
     if (pl && pl.tplFiles) {
       preview.textContent = pl.tplFiles.map(x => { const ls = x.t.split('\n'); return ls.map((l, i) => l.includes(P.tpl) ? `${x.f.p.slice(5)}:${i + 1}\n  - ${l.trim()}\n  + ${l.split(P.tpl).join(pl.fixed).trim()}` : null).filter(Boolean).slice(0, 4).join('\n'); }).join('\n');
-    } else if (P.kind === 'dynimg') preview.textContent = pl ? pl.block : '';
+    } else if (P.kind === 'dynimg' || pickedFile) preview.textContent = pl ? pl.block : '';
     else if (lines && P.line) {
       const a = Math.max(0, P.line - 3), z = Math.min(lines.length, P.line + 2), out = pl && pl.lines;
       preview.textContent = lines.slice(a, z).map((l, i) => { const n = a + i + 1; return n === P.line && out ? `${String(n).padStart(4)} - ${l}\n${String(n).padStart(4)} + ${out[n - 1]}` : `${String(n).padStart(4)}   ${l}`; }).join('\n');
@@ -2806,7 +2815,7 @@ async function fixSheet(gid, err, byHand) {
   const saveB = h('button', { class: 'btn', id: 'fix-save', onclick: async () => { await apply(); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
   openSheet(P.kind === 'label' ? 'Fix a missing scene' : P.kind === 'image' ? 'Fix a missing picture' : 'Fix a misspelt name', h('div', { class: 'stack', id: 'fix-sheet' },
     h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'dynimg' ? `The picture “${P.tpl}” is named after the variable “${P.name}”, and with its value there is no such picture. Variables that look like it (✓: with its value, the picture exists):` : P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
-    picks, custom, evB, preview, how,
+    pickedFile ? null : picks, pickedFile ? null : custom, pickB, pickedBox, evB, preview, how,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
     h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, saveB),
     h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: () => fixSheet(gid, err, true) }, icon('edit'), 'Edit the line yourself instead'),
@@ -3784,11 +3793,13 @@ async function openAssets(gid, opts = {}) {
     count.textContent = sel.size ? `${plural(sel.size, 'picture')} selected${together && sel.size > 1 ? ' (as one picture)' : ''}` : 'Tap pictures to select them';
     coverB.disabled = together ? !sel.size : sel.size !== 1; quickB.hidden = !quickTo; quickB.disabled = !sel.size; galB.disabled = !sel.size; addB.disabled = !sel.size; noneB.hidden = !sel.size;
     viewB.disabled = !list.length;
+    if (opts.pick) { const useB = h('button', { class: 'btn primary small', id: 'asset-use', disabled: sel.size !== 1, onclick: () => { const [p0] = sel; closeSheet(); opts.pick(p0); } }, icon('check'), 'Use this picture'); barEl.replaceChildren(h('b', { class: 'num' }, sel.size ? 'Picture chosen' : 'Tap the picture to use'), h('span', { class: 'grow' }), viewB, useB); return; }
     if (!barEl.querySelector('#asset-name, #asset-where')) barEl.replaceChildren(count, h('span', { class: 'grow' }), viewB, noneB, artB, allB, coverB, addB, galB, quickB);
   };
   const tile = pic => {
     const img = h('img', { alt: '' });
     const b = h('button', { class: 'btile asset', 'aria-pressed': String(sel.has(pic)), title: pic.name, 'aria-label': pic.name, onclick: () => {
+      if (opts.pick && !sel.has(pic)) { sel.clear(); grid.querySelectorAll('.btile').forEach(x => x.setAttribute('aria-pressed', 'false')); } // (one picture)
       if (sel.has(pic)) sel.delete(pic); else sel.add(pic); b.setAttribute('aria-pressed', String(sel.has(pic))); bar();
     } }, h('span', { class: 'bthumb' }, img, h('span', { class: 'acheck', 'aria-hidden': 'true' }, icon('check'))),
       h('span', { class: 'bcap' }, h('b', {}, pic.name.split('/').pop()), h('span', { class: 'num' }, pic.name.includes('/') ? pic.name.slice(0, pic.name.lastIndexOf('/')) : '')));
@@ -3921,7 +3932,9 @@ async function openAssets(gid, opts = {}) {
   bar(); more.observe(sentinel);
   try {
     const list0 = await gameFileList(g0, 'on'); pics = await rpyPictures(list0);
-    if (opts.only) { const by = new Map(pics.map(p => [p.name.toLowerCase(), p])); pics = opts.only.map(n => by.get(String(n).toLowerCase())).filter(Boolean); } if (sortBy === 'psize' || sortBy === 'similar') setSort(sortBy); else filter(); }
+    if (opts.only) { const by = new Map(pics.map(p => [p.name.toLowerCase(), p])); pics = opts.only.map(n => by.get(String(n).toLowerCase())).filter(Boolean); }
+    if (opts.query) { find.value = opts.query; if (opts.pick && !pics.some(p => p.name.toLowerCase().includes(opts.query.toLowerCase()))) find.value = ''; } // (the search is filled in, if it finds anything)
+    if (sortBy === 'psize' || sortBy === 'similar') setSort(sortBy); else filter(); }
   catch (e) { note.textContent = 'Could not read the game\'s pictures: ' + (e.message || e); }
 }
 

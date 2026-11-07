@@ -101,6 +101,27 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('Try it plays the scene again, showing the right picture, with no error', Array.isArray(d3) && d3[0] === true && d3[1] === true && newErr === 0, JSON.stringify([d3, newErr]));
   await p.click('.fixbar button:has-text("Keep the fix")');
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
+  // a missing picture no name fixes: search the game's pictures and choose the one it should be
+  await p.click('#game-play'); fr = await start();
+  await fr.evaluate(() => window.renpy_exec(['store._tkbjd4 = False', 'def _tkbj4(store=store, renpy=renpy):', '    if store._tkbjd4:', '        return', '    store._tkbjd4 = True', '    renpy.jump("tkb_err_test4")', 'config.periodic_callbacks.append(_tkbj4)', 'result = True'].join('\n')));
+  await p.waitForTimeout(3000);
+  await p.click('#gamebox .gameerr'); await p.waitForSelector('#gameerrors');
+  await p.click('#gameerrors .fixbtn:has-text("tkbface")'); await p.waitForSelector('#fix-search');
+  await p.click('#fix-search'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  ok('Search the game\'s pictures opens them to choose one', /Which picture should “tkbface 7” be/.test(await p.$eval('#sheetTitle', e => e.innerText)));
+  await p.fill('#sheetBody input.search', 'club'); await p.waitForTimeout(500);
+  await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#fix-picked');
+  const pv = await p.$eval('#fix-preview', e => e.innerText);
+  ok('the chosen picture is shown, and the fix makes the missing name show it', /image tkbface 7 = "images\/bg club\.jpg"/.test(pv), pv);
+  await p.click('#fix-try');
+  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  await p.waitForTimeout(3000);
+  fr = p.frames().find(f => f !== p.mainFrame());
+  const d4 = await fr.evaluate(() => window.renpy_exec('result = [renpy.showing("tf"), renpy.has_image("tkbface 7"), str(renpy.game.context().current)]')).catch(e => String(e));
+  const err4 = await p.evaluate(() => (GAME.errors || []).filter(e => /tkbface/.test(e.short)).length);
+  ok('Try it shows the chosen picture in the scene, with no error', Array.isArray(d4) && d4[0] === true && d4[1] === true && err4 === 0, JSON.stringify([d4, err4]));
+  await p.click('.fixbar button:has-text("Keep the fix")');
+  await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
   // Show the game's error screen (with the fix switched off, so the error happens again)
   await p.evaluate(async gid => { const g = await S.gal(gid); g.game.mods.forEach(m => m.on = false); await saveGallery(g); renderDetail(gid); }, gid); await p.waitForTimeout(800);
   await p.click('#game-errors button:has-text("Show")'); await p.waitForTimeout(800);
