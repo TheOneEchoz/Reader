@@ -543,6 +543,7 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .storerow{display:grid;gap:6px;padding:8px 10px;border-radius:12px;background:var(--surface2)}
 .storerow .bar{height:4px}
 .fixbar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px 10px 8px 14px;border-radius:14px;background:rgba(20,20,24,.92);color:#fff;z-index:3;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.codeedit{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:pre;overflow:auto;min-height:120px}
 .errlog{white-space:pre-wrap;font-size:12px;max-height:40vh;overflow:auto;background:var(--surface2);padding:10px;border-radius:10px;margin:0}
 .savegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .savecard{display:grid;gap:3px;text-align:left;padding:6px;border-radius:12px;background:var(--surface2);color:inherit;border:0;cursor:pointer}
@@ -2625,6 +2626,12 @@ const RPY_HOOKS = [
   '            pass',
   '        if getattr(store, "_tkb_errors", "skip") != "skip":',
   '            return False',
+  '        try:',
+  '            renpy.display.im.ignored_images |= renpy.display.im.images_to_ignore',
+  '            renpy.config.raise_image_exceptions = False',
+  '            renpy.config.raise_image_load_exceptions = False',
+  '        except Exception:',
+  '            pass',
   '        now = _tkb_time.time()',
   '        _tkb_errs[:] = [t for t in _tkb_errs if now - t < 5] + [now]',
   '        return len(_tkb_errs) <= 12', // (the same trouble over and over: the game's own screen after all)
@@ -2674,12 +2681,14 @@ const gameCmd = cmd => { try { GAME.frame && GAME.frame.contentWindow.postMessag
 function parseGameError(e) {
   const t = (e.full || e.short || ''), sh = e.short || t;
   let m, kind = null, name = null;
-  if ((m = sh.match(/NameError: (?:global )?name '([^']+)' is not defined/))) { kind = 'name'; name = m[1]; }
+  let tpl = null;
+  if ((m = sh.match(/DynamicImage '([^']+)': could not find image/)) && /\[[A-Za-z_][\w.]*\]/.test(m[1])) { kind = 'dynimg'; tpl = m[1]; name = m[1].match(/\[([A-Za-z_][\w.]*)\]/)[1]; }
+  else if ((m = sh.match(/NameError: (?:global )?name '([^']+)' is not defined/))) { kind = 'name'; name = m[1]; }
   else if ((m = sh.match(/could not find label '([^']+)'/i))) { kind = 'label'; name = m[1]; }
   else if ((m = sh.match(/Image '([^']+)' not found/i)) || (m = sh.match(/image '([^']+)' (?:is not defined|not found)/i))) { kind = 'image'; name = m[1]; }
   else if ((m = sh.match(/AttributeError: .* has no attribute '([^']+)'/))) { kind = 'attr'; name = m[1]; }
   const where = [...(sh.match(/File "([^"]+)", line (\d+)/g) || [])].map(x => x.match(/File "([^"]+)", line (\d+)/)).filter(x => !/^renpy\//.test(x[1]) && !/zzzz_tankobon/.test(x[1]))[0];
-  return { kind, name, file: where ? where[1].replace(/^\/+/, '').replace(/^game\//, 'game/') : null, line: where ? +where[2] : null };
+  return { kind, name, tpl, file: where ? where[1].replace(/^\/+/, '').replace(/^game\//, 'game/') : null, line: where ? +where[2] : null };
 }
 /* how alike two names are (0..1): typing distance, with a bonus for the same start */
 function nameLikeness(a, b) {
@@ -2713,16 +2722,31 @@ async function addFixBlock(gid, key, block, modId) { // the file of small fixes:
 }
 /* fix one error: the right name (from the running game's own names, closest spelling first), the line it is on, and the fix,
    which goes into the game's "Fixes" mod; "Try it" plays the scene again with the fix */
-async function fixSheet(gid, err) {
+async function fixSheet(gid, err, byHand) {
   const g = await S.gal(gid), P = parseGameError(err);
-  if (!P.kind) return toast('This kind of error cannot be fixed here yet. Copy the details to send them to the game\'s maker.', 4500);
+  if (!P.kind || byHand) return fixByHand(gid, err, P);
   const codes = {
     name: 'result = sorted(set(k for k, v in renpy.store.__dict__.items() if not k.startswith("_") and type(v).__name__ not in ("module", "function", "builtin_function_or_method", "type", "classobj", "instancemethod", "method")))',
     attr: 'result = sorted(set(k for k, v in renpy.store.__dict__.items() if not k.startswith("_")))',
     label: 'result = sorted(str(l) for l in renpy.get_all_labels() if not str(l).startswith("_"))',
     image: 'result = sorted(set(" ".join(t) if isinstance(t, tuple) else str(t) for t in renpy.list_images()))' };
+  codes.dynimg = codes.name;
   const all = (await gamePy(codes[P.kind])) || [];
-  const ranked = all.filter(x => x !== P.name).map(x => [x, nameLikeness(P.name, x)]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0.45).slice(0, 8).map(x => x[0]);
+  let works = new Set();
+  if (P.kind === 'dynimg') {
+    const r = await gamePy([`_tpl = ${JSON.stringify(P.tpl)}`, `_v = ${JSON.stringify(P.name)}`, '_out = []',
+      'for _k, _x in list(renpy.store.__dict__.items()):',
+      '    if _k.startswith("_") or callable(_x) or isinstance(_x, (dict, list, set, tuple)):',
+      '        continue',
+      '    try:',
+      '        if renpy.has_image(_tpl.replace("[" + _v + "]", str(_x)), exact=True):',
+      '            _out.append(_k)',
+      '    except Exception:',
+      '        pass',
+      'result = _out'].join('\n'));
+    works = new Set(r || []);
+  }
+  const ranked = all.filter(x => x !== P.name).map(x => [x, nameLikeness(P.name, x) + (works.has(x) ? 0.6 : 0)]).sort((a, b) => b[1] - a[1]).filter(x => x[1] > 0.45).slice(0, 8).map(x => x[0]);
   // the script line, when the game has its script (.rpy)
   const files = await gameFileList(g, 'on');
   const srcPath = P.file ? P.file.replace(/\.rpyc$/i, '.rpy') : null, src = srcPath ? files.find(f => f.p.toLowerCase() === srcPath.toLowerCase()) : null;
@@ -2730,13 +2754,20 @@ async function fixSheet(gid, err) {
   const word = new RegExp(`(?<![A-Za-z0-9_])${P.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_])`, 'g');
   let choice = ranked[0] || '', everywhere = false;
   const custom = h('input', { class: 'text', id: 'fix-custom', autocomplete: 'off', placeholder: 'Or type the right name', oninput: e => { choice = e.target.value.trim(); $$('input[name=fixpick]').forEach(r => r.checked = false); paint(); } });
-  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), h('code', {}, x))) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
+  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null)) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
   const preview = h('pre', { class: 'errlog', id: 'fix-preview' });
   const others = lines ? lines.reduce((n, l, i) => n + (i !== P.line - 1 ? (l.match(word) || []).length : 0), 0) : 0;
   const evB = others ? h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'checkbox', onchange: e => { everywhere = e.target.checked; paint(); } }), `Also the ${plural(others, 'other place')} in this file`) : null;
   const how = h('p', { class: 'hint', style: 'margin:0' });
+  // a picture made from a variable: the script files where that picture's name is written
+  const tplFiles = P.kind === 'dynimg' ? (await Promise.all(files.filter(f => /^game\/.*\.rpy$/i.test(f.p) && f.s < 8e6).map(async f => { const t = new TextDecoder().decode(await rpyRead(f.c, f.s)); return t.includes(P.tpl) ? { f, t } : null; }))).filter(Boolean) : [];
   const plan = () => {
     if (!choice) return null;
+    if (P.kind === 'dynimg') {
+      const fixed = P.tpl.split('[' + P.name + ']').join('[' + choice + ']');
+      if (tplFiles.length) return { files: tplFiles.map(x => ({ p: x.f.p, text: x.t.split(P.tpl).join(fixed) })), tplFiles, fixed, label: `“${P.tpl}” becomes “${fixed}” in ${tplFiles.map(x => x.f.p.slice(5)).join(', ')} (corrected copies, only while the Fixes mod is on).` };
+      return { block: ['init 1999 python:', `    def _tkbfix_${P.name}():`, `        setattr(renpy.store, "${P.name}", getattr(renpy.store, "${choice}", None))`, `    config.start_interact_callbacks.append(_tkbfix_${P.name})`].join('\n'), key: 'picture ' + P.tpl, label: `The picture “${P.tpl}” will use “${choice}” (the game's script is not included, so “${P.name}” is made to follow “${choice}”).` };
+    }
     if (P.kind === 'label') return { block: `label ${P.name}:\n    jump ${choice}`, key: 'label ' + P.name, label: `The scene “${P.name}” does not exist; going there will go to “${choice}”.` };
     if (P.kind === 'image') return { block: `image ${P.name} = ${JSON.stringify(choice)}`, key: 'image ' + P.name, label: `The picture “${P.name}” will show “${choice}”.` };
     if (lines && P.line) {
@@ -2748,7 +2779,10 @@ async function fixSheet(gid, err) {
   };
   const paint = () => {
     const pl = plan(); how.textContent = pl ? pl.label : 'Choose the right name.';
-    if (lines && P.line) {
+    if (pl && pl.tplFiles) {
+      preview.textContent = pl.tplFiles.map(x => { const ls = x.t.split('\n'); return ls.map((l, i) => l.includes(P.tpl) ? `${x.f.p.slice(5)}:${i + 1}\n  - ${l.trim()}\n  + ${l.split(P.tpl).join(pl.fixed).trim()}` : null).filter(Boolean).slice(0, 4).join('\n'); }).join('\n');
+    } else if (P.kind === 'dynimg') preview.textContent = pl ? pl.block : '';
+    else if (lines && P.line) {
       const a = Math.max(0, P.line - 3), z = Math.min(lines.length, P.line + 2), out = pl && pl.lines;
       preview.textContent = lines.slice(a, z).map((l, i) => { const n = a + i + 1; return n === P.line && out ? `${String(n).padStart(4)} - ${l}\n${String(n).padStart(4)} + ${out[n - 1]}` : `${String(n).padStart(4)}   ${l}`; }).join('\n');
     } else preview.textContent = pl && pl.block ? pl.block : '';
@@ -2759,30 +2793,64 @@ async function fixSheet(gid, err) {
   const into = h('select', { class: 'text', id: 'fix-into', 'aria-label': 'Put the fix in', onchange: () => { newName.hidden = into.value !== 'new'; if (!newName.hidden) newName.focus(); } },
     fixMods.length ? fixMods.map(m => h('option', { value: m.id }, `The mod “${m.name}”`)) : h('option', { value: '' }, 'The mod “Fixes” (made now)'), h('option', { value: 'new' }, 'A new mod…'));
   const modArg = () => into.value === 'new' ? 'new:' + (newName.value.trim() || 'More fixes') : into.value || null;
-  const apply = async () => { const pl = plan(); if (!pl) return null; if (pl.file) { const r = await setFixFile(gid, pl.file, pl.text, modArg()); return { path: pl.file, before: r.before, modId: r.modId }; } return addFixBlock(gid, pl.key, pl.block, modArg()); };
+  const apply = async () => { const pl = plan(); if (!pl) return null;
+    if (pl.files) { let first = null; for (const f of pl.files) { const r = await setFixFile(gid, f.p, f.text, modArg()); first = first || { path: f.p, before: r.before, modId: r.modId }; } return first; }
+    if (pl.file) { const r = await setFixFile(gid, pl.file, pl.text, modArg()); return { path: pl.file, before: r.before, modId: r.modId }; } return addFixBlock(gid, pl.key, pl.block, modArg()); };
   const tryB = h('button', { class: 'btn primary', id: 'fix-try', onclick: async () => {
     tryB.disabled = true;
     // the scene to play again: the label the broken line is in
-    const scene = P.file && P.line ? await gamePy(`_f = ${JSON.stringify(P.file.split('/').pop().replace(/\.rpyc$/i, ''))}\nresult = max([(n.linenumber, str(k)) for k, n in renpy.game.script.namemap.items() if isinstance(k, str) and not k.startswith("_") and n.filename.replace("\\\\", "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P.line}] or [(0, None)])[1]`) : null;
+    const scene = P.file && P.line ? await gamePy(`_f = ${JSON.stringify(P.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P.line}] or [(0, None)])[1]`) : null;
     const done = await apply(); closeSheet();
     await gameTrial(gid, done, scene);
   } }, icon('play'), 'Try it');
   const saveB = h('button', { class: 'btn', id: 'fix-save', onclick: async () => { await apply(); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
   openSheet(P.kind === 'label' ? 'Fix a missing scene' : P.kind === 'image' ? 'Fix a missing picture' : 'Fix a misspelt name', h('div', { class: 'stack', id: 'fix-sheet' },
-    h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
+    h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'dynimg' ? `The picture “${P.tpl}” is named after the variable “${P.name}”, and with its value there is no such picture. Variables that look like it (✓: with its value, the picture exists):` : P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
     picks, custom, evB, preview, how,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
     h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, saveB),
+    h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: () => fixSheet(gid, err, true) }, icon('edit'), 'Edit the line yourself instead'),
     h('p', { class: 'hint' }, 'All fixes go into the same mod (“Fixes”), unless you choose another. It is on the game\'s page with the other mods: switch it off any time to play the game as it was.')));
   paint();
+}
+/* any error: edit the lines around the broken one (a corrected copy of that script file), or write a fix by hand */
+async function fixByHand(gid, err, P) {
+  const g = await S.gal(gid), files = await gameFileList(g, 'on');
+  const srcPath = P.file ? P.file.replace(/\.rpyc$/i, '.rpy') : null, src = srcPath ? files.find(f => f.p.toLowerCase() === srcPath.toLowerCase()) : null;
+  const text = src ? new TextDecoder().decode(await rpyRead(src.c, src.s)) : null, lines = text ? text.split('\n') : null;
+  const a = lines && P.line ? Math.max(0, P.line - 6) : 0, z = lines && P.line ? Math.min(lines.length, P.line + 5) : 0;
+  const ed = h('textarea', { class: 'text codeedit', id: 'fix-edit', spellcheck: 'false', rows: lines ? String(Math.min(14, z - a + 1)) : '8' },
+    lines ? lines.slice(a, z).join('\n') : '# Ren\'Py code that runs when the game starts, for example:\n# define name_with_a_typo = right_name\n# label missing_scene:\n#     jump existing_scene\n');
+  const fixMods = (g.game.mods || []).filter(m => m.fixes);
+  const newName = h('input', { class: 'text', id: 'fix-newmod', hidden: true, autocomplete: 'off', placeholder: 'Name of the new mod', value: 'More fixes' });
+  const into = h('select', { class: 'text', id: 'fix-into', 'aria-label': 'Put the fix in', onchange: () => { newName.hidden = into.value !== 'new'; } }, fixMods.length ? fixMods.map(m => h('option', { value: m.id }, `The mod “${m.name}”`)) : h('option', { value: '' }, 'The mod “Fixes” (made now)'), h('option', { value: 'new' }, 'A new mod…'));
+  const apply = async () => {
+    const mid = into.value === 'new' ? 'new:' + (newName.value.trim() || 'More fixes') : into.value || null;
+    if (lines) { const out = [...lines.slice(0, a), ...ed.value.split('\n'), ...lines.slice(z)].join('\n'); const r = await setFixFile(gid, src.p, out, mid); return { path: src.p, before: r.before, modId: r.modId }; }
+    return addFixBlock(gid, 'by hand ' + Date.now().toString(36), ed.value, mid);
+  };
+  const tryB = h('button', { class: 'btn primary', id: 'fix-try', onclick: async () => {
+    tryB.disabled = true;
+    const scene = P.file && P.line ? await gamePy(`_f = ${JSON.stringify(P.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P.line}] or [(0, None)])[1]`) : null;
+    const done = await apply(); closeSheet(); await gameTrial(gid, done, scene);
+  } }, icon('play'), 'Try it');
+  openSheet('Fix this error', h('div', { class: 'stack', id: 'fix-sheet' },
+    h('pre', { class: 'errlog' }, (err.short || '').trim().split('\n').slice(-4).join('\n')),
+    lines ? h('p', { class: 'hint', style: 'margin:0' }, `Lines ${a + 1} to ${z} of ${src.p.slice(5)}; the error is on line ${P.line}. Change what is wrong, then try it. A corrected copy of the file goes into the mod; the game's own file is not changed.`)
+      : h('p', { class: 'hint', style: 'margin:0' }, P.file ? `The error is in ${P.file.replace(/^game\//, '')}${P.line ? `, line ${P.line}` : ''}, but the game does not include that script (only its compiled version), so it cannot be edited. You can write a fix in Ren'Py's language instead; it runs when the game starts.` : 'Write a fix in Ren\'Py\'s language; it runs when the game starts.'),
+    ed,
+    h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, h('button', { class: 'btn', onclick: async () => { await apply(); closeSheet(); toast('Fix saved. It works from the next start.', 3000); } }, 'Save the fix'),
+      h('button', { class: 'btn ghost', onclick: async () => { try { await navigator.clipboard.writeText(err.full || err.short); toast('Copied.'); } catch (e) { } } }, 'Copy the error'))));
+  setTimeout(() => { if (lines && P.line) { const pos = lines.slice(a, P.line - 1).join('\n').length + (P.line - 1 > a ? 1 : 0); ed.focus(); ed.setSelectionRange(pos, pos + (lines[P.line - 1] || '').length); } }, 80);
 }
 /* trying a fix: the game starts again with it, goes back to where it was and plays the scene again; then Keep or Undo */
 async function gameTrial(gid, done, scene) {
   await gameAutosave();
   closeGame();
+  GAME.nextScene = scene || null;
   GAME.afterReady = async () => {
     for (let k = 0; k < 40; k++) { const r = await gamePy('result = renpy.get_screen("main_menu") is None and renpy.game.context().current is not None', 3000); if (r) break; await new Promise(z => setTimeout(z, 500)); }
-    if (scene) gameCmd(['jump', scene]);
     const bar = h('div', { class: 'fixbar', role: 'status' }, h('span', {}, scene ? 'Playing the scene again with the fix.' : 'The game is running with the fix.'),
       h('button', { class: 'btn small primary', onclick: () => { bar.remove(); toast('The fix is kept in the Fixes mod.'); } }, 'Keep the fix'),
       h('button', { class: 'btn small', onclick: async () => { bar.remove(); if (done) await setFixFile(gid, done.path, done.before, done.modId); await gameAutosave(); closeGame(); render('game', { id: gid, cont: 1 }); toast('The fix was undone.'); } }, 'Undo'));
@@ -2790,12 +2858,14 @@ async function gameTrial(gid, done, scene) {
   };
   CUR.params = { id: gid, cont: 1 }; render('game', { id: gid, cont: 1 });
 }
+// the same mistake reported from many lines (a picture that stays on screen): one entry
+const errKey = e => { const t = (e.short || e.full || '').trim(), m = t.match(/^[A-Za-z_.]*(?:Error|Exception)\b.*$/m); return m ? m[0] : t.split('\n').filter(Boolean).slice(-1)[0] || t; };
 function gameErrors(list, title) {
   const text = (list || []).map(e => `${new Date(e.t).toLocaleString()}\n${e.full || e.short}`).join('\n\n----\n\n');
   openSheet('Errors in the game', h('div', { class: 'stack', id: 'gameerrors' },
     h('p', { class: 'hint' }, `These are mistakes in “${title}” itself (they would show on a computer too). The app skips them, like the Ignore button on the game's error screen. If the game gets stuck afterwards, use Saves to go back to a save. You can send this to the game's maker.`),
-    ...[...new Map((list || []).map(e => [e.short.trim(), e])).values()].slice(-6).map(e => { const P = parseGameError(e); return h('div', { class: 'stack', style: 'gap:6px' }, h('pre', { class: 'errlog' }, e.short.trim()),
-      P.kind && GAME.g && GAME.loaded ? h('div', {}, h('button', { class: 'btn small primary fixbtn', onclick: () => fixSheet(GAME.g.id, e) }, icon('tools'), P.kind === 'label' ? 'Fix this missing scene' : P.kind === 'image' ? 'Fix this missing picture' : `Fix “${P.name}”`)) : null); }),
+    ...[...new Map((list || []).map(e => [errKey(e), e])).values()].slice(-6).map(e => { const P = parseGameError(e); return h('div', { class: 'stack', style: 'gap:6px' }, h('pre', { class: 'errlog' }, e.short.trim()),
+      GAME.g && GAME.loaded && isRenpy(GAME.g) ? h('div', {}, h('button', { class: 'btn small primary fixbtn', onclick: () => fixSheet(GAME.g.id, e) }, icon('tools'), P.kind === 'label' ? 'Fix this missing scene' : P.kind === 'image' ? 'Fix this missing picture' : P.kind === 'dynimg' ? `Fix “${P.tpl}”` : P.kind ? `Fix “${P.name}”` : 'Fix this error')) : h('p', { class: 'hint', style: 'margin:0' }, 'Fixing is done while the game is open.')); }),
     (list || []).length ? null : h('p', { class: 'hint' }, 'No errors.'),
     h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: async () => { try { await navigator.clipboard.writeText(text); toast('Copied.'); } catch (e) { toast('Could not copy.'); } } }, 'Copy the full details'))));
 }
@@ -2803,7 +2873,7 @@ function gameErrors(list, title) {
 async function rpySaveCards(idx) {
   const out = [];
   for (const [p, s] of Object.entries(idx || {})) {
-    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/(tokens|sync)\//.test(p)) continue;
+    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/(tokens|sync)\//.test(p) || /\/_[^/]*$/.test(p)) continue;
     const c = { p, name: p.split('/').pop(), t: s.t || 0, shot: null, info: '' };
     try {
       const z = await JSZip.loadAsync(await rpyRead(s.c, s.s));
@@ -2839,7 +2909,7 @@ async function savePicker(gid) {
 async function newestSlot(idx) {
   let best = null, bt = -1;
   for (const [p, s] of Object.entries(idx)) {
-    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/tokens\//.test(p)) continue;
+    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/tokens\//.test(p) || /\/_[^/]*$/.test(p)) continue; // (not Ren'Py's own error and reload saves)
     let t = s.t || 0;
     try { const z = await JSZip.loadAsync(await rpyRead(s.c, s.s)), j = z.file('json'); if (j) { const o = JSON.parse(await j.async('string')); if (o._ctime) t = o._ctime * 1000; } } catch (e) { }
     if (t > bt) { bt = t; best = p.split('/').pop(); }
@@ -2931,6 +3001,7 @@ async function openGame(id, cont) {
   if (!isGame(g)) return go('library', {}, true);
   if (!EXP) { toast('Games can be played in the experimental version of the app for now.', 3500); return back('detail', { id }); }
   if (g.game.engine === 'html') return openHtmlGame(id, g, cont);
+  GAME.errors = []; GAME.errToastAt = 0;
   const v = g.game.rt;
   if (!(await RPY.has(v)) && !(await rpyAskDownload(v, `To play “${g.title}”, the app needs Ren'Py ${v}.`))) return back('detail', { id });
   if (CUR.view !== 'game' || CUR.params.id !== id) return;
@@ -3024,6 +3095,8 @@ async function openGame(id, cont) {
         GAME.lazy = lazy ? lazy.remote.length : 0;
         // Continue: Ren'Py loads this save itself when it starts (its own auto_load setting)
         const more = [{ p: 'game/zzzz_tankobon_hooks.rpy', text: RPY_HOOKS }, { p: 'game/zzzz_tankobon_errors.rpy', text: `init 1998 python:\n    store._tkb_errors = ${JSON.stringify(g.game.errors === 'show' ? 'show' : 'skip')}\n` }];
+        // trying a fix: once the save is loaded, the scene plays again (Ren'Py runs this itself, right after loading)
+        if (GAME.nextScene) { more.push({ p: 'game/zzzz_tankobon_trial.rpy', text: `init 1999 python:\n    def _tkb_trial_after():\n        store._tkb_cmd = ("jump", ${JSON.stringify(GAME.nextScene)})\n    config.after_load_callbacks.append(_tkb_trial_after)\n` }); GAME.nextScene = null; }
         if (cont) { const slot = await newestSlot(saves || {}); if (slot) more.push({ p: 'game/zzzz_tankobon_continue.rpy', text: `init 1999 python:\n    config.auto_load = ${JSON.stringify(slot)}\n` }); }
         win.postMessage({ t: 'boot', files, game, saves: sv, extract, more, lazy: lazy && { parts: lazy.parts, remote: lazy.remote } }, '*', [...Object.values(files), ...sv.map(s => s.buf)]);
         rt = null; // handed over
@@ -3054,7 +3127,7 @@ async function openGame(id, cont) {
       } else if (m.t === 'gameerror') {
         // an error in the game itself (skipped, unless set to show Ren'Py's screen)
         GAME.errors = GAME.errors || []; GAME.errors.push({ short: String(m.short || ''), full: String(m.full || ''), t: Date.now() }); if (GAME.errors.length > 30) GAME.errors.shift();
-        errB.hidden = false; errB.dataset.n = String(new Set(GAME.errors.map(e => e.short)).size);
+        errB.hidden = false; errB.dataset.n = String(new Set(GAME.errors.map(errKey)).size);
         if (g.game.errors !== 'show' && Date.now() - (GAME.errToastAt || 0) > 6000) { GAME.errToastAt = Date.now(); undoToast('The game had an error and it was skipped.', () => gameErrors(GAME.errors, g.title), null, 6000, 'Details'); }
       } else if (m.t === 'autosaved') {
         if (GAME.onAutosaved) GAME.onAutosaved(m.ok);

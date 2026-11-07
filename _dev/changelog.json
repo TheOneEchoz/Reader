@@ -1,5 +1,16 @@
 [
  {
+  "v": 119,
+  "name": "1.23.0-beta.21",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing game errors: every error now has a Fix button. Pictures named after a variable with a typo (like “mox4dawn [dawb]” that should use dawn) are recognised: the variables that give a picture the game really has are listed first and marked ✓. Other kinds of error open the lines around the broken one to edit by hand (or, when the game has no script files, a place to write a fix).",
+   "The same error repeated on many lines (a picture that stays on screen) is listed once. Skipped picture errors stop repeating, as with the Ignore button.",
+   "Try it now reliably goes back to the scene with the error after the game restarts. Continue and the save list no longer pick Ren'Py's own error saves."
+  ]
+ },
+ {
   "v": 118,
   "name": "1.23.0-beta.20",
   "date": "2026-11-08",

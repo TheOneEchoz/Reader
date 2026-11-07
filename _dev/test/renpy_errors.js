@@ -59,6 +59,47 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('the fix is in the game\'s Fixes mod', mods && mods.name === 'Fixes' && mods.on && JSON.stringify(mods.files) === '["game/zz_errtest.rpy"]', JSON.stringify(mods));
 
   await p.screenshot({ path: '/tmp/claude-0/shots/err-skipped.png' });
+  // another kind of error (a TypeError): Fix this error opens the lines around it, to edit by hand
+  fr = p.frames().find(f => f !== p.mainFrame());
+  await fr.evaluate(() => window.renpy_exec(['store._tkbjd2 = False', 'def _tkbj2(store=store, renpy=renpy):', '    if store._tkbjd2:', '        return', '    store._tkbjd2 = True', '    renpy.jump("tkb_err_test2")', 'config.periodic_callbacks.append(_tkbj2)', 'result = True'].join('\n')));
+  await p.waitForTimeout(2500);
+  await p.click('#gamebox .gameerr'); await p.waitForSelector('#gameerrors');
+  const fixBtns = await p.$$eval('#gameerrors .fixbtn', a => a.map(e => e.innerText.trim()));
+  ok('every error has a Fix button (also kinds it cannot fix by itself)', fixBtns.includes('Fix this error'), JSON.stringify(fixBtns));
+  await p.click('#gameerrors .fixbtn:has-text("Fix this error")'); await p.waitForSelector('#fix-edit'); await p.waitForTimeout(400);
+  const sel = await p.$eval('#fix-edit', e => e.value.slice(e.selectionStart, e.selectionEnd));
+  ok('it shows the lines around it, with the broken one selected', /"points: " \+ 5/.test(sel), sel);
+  await p.$eval('#fix-edit', e => { e.value = e.value.replace('"points: " + 5', '"points: " + str(5)'); });
+  await p.click('#fix-try');
+  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  await p.waitForTimeout(2500);
+  fr = p.frames().find(f => f !== p.mainFrame());
+  const after2 = await fr.evaluate(() => window.renpy_exec('result = [getattr(store, "tkb_label2", None), getattr(store, "tkb_after2", None)]')).catch(e => String(e));
+  ok('the edited line works when the scene plays again', Array.isArray(after2) && after2[0] === 'points: 5', JSON.stringify(after2));
+  await p.click('.fixbar button:has-text("Keep the fix")');
+  const files2 = await p.evaluate(async gid => { const g = await S.gal(gid); return g.game.mods.filter(m => m.fixes).map(m => m.name + ':' + m.files); }, gid);
+  ok('both fixes are in the same mod', JSON.stringify(files2) === '["Fixes:1"]', JSON.stringify(files2));
+  await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
+  // a picture named after a variable with a typo ("tkbpic [tkb_dawb]" should use tkb_dawn): the variable that gives a real picture comes first
+  await p.click('#game-play'); fr = await start();
+  await fr.evaluate(() => window.renpy_exec(['store._tkbjd3 = False', 'def _tkbj3(store=store, renpy=renpy):', '    if store._tkbjd3:', '        return', '    store._tkbjd3 = True', '    renpy.jump("tkb_err_test3")', 'config.periodic_callbacks.append(_tkbj3)', 'result = True'].join('\n')));
+  await p.waitForTimeout(3000);
+  await p.click('#gamebox .gameerr'); await p.waitForSelector('#gameerrors');
+  const entries = await p.$$eval('#gameerrors .fixbtn', a => a.map(e => e.innerText.trim()));
+  ok('the repeated picture error is listed once, with its Fix button', entries.filter(t => /tkbpic/.test(t)).length === 1, JSON.stringify(entries));
+  await p.click('#gameerrors .fixbtn:has-text("tkbpic")'); await p.waitForSelector('#fix-picks');
+  const dp = await p.$$eval('#fix-picks label', a => a.map(e => e.innerText.replace(/\s+/g, ' ').trim()));
+  const dprev = await p.$eval('#fix-preview', e => e.innerText);
+  ok('the variable that gives a picture the game has comes first, marked', /^tkb_dawn ✓/.test(dp[0] || ''), JSON.stringify(dp));
+  ok('the script lines that name the picture are shown, before and after', /- .*tkbpic \[tkb_dawb\]/.test(dprev) && /\+ .*tkbpic \[tkb_dawn\]/.test(dprev), dprev);
+  await p.click('#fix-try');
+  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  await p.waitForTimeout(3000);
+  fr = p.frames().find(f => f !== p.mainFrame());
+  const d3 = await fr.evaluate(() => window.renpy_exec('result = [renpy.showing("tp"), renpy.get_screen("main_menu") is None, str(renpy.game.context().current)]')).catch(e => String(e));
+  const newErr = await p.evaluate(() => (GAME.errors || []).filter(e => /tkbpic/.test(e.short)).length);
+  ok('Try it plays the scene again, showing the right picture, with no error', Array.isArray(d3) && d3[0] === true && d3[1] === true && newErr === 0, JSON.stringify([d3, newErr]));
+  await p.click('.fixbar button:has-text("Keep the fix")');
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
   // Show the game's error screen (with the fix switched off, so the error happens again)
   await p.evaluate(async gid => { const g = await S.gal(gid); g.game.mods.forEach(m => m.on = false); await saveGallery(g); renderDetail(gid); }, gid); await p.waitForTimeout(800);

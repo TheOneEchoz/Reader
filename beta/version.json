@@ -1,6 +1,6 @@
 {
- "version": 118,
- "name": "1.23.0-beta.20",
+ "version": 119,
+ "name": "1.23.0-beta.21",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,10 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: fixing a game's own mistakes. When an error is skipped, Details (or the new error button in the player's corner) has a Fix button. For a misspelt name it lists the names the game really has, closest spelling first, and shows the broken line before and after; missing scenes and pictures are offered the closest ones too.",
-  "Try it starts the game again with the fix, goes back to where you were and plays that scene again; then Keep the fix or Undo. Fixes go into one mod, “Fixes” (or another one you choose or make), so the game's own files are never changed and the mod can be switched off any time. When the game includes its script, the fix is a corrected copy of that script file.",
-  "Games kept in a gallery's folders show in Edit with the pictures, and move like them: Select, then Move into another folder or to another gallery.",
-  "Encrypted copy: one game (with its saves and mods) or one gallery as an encrypted file, to move it to another device or account; restore it from Settings → Backup.",
-  "Settings → Storage → See what takes space: every gallery, game and downloaded Ren'Py, biggest first, with what each is made of (pages, sounds, files, mods, saves); open or delete from there."
+  "Fixing game errors: every error now has a Fix button. Pictures named after a variable with a typo (like “mox4dawn [dawb]” that should use dawn) are recognised: the variables that give a picture the game really has are listed first and marked ✓. Other kinds of error open the lines around the broken one to edit by hand (or, when the game has no script files, a place to write a fix).",
+  "The same error repeated on many lines (a picture that stays on screen) is listed once. Skipped picture errors stop repeating, as with the Ignore button.",
+  "Try it now reliably goes back to the scene with the error after the game restarts. Continue and the save list no longer pick Ren'Py's own error saves."
  ]
 }
