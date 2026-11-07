@@ -1,6 +1,6 @@
 {
- "version": 100,
- "name": "1.23.0-beta.2",
+ "version": 101,
+ "name": "1.23.0-beta.3",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,9 +22,9 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: drop a game's folder (or its ZIP) on the window, or use Add → “Add a Ren'Py game”, and it becomes a game in your library. Only the game's own files are copied, encrypted; its launchers are left out.",
-  "The app finds out which Ren'Py made the game and which version plays it. That part of Ren'Py (about 20–40 MB) is downloaded once from the Tankōbon website, only after asking you, and kept encrypted with your library.",
-  "Games play inside the app, sealed off: they cannot reach the internet or store anything of their own, and the game's files are only decrypted into memory while you play. Saves are kept encrypted with the game.",
-  "Games stay on the device they were added on: they are not sent to your other devices yet."
+  "Ren'Py games: sound works. Ren'Py's web version could not play music and sounds kept in the game's .rpa archives (where most games keep them); they are now handed to Ren'Py as plain files, without using extra memory.",
+  "Enter works in the game's text boxes (for example when a game asks for your name).",
+  "A game's cover is now a picture of its main menu, taken by itself the first time you play. Or tap Cover on the game's page to pick any picture from the game, including those inside its archives.",
+  "Games can go into a gallery's folders: tap Move on the game's page, drop a game while a gallery or folder is open, or use Add → “Add a Ren'Py game” inside a gallery. If its folder is deleted, the game goes back to the library."
  ]
 }
