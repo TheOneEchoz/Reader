@@ -1,0 +1,3 @@
+run 8
+status success
+-rwxr-xr-x 1 runneradmin 197121 112346003 Nov  7 18:23 Tankobon-Setup.exe
