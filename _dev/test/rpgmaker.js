@@ -53,6 +53,22 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   for (let k = 0; k < 40; k++) { await p.waitForTimeout(1000); scene = await fr2.evaluate(() => window.SceneManager && SceneManager._scene && SceneManager._scene.constructor.name).catch(() => ''); if (scene === 'Scene_Title') break; }
   const has = await fr2.evaluate(() => [DataManager.isAnySavefileExists(), DataManager.loadSavefileInfo(1) && DataManager.loadSavefileInfo(1).title]).catch(e => String(e));
   ok('playing again, the save is there (Continue)', Array.isArray(has) && has[0] === true, JSON.stringify(has));
+  // leaving from the map saves to the app's own slot; Continue starts there
+  await fr2.evaluate(() => SceneManager._scene.commandNewGame()); for (let k = 0; k < 20; k++) { await p.waitForTimeout(800); if (await fr2.evaluate(() => SceneManager._scene.constructor.name) === 'Scene_Map') break; }
+  await p.waitForTimeout(1500);
+  const pos0 = await fr2.evaluate(() => { $gamePlayer.locate(3, 4); $gameVariables.setValue(7, 1234); return [$gameMap.mapId(), $gamePlayer.x, $gamePlayer.y]; });
+  await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
+  const sv2 = await p.evaluate(async () => { const g = (await S.gals()).find(x => x.game); return Object.keys((await rpyGetJSON(g.game.sv)) || {}); });
+  const toastT = await p.evaluate(() => [...document.querySelectorAll('.toast, #toast')].map(t => t.innerText).join(' | '));
+  ok('leaving from the map saves the game in the app\'s own slot', sv2.includes('ls/RPG%20File21') && /Saved/.test(toastT), JSON.stringify(sv2) + ' ' + toastT);
+  ok('Continue appears on the game\'s page', !!(await p.$('#game-continue')));
+  await p.click('#game-continue');
+  for (let k = 0; k < 60 && !(await p.evaluate(() => GAME.loaded)); k++) await p.waitForTimeout(500);
+  const fr3 = p.frames().find(f => f !== p.mainFrame()); let pos1 = null;
+  for (let k = 0; k < 40; k++) { await p.waitForTimeout(800); pos1 = await fr3.evaluate(() => SceneManager._scene && SceneManager._scene.constructor.name === 'Scene_Map' && $gamePlayer ? [$gameMap.mapId(), $gamePlayer.x, $gamePlayer.y, $gameVariables.value(7)] : null).catch(() => null); if (pos1) break; }
+  ok('Continue starts where you left (not at the title)', pos1 && pos1[0] === pos0[0] && pos1[1] === 3 && pos1[2] === 4 && pos1[3] === 1234, JSON.stringify([pos0, pos1]));
+  const slots = await fr3.evaluate(() => { const out = []; for (let i = 1; i <= DataManager.maxSavefiles(); i++) if (DataManager.loadSavefileInfo(i)) out.push(i); return out; });
+  ok('the game\'s own save slots are untouched (only the one you made)', JSON.stringify(slots) === '[1]', JSON.stringify(slots));
   ok('nothing was fetched from the internet', net.length === 0, net.slice(0, 3).join(', '));
   const real = errs.filter(e => !/serviceWorker/.test(e) && !/require is not a function/.test(e)); // (that test game has a plugin made only for the Windows player)
   ok('no errors', real.length === 0, real.slice(0, 3).join(' | '));

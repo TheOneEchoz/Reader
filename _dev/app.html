@@ -2222,10 +2222,11 @@ async function renderHtmlGameDetail(v, g) {
       h('div', {}, h('h1', {}, g.title), h('div', { class: 'sub num' }, `${gameKind(g)} · ${mb(G.size)}`), h('div', { class: 'sub' }, `Made with ${HTML_KIND[G.kind] || 'HTML'}. Plays in the app; nothing to download.`),
         h('div', { class: 'sub' }, g.lastReadAt ? ago(g.lastReadAt).replace('Read', 'Played') : 'Not played yet'))),
     h('div', { class: 'stack' },
-      EXP ? h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'game-play', style: 'flex:1', onclick: () => go('game', { id }) }, icon('play'), 'Play'))
+      EXP ? h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'game-play', style: 'flex:1', onclick: () => go('game', { id }) }, icon('play'), 'Play'),
+        nSaves && G.kind !== 'html' ? h('button', { class: 'btn', id: 'game-continue', onclick: () => go('game', { id, cont: 1 }) }, icon('play'), 'Continue') : null)
         : h('div', { class: 'banner' }, 'Games can be played in the experimental version of the app for now.'),
       h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'label' }, 'Saves'),
-        h('p', { class: 'hint', style: 'margin:0' }, (nSaves ? `${plural(nSaves, 'saved game')} · ${mb(svSize)}, kept encrypted with the game.` : 'No saved games yet. Saves you make in the game are kept here, encrypted.') + (Sync.st.enabled && !Sync.st.noGameSaves ? ' With sync on, they are shared with your other devices that have this game too.' : '')),
+        h('p', { class: 'hint', style: 'margin:0' }, (nSaves ? `${plural(nSaves, 'saved game')} · ${mb(svSize)}, kept encrypted with the game.` : 'No saved games yet. Saves you make in the game are kept here, encrypted.') + (G.kind !== 'html' ? ' Leaving the game (×, the lock, or switching away from the app) saves it in a slot of the app\'s own, while you are walking around; Continue starts from your newest save.' : '') + (Sync.st.enabled && !Sync.st.noGameSaves ? ' With sync on, they are shared with your other devices that have this game too.' : '')),
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, G.kind !== 'html' ? importB : null,
           Object.keys(saves).length ? h('button', { class: 'btn ghost small', onclick: async () => {
             if (!(await askYes('Delete all saves?', `Every saved game and setting of “${g.title}” will be deleted. This cannot be undone.`, 'Delete saves'))) return;
@@ -2680,7 +2681,7 @@ async function openGame(id, cont) {
   const g = await S.gal(id);
   if (!isGame(g)) return go('library', {}, true);
   if (!EXP) { toast('Games can be played in the experimental version of the app for now.', 3500); return back('detail', { id }); }
-  if (g.game.engine === 'html') return openHtmlGame(id, g);
+  if (g.game.engine === 'html') return openHtmlGame(id, g, cont);
   const v = g.game.rt;
   if (!(await RPY.has(v)) && !(await rpyAskDownload(v, `To play “${g.title}”, the app needs Ren'Py ${v}.`))) return back('detail', { id });
   if (CUR.view !== 'game' || CUR.params.id !== id) return;
@@ -2817,14 +2818,22 @@ async function openGame(id, cont) {
    Sealed like Ren'Py: the page runs in a frame that cannot reach the network or this app's data. Every file it asks for
    (scripts, data, pictures, sounds) is answered from the encrypted copy; what it keeps in the browser (its saves) is kept
    here, encrypted with the game. */
-async function openHtmlGame(id, g) {
+async function openHtmlGame(id, g, cont) {
   if (CUR.view !== 'game' || CUR.params.id !== id) return;
   closeGame();
   const lbl = h('div', { class: 'num' }, 'Opening…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
   const load = h('div', { class: 'gameload', role: 'status' }, h('div', { class: 'gamecover' }, thumbImg(coverId(g), '')), h('b', {}, g.title), h('div', { class: 'progress' }, lbl, bar));
   const frame = h('iframe', { title: g.title, sandbox: 'allow-scripts', allow: 'autoplay; gamepad; fullscreen', referrerpolicy: 'no-referrer' });
-  const exit = h('button', { class: 'gameexit', 'aria-label': 'Leave the game', title: 'Leave', onclick: async () => { exit.disabled = true; await new Promise(r => setTimeout(r, 500)); await gameSaveChain; back('detail', { id }); } }, icon('x'));
-  const lockB = h('button', { class: 'gameexit gamelock', 'aria-label': 'Lock the app', title: 'Lock', onclick: async () => { lockB.disabled = true; await gameSaveChain; lockNow(); } }, icon('lock'));
+  const rmKind = ['rmmv', 'rmmz'].includes(g.game.kind);
+  // RPG Maker: leaving, locking or switching away saves to the app's own slot first (when the game is on its map)
+  const rmSave = () => new Promise(res => {
+    if (!rmKind || !GAME.loaded || GAME.frame !== frame) return res(false);
+    const t = setTimeout(() => { GAME.onRmSaved = null; res(false); }, 4000);
+    GAME.onRmSaved = ok => { clearTimeout(t); GAME.onRmSaved = null; setTimeout(() => res(ok), 50); };
+    frame.contentWindow.postMessage({ t: 'rmsave' }, '*');
+  });
+  const exit = h('button', { class: 'gameexit', 'aria-label': rmKind ? 'Leave the game (it is saved first)' : 'Leave the game', title: 'Leave', onclick: async () => { exit.disabled = true; const ok = await rmSave(); await new Promise(r => setTimeout(r, 400)); await gameSaveChain; if (ok) toast('Saved. Continue on the game\'s page starts here.'); back('detail', { id }); } }, icon('x'));
+  const lockB = h('button', { class: 'gameexit gamelock', 'aria-label': 'Lock the app', title: 'Lock', onclick: async () => { lockB.disabled = true; await rmSave(); await gameSaveChain; lockNow(); } }, icon('lock'));
   const box = h('div', { id: 'gamebox' }, load, exit, lockB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
@@ -2847,7 +2856,7 @@ async function openHtmlGame(id, g) {
       if (m.t === 'hello') {
         const store = {};
         for (const [p, f] of Object.entries(saves || {})) { if (!/^(ls|lf)\//.test(p)) continue; try { store[p] = new TextDecoder().decode(await rpyRead(f.c, f.s)); } catch (x) { } }
-        win.postMessage({ t: 'boot', files: [...byPath.entries()].map(([k, f]) => [k, f.s]), store, base }, '*');
+        win.postMessage({ t: 'boot', files: [...byPath.entries()].map(([k, f]) => [k, f.s]), store, base, cont: !!cont }, '*');
       } else if (m.t === 'file') {
         const f = byPath.get(String(m.p).toLowerCase());
         if (!f) return win.postMessage({ q: m.q, buf: null }, '*');
@@ -2856,6 +2865,8 @@ async function openHtmlGame(id, g) {
         lbl.textContent = `Opening the game · ${m.done} of ${m.total}`; bar.firstChild.style.width = (100 * m.done / Math.max(1, m.total)) + '%';
       } else if (m.t === 'loaded') {
         GAME.loaded = true; load.hidden = true; frame.focus();
+      } else if (m.t === 'rmsaved') {
+        if (GAME.onRmSaved) GAME.onRmSaved(m.ok);
       } else if (m.t === 'store') {
         persistSaves(id, Object.entries(m.store || {}).map(([p, text]) => ({ p, buf: Crypt.te.encode(text).buffer })), { allowEmpty: true });
       } else if (m.t === 'error') {
@@ -2865,7 +2876,8 @@ async function openHtmlGame(id, g) {
     } catch (x) { console.error(x); }
   };
   window.addEventListener('message', GAME.onMsg);
-  GAME.onHide = () => { };
+  GAME.onHide = () => { if (document.visibilityState === 'hidden' && GAME.frame === frame) rmSave(); };
+  document.addEventListener('visibilitychange', GAME.onHide); window.addEventListener('pagehide', GAME.onHide);
   frame.addEventListener('load', () => { if (++GAME.loads > 1 && GAME.frame === frame) { toast('The game tried to open a web page, so it was stopped.', 4500); back('detail', { id }); } });
   frame.srcdoc = htmlDoc(html, base); box.prepend(frame);
 }
@@ -3068,9 +3080,38 @@ function htmlBoot(ITEMS, CSS) {
     if (realLoaded) try { window.dispatchEvent(new Event('load')); } catch (e) { } // (otherwise the real one is still to come)
   }
   let realLoaded = false; window.addEventListener('load', () => { realLoaded = true; }, { once: true });
+  /* RPG Maker MV/MZ: the app's own save slot (one past the game's last slot, so it never takes one of yours),
+     written when you leave, lock or switch away; Continue loads the newest save */
+  const rm = () => window.DataManager && window.SceneManager && window.$gameSystem !== undefined;
+  const appSlot = () => DataManager.maxSavefiles() + 1;
+  const sceneName = () => { const sc = SceneManager._scene; return sc ? sc.constructor.name : ''; };
+  async function rmSave() {
+    if (!rm() || !window.$gameMap || !(window.Scene_Map && SceneManager._scene instanceof Scene_Map)) return false; // (only while walking around, not in battle or on the title)
+    try {
+      $gameSystem.onBeforeSave();
+      const r = DataManager.saveGame(appSlot());
+      if (r && r.then) await r; else if (r === false) return false;
+      clearTimeout(storeT); post({ t: 'store', store: Object.assign({}, STORE) }); // at once
+      return true;
+    } catch (e) { return false; }
+  }
+  const stamp = id => { try { const i = DataManager.savefileInfo ? DataManager.savefileInfo(id) : DataManager.loadSavefileInfo(id); return i && i.timestamp || 0; } catch (e) { return 0; } };
+  async function rmContinue() {
+    for (let k = 0; k < 600; k++) { if (rm() && /^Scene_(Title|Map)$/.test(sceneName()) && (!SceneManager._scene.isBusy || !SceneManager._scene.isBusy())) break; await new Promise(r => setTimeout(r, 100)); }
+    if (!rm() || sceneName() !== 'Scene_Title') return;
+    let best = 0, bt = 0;
+    for (let id = 0; id <= appSlot(); id++) { const t = stamp(id); if (t > bt) { bt = t; best = id; } }
+    if (!bt) return;
+    try {
+      const done = () => { $gameSystem.onAfterLoad(); try { Scene_Load.prototype.reloadMapIfUpdated.call(SceneManager._scene); } catch (e) { } SceneManager.goto(Scene_Map); };
+      const r = DataManager.loadGame(best);
+      if (r && r.then) await r.then(done); else if (r) done();
+    } catch (e) { fail('Could not load the save: ' + (e.message || e)); }
+  }
   window.addEventListener('message', e => {
     if (e.source !== P) return; const m = e.data || {};
-    if (m.t === 'boot') start(m).catch(fail);
+    if (m.t === 'boot') start(m).then(() => { if (m.cont) rmContinue(); }).catch(fail);
+    else if (m.t === 'rmsave') rmSave().then(ok => post({ t: 'rmsaved', ok }));
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
   });
   window.addEventListener('error', e => { if (e && e.message) fail(e.message); });

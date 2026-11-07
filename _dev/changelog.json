@@ -1,5 +1,15 @@
 [
  {
+  "v": 116,
+  "name": "1.23.0-beta.18",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "RPG Maker MV/MZ games: leaving with ×, locking, or switching away from the app now saves the game (while you are walking around on the map) in a save slot of the app's own, past the game's last slot, so none of your own saves is ever replaced.",
+   "Their page has a Continue button that starts straight from your newest save, the app's or one you made in the game."
+  ]
+ },
+ {
   "v": 115,
   "name": "1.23.0-beta.17",
   "date": "2026-11-07",
