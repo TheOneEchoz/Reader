@@ -1,5 +1,14 @@
 [
  {
+  "v": 113,
+  "name": "1.23.0-beta.15",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "Sounds for a page: “Search all sounds” lists every sound in your account — the ones on pages of any gallery, and the music and sounds inside your games (also inside their archives). Search by name, game or gallery, listen to any of them, and add one: it is copied into this gallery and put on the page(s)."
+  ]
+ },
+ {
   "v": 112,
   "name": "1.23.0-beta.14",
   "date": "2026-11-07",

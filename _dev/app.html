@@ -680,6 +680,7 @@ const ICONS = {
   tools: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   variants: '<rect x="3" y="3" width="11" height="14" rx="1.5"/><rect x="10" y="7" width="11" height="14" rx="1.5"/><path d="M13 12h5M15.5 9.5v5"/>',
   bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
   music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
   volume: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
   mute: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>',
@@ -7917,16 +7918,68 @@ function soundSheet(g, pageIds, onDone, inReader) {
       for (const f of files) { const a = await Snd.add(g, f.name, f); for (const pid of pageIds) A()[pid] = [...new Set([...(A()[pid] || []), a])]; }
       await save(); toast(`${plural(files.length, 'sound')} added.`);
     } }, icon('plus'), 'Add sound files');
+    const searchB = h('button', { class: 'btn small', id: 'snd-search', onclick: () => soundSearch(g, async (name, blob) => {
+      const a = await Snd.add(g, name, blob); for (const pid of pageIds) A()[pid] = [...new Set([...(A()[pid] || []), a])];
+      await saveGallery(g); if (onDone) onDone(); toast(`“${name}” added.`); draw();
+    }) }, icon('search'), 'Search all sounds');
     const vol = h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(Snd.vol), 'aria-label': 'Volume', style: 'flex:1', oninput: e => Snd.setVol(+e.target.value) });
     const muteB = h('button', { class: 'iconbtn', 'aria-label': Snd.muted ? 'Sound on' : 'Mute', onclick: () => { Snd.setMute(!Snd.muted); draw(); } }, icon(Snd.muted ? 'mute' : 'volume'));
     openSheet(pageIds.length === 1 ? 'Sounds for this page' : `Sounds for ${plural(pageIds.length, 'page')}`, h('div', { class: 'stack', id: 'snd-sheet' },
       rows.length ? h('div', { class: 'stack', style: 'gap:6px' }, rows) : h('p', { class: 'hint' }, pageIds.length === 1 ? 'This page has no sound yet.' : 'These pages have no sound yet.'),
-      h('div', { class: 'row', style: 'flex-wrap:wrap' }, addB, pick),
+      h('div', { class: 'row', style: 'flex-wrap:wrap' }, addB, searchB, pick),
       inReader ? h('div', { class: 'row' }, muteB, vol) : null,
       h('p', { class: 'hint' }, 'While reading, a page\'s sounds loop for as long as you are on it. If the next page has the same sound, it keeps playing; otherwise one fades into the other. To put a sound on many pages at once, select them in Edit and tap Sound.')),
       () => { if (prev) { prev.pause(); prev = null; } });
   };
   draw();
+}
+/* every sound this account has: the ones on pages of any gallery, and the music and sounds inside its games */
+async function soundLibrary(onProg = () => { }) {
+  const out = [], gals = await S.gals();
+  for (const g of gals.filter(x => !isGame(x))) for (const [aid, m] of Object.entries(g.meta || {})) if (m[3] === 'a')
+    out.push({ name: m[2], size: m[4] || 0, from: g.title, kind: 'gallery', key: 'g:' + g.id + ':' + aid, read: async () => (await S.blob('images', aid)) });
+  const games = gals.filter(isGame);
+  for (const [k, g] of games.entries()) {
+    onProg(k, games.length, g.title);
+    const list = await gameFileList(g, 'on').catch(() => null); if (!list) continue;
+    for (const f of list) {
+      if (!/^game\//i.test(f.p)) continue;
+      if (RPY_AUDIO.test(f.p)) out.push({ name: f.p.slice(5), size: f.s, from: g.title, kind: 'game', key: 'f:' + g.id + ':' + f.p, read: async () => new Blob([await rpyRange(f, 0, f.s)]) });
+      else if (/\.rpa$/i.test(f.p)) { const idx = await rpaIndex(f).catch(() => null); if (idx) for (const [n, m] of idx) if (RPY_AUDIO.test(n)) out.push({ name: n, size: m.l, from: g.title, kind: 'game', key: 'a:' + g.id + ':' + n, read: async () => new Blob([await rpaRead(f, m)]) }); }
+    }
+  }
+  // the same file kept in several galleries is listed once
+  const seen = new Set();
+  return out.filter(x => { const k = x.name.split('/').pop().toLowerCase() + '|' + x.size + '|' + x.kind; if (x.kind === 'gallery' && seen.has(k)) return false; seen.add(k); return true; });
+}
+let SNDLIB = null; // (found once per session; new sounds added since are picked up when the sheet is opened again)
+function soundSearch(g, onPick) {
+  const find = h('input', { class: 'text', id: 'sndlib-find', type: 'search', placeholder: 'Search by name, game or gallery', autocomplete: 'off', 'aria-label': 'Search sounds' });
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Where from' }), note = h('p', { class: 'hint num' }, 'Looking through your galleries and games…'), box = h('div', { class: 'stack', id: 'sndlib-list', style: 'gap:6px' });
+  let all = [], where = 'all', prev = null;
+  const stopPrev = () => { if (prev) { prev.el.pause(); URL.revokeObjectURL(prev.el.src); prev.btn.replaceChildren(icon('play'), h('span', {}, 'Listen')); prev = null; } };
+  const listen = (x, btn) => async () => {
+    const again = prev && prev.x === x; stopPrev(); if (again) return;
+    try { const b = await x.read(); const el = new Audio(URL.createObjectURL(b)); el.volume = Snd.vol; el.loop = true; prev = { x, el, btn }; btn.replaceChildren(icon('x'), h('span', {}, 'Stop')); el.play().catch(() => { }); } catch (e) { toast('That sound could not be played.'); }
+  };
+  const draw = () => {
+    const q = find.value.trim().toLowerCase();
+    const hits = all.filter(x => (where === 'all' || x.kind === where) && (!q || (x.name + ' ' + x.from).toLowerCase().includes(q)));
+    note.textContent = all.length ? `${plural(hits.length, 'sound')}${hits.length > 150 ? ' (the first 150 are shown; search to narrow it down)' : ''}.` : 'No sounds yet: add sound files to a page, or add a game.';
+    box.replaceChildren(...hits.slice(0, 150).map(x => {
+      const lb = h('button', { class: 'btn ghost small', 'aria-label': `Listen to ${x.name}` }, icon('play'), h('span', {}, 'Listen')); lb.onclick = listen(x, lb);
+      return h('div', { class: 'row sndrow', style: 'justify-content:space-between;gap:8px' },
+        h('span', { style: 'min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, icon('music'), ' ', h('b', {}, x.name.split('/').pop()), h('small', { class: 'hint' }, ` · ${x.kind === 'game' ? 'game' : 'gallery'} “${x.from}”${x.name.includes('/') ? ' · ' + x.name.split('/').slice(0, -1).join('/') : ''}`)),
+        h('div', { class: 'row', style: 'gap:6px;flex:none' }, lb,
+          h('button', { class: 'btn small primary', 'aria-label': `Add ${x.name}`, onclick: async e => { e.currentTarget.disabled = true; stopPrev(); try { const b = await x.read(); closeSheet(); await onPick(x.name.split('/').pop(), b); } catch (err) { toast('That sound could not be added.'); e.currentTarget.disabled = false; } } }, icon('plus'), 'Add')));
+    }));
+  };
+  seg.append(...[['all', 'All'], ['gallery', 'From galleries'], ['game', 'From games']].map(([v, l]) => h('button', { 'aria-pressed': String(v === where), onclick: e => { where = v; $$('button', seg).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); draw(); } }, l)));
+  find.addEventListener('input', draw);
+  openSheet('All your sounds', h('div', { class: 'stack', id: 'sndlib' }, find, seg, note, box,
+    h('p', { class: 'hint' }, 'Sounds on pages of any of your galleries, and the music and sounds inside your games. The one you add is copied into this gallery.')), () => stopPrev());
+  setTimeout(() => find.focus(), 60);
+  (SNDLIB ? Promise.resolve(SNDLIB) : soundLibrary((k, n, t) => { note.textContent = `Looking through your games… ${k + 1} of ${n}: ${t}`; })).then(r => { SNDLIB = null; all = r; draw(); });
 }
 async function openReader(id, ch, page, start, scope, only, tq) {
   const g = await S.gal(id);

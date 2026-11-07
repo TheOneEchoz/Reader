@@ -1,6 +1,6 @@
 {
- "version": 112,
- "name": "1.23.0-beta.14",
+ "version": 113,
+ "name": "1.23.0-beta.15",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: in Pictures on screen, each sound under Playing now has a Listen button that plays just that sound, so you can tell what it is. The game's own sound pauses while you listen and comes back when you stop or close the sheet."
+  "Sounds for a page: “Search all sounds” lists every sound in your account — the ones on pages of any gallery, and the music and sounds inside your games (also inside their archives). Search by name, game or gallery, listen to any of them, and add one: it is copied into this gallery and put on the page(s)."
  ]
 }
