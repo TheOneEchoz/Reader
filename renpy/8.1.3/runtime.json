@@ -6,7 +6,7 @@
  "files": [
   {
    "path": "engine.zip",
-   "size": 1918468
+   "size": 2575712
   },
   {
    "path": "web/index.html",
@@ -45,5 +45,5 @@
    "size": 1144617
   }
  ],
- "total": 35885157
+ "total": 36542401
 }
