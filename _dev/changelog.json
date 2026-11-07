@@ -1,5 +1,16 @@
 [
  {
+  "v": 108,
+  "name": "1.23.0-beta.10",
+  "date": "2026-11-07",
+  "beta": true,
+  "items": [
+   "Ren'Py games: a camera button while playing takes a picture of the screen and keeps it in the game's own screenshots gallery (made the first time).",
+   "Mods can be switched while playing: the mods button saves the game, starts it again with the mods you chose and puts you back where you were.",
+   "Big games (over 300 MB) load their pictures and sounds as the story needs them, using Ren'Py's own look-ahead, instead of reading the whole game into memory at the start: they open much faster and use far less memory. A game's page has a setting for this (Automatic, As needed, All at the start). Picture sizes are measured once, the first time."
+  ]
+ },
+ {
   "v": 107,
   "name": "1.23.0-beta.9",
   "date": "2026-11-07",

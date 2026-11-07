@@ -529,6 +529,10 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gameexit:hover,#gamebox .gameexit:focus-visible{opacity:1}
 #gamebox .gamelock{left:48px}
 #gamebox .gamepics{left:88px}
+#gamebox .gamecam{left:128px}
+#gamebox .gamemods{left:168px}
+.shotflash{position:fixed;inset:0;background:#fff;z-index:175;pointer-events:none;animation:shotflash .45s ease-out forwards}
+@keyframes shotflash{from{opacity:.75}to{opacity:0}}
 body.gaming #sheet{z-index:95}
 body.gaming{overflow:hidden}
 </style>
@@ -672,6 +676,7 @@ const ICONS = {
   tools: '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   variants: '<rect x="3" y="3" width="11" height="14" rx="1.5"/><rect x="10" y="7" width="11" height="14" rx="1.5"/><path d="M13 12h5M15.5 9.5v5"/>',
   bookmark: '<path d="M6 3h12v18l-6-4.5L6 21z"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>',
   tag: '<path d="M3 12.2V4.5A1.5 1.5 0 014.5 3h7.7l8.9 8.9a1.5 1.5 0 010 2.1l-7.1 7.1a1.5 1.5 0 01-2.1 0z"/><circle cx="8" cy="8" r="1.6"/>',
   undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/>', redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/>',
@@ -1848,7 +1853,7 @@ async function rpyGetJSON(id) { if (!id) return null; const r = await ST.get('im
 /* every record a game uses (for deleting it) */
 async function rpyIds(g) {
   if (!isGame(g)) return [];
-  const out = [g.game.list, g.game.sv, g.game.coverOrig, g.game.ana].filter(Boolean);
+  const out = [g.game.list, g.game.sv, g.game.coverOrig, g.game.ana, g.game.dims].filter(Boolean);
   for (const f of (await rpyGetJSON(g.game.list)) || []) out.push(...f.c);
   for (const m of g.game.mods || []) { out.push(m.list); for (const f of (await rpyGetJSON(m.list)) || []) out.push(...f.c); }
   for (const s of Object.values((await rpyGetJSON(g.game.sv)) || {})) out.push(...s.c);
@@ -2129,6 +2134,13 @@ async function renderGameDetail(v, g) {
       h('div', { class: 'panel stack', style: 'gap:10px' }, h('div', { class: 'label' }, 'Ren\'Py'),
         h('p', { class: 'hint', style: 'margin:0' }, ready ? `Plays with Ren'Py ${G.rt}, which is downloaded.` : `Plays with Ren'Py ${G.rt}, which is not downloaded yet (about ${rpyRuntime(G.rt).mb} MB). You will be asked before it is downloaded.`),
         pick,
+        EXP ? (() => {
+          const big = (G.size || 0) > RPY_LAZY_MB * 1e6, cur = G.lazy === true ? 'on' : G.lazy === false ? 'off' : 'auto';
+          const seg = h('div', { class: 'seg', role: 'group', id: 'game-lazy', 'aria-label': 'Load pictures and sounds' }, [['auto', 'Automatic'], ['on', 'As needed'], ['off', 'All at the start']].map(([v, l]) =>
+            h('button', { 'aria-pressed': String(v === cur), onclick: async () => { const x = await S.gal(id); if (v === 'auto') delete x.game.lazy; else x.game.lazy = v === 'on'; await saveGallery(x); renderDetail(id); } }, l)));
+          return h('div', { class: 'stack', style: 'gap:6px' }, h('div', { class: 'label' }, 'Pictures and sounds'), seg,
+            h('p', { class: 'hint', style: 'margin:0' }, `As needed: they are read when the story is about to show or play them, so a big game starts quickly and uses much less memory (a picture may appear a moment late). Automatic does this for games over ${RPY_LAZY_MB} MB${cur === 'auto' ? ` — ${big ? 'this one is, so it is on' : 'this one is smaller, so everything is read at the start'}` : ''}.`));
+        })() : null,
         h('div', { class: 'row', style: 'flex-wrap:wrap' },
           !ready && EXP ? h('button', { class: 'btn small', onclick: async () => { if (await rpyAskDownload(G.rt)) renderDetail(id); } }, icon('download'), `Download Ren'Py ${G.rt}`) : null,
           ready ? h('button', { class: 'btn ghost small', onclick: async () => { if (await askYes(`Delete the downloaded Ren'Py ${G.rt}?`, 'Games that use it will ask to download it again when you play them.', 'Delete')) { await RPY.remove(G.rt); renderDetail(id); } } }, `Delete the downloaded Ren'Py ${G.rt}`) : null)),
@@ -2182,7 +2194,7 @@ function rpyDoc(html, loader) {
 function rpyBoot(SCRIPTS, LOADER) {
   try { Object.defineProperty(Navigator.prototype, 'serviceWorker', { get: () => undefined, configurable: true }); } catch (e) { } // sealed: it would only throw
   const P = window.parent, post = (m, t) => P.postMessage(m, '*', t || []);
-  const URLS = {}, waiting = new Map(); let FILES = [], SAVES = [], EXTRACT = {}, MORE = [], seq = 0;
+  const URLS = {}, waiting = new Map(); let FILES = [], SAVES = [], EXTRACT = {}, MORE = [], LAZY = null, seq = 0;
   const ask = m => new Promise(res => { const q = ++seq; waiting.set(q, res); post(Object.assign({ q }, m)); });
   const mime = n => /\.wasm$/.test(n) ? 'application/wasm' : /\.js$/.test(n) ? 'text/javascript' : 'application/octet-stream';
   const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src)); document.body.appendChild(s); });
@@ -2190,8 +2202,8 @@ function rpyBoot(SCRIPTS, LOADER) {
   const fail = e => post({ t: 'error', msg: String((e && e.message) || e) });
   async function writeGame() {
     const total = FILES.reduce((n, f) => n + f.s, 0); let done = 0, last = 0;
-    for (let i = 0; i < FILES.length; i++) {
-      const f = FILES[i], arr = new Uint8Array(f.s); let off = 0;
+    for (let j = 0; j < FILES.length; j++) {
+      const f = FILES[j], i = f.i ?? j, arr = new Uint8Array(f.s); let off = 0;
       for (let k = 0; k < f.n; k++) { const r = await ask({ t: 'chunk', i, k }); const u = new Uint8Array(r.buf); arr.set(u, off); off += u.length; done += u.length; }
       const path = '/' + f.p; mkdirs(path.slice(0, path.lastIndexOf('/')));
       FS.writeFile(path, arr, { canOwn: true });
@@ -2203,9 +2215,37 @@ function rpyBoot(SCRIPTS, LOADER) {
           FS.writeFile(t, data, { canOwn: true });
         } catch (e) { }
       }
-      if (Date.now() - last > 150 || i === FILES.length - 1) { last = Date.now(); post({ t: 'progress', done, total }); }
+      if (Date.now() - last > 150 || j === FILES.length - 1) { last = Date.now(); post({ t: 'progress', done, total }); }
     }
+    if (LAZY) await writeLazy();
     for (const f of MORE) { const path = '/' + f.p; mkdirs(path.slice(0, path.lastIndexOf('/'))); FS.writeFile(path, f.text); }
+  }
+  /* Big games: pictures and sounds are not put in memory at the start. Ren'Py is told they are "remote" (its web version's own
+     on-demand loading): it shows a stand-in, asks for the file (also ahead of time, from what the story is about to show), and frees it
+     after use. The asking is answered here, from the app, instead of from a web server. */
+  const PART = (e) => ask({ t: 'part', i: e[1], o: e[2], l: e[3] }).then(r => { let u = new Uint8Array(r.buf); if (e[4]) { const w = new Uint8Array(e[4].length + u.length); w.set(e[4]); w.set(u, e[4].length); u = w; } return u; });
+  async function writeLazy() {
+    // the non-media files of the archives, as plain files (the archives themselves are not written)
+    for (const e of LAZY.parts) { const u = await PART(e), path = '/game/' + e[0]; mkdirs(path.slice(0, path.lastIndexOf('/'))); FS.writeFile(path, u, { canOwn: true }); }
+    const REM = new Map(LAZY.remote.map(e => [e[0], e]));
+    let idx = '';
+    for (const e of LAZY.remote) idx += e[0] + '\n' + e[5] + ' ' + (e[5] === 'image' ? e[6].join(',') : e[6]) + '\n';
+    FS.writeFile('/game/renpyweb_remote_files.txt', idx);
+    // a stand-in picture for each (Ren'Py stretches it to the real size until the real one is here)
+    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
+    for (const e of LAZY.remote) if (e[5] === 'image') { const p = '/_placeholders/' + e[0]; mkdirs(p.slice(0, p.lastIndexOf('/'))); FS.writeFile(p, png); }
+    let rw = null;
+    const hook = v => {
+      v.dl_new = path => {
+        const id = v.xhr_id++, x = { readyState: 1, status: 0, statusText: '' }; v.xhrs[id] = x;
+        const name = String(path).replace(/^\/?game\//, ''), e = REM.get(name);
+        if (!e) { x.readyState = 4; x.statusText = 'not in the game'; return id; }
+        PART(e).then(u => { const t = '/game/' + name; try { FS.unlink(t); } catch (err) { } mkdirs(t.slice(0, t.lastIndexOf('/'))); FS.writeFile(t, u, { canOwn: true }); x.status = 200; x.statusText = 'OK'; x.readyState = 4; post({ t: 'lazy', name }); },
+          err => { x.readyState = 4; x.statusText = String(err); });
+        return id;
+      };
+    };
+    try { Object.defineProperty(window, 'RenPyWeb', { configurable: true, get: () => rw, set: v => { rw = v; try { hook(v); } catch (e) { } } }); } catch (e) { }
   }
   /* saves live in memory here; whenever Ren'Py saves (it calls syncfs), they are sent to the app */
   const ROOTS = ['/home/web_user/.renpy', '/game/saves'];
@@ -2241,7 +2281,7 @@ function rpyBoot(SCRIPTS, LOADER) {
       if (n === 'renpy-pre.js') data = new TextDecoder().decode(data).replace(/fetch\((['"])game\.zip\1\)/g, 'fetch(window.gameZipURL)');
       URLS[n] = URL.createObjectURL(new Blob([data], { type: mime(n) }));
     }
-    FILES = m.game; SAVES = m.saves || []; EXTRACT = m.extract || {}; MORE = m.more || [];
+    FILES = m.game; SAVES = m.saves || []; EXTRACT = m.extract || {}; MORE = m.more || []; LAZY = m.lazy || null;
     window.Module = window.Module || {};
     Module.locateFile = p => URLS[String(p).split('/').pop()] || p;
     if (LOADER === 'renpy.js') window.gameZipURL = URLS['engine.zip']; else window.DEFAULT_GAME_FILENAME = URLS['engine.zip'];
@@ -2257,7 +2297,7 @@ function rpyBoot(SCRIPTS, LOADER) {
   window.addEventListener('message', e => {
     if (e.source !== P) return; const m = e.data || {};
     if (m.t === 'boot') start(m);
-    else if (m.t === 'shot') shot();
+    else if (m.t === 'shot') shot(m.any);
     else if (m.t === 'autosave') autosave();
     else if (m.t === 'onscreen') onscreen();
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
@@ -2268,12 +2308,12 @@ function rpyBoot(SCRIPTS, LOADER) {
     if (e.key === 'Enter' && !e.isComposing && t && t.id === 'inputText') { e.preventDefault(); const f = document.getElementById('inputForm'); if (f) f.dispatchEvent(new Event('submit', { cancelable: true })); }
   }, true);
   /* a picture of the main menu, for the game's cover (only while the main menu is on screen) */
-  async function shot() {
+  async function shot(any) {
     let buf = null;
     try {
       if (window.renpy_exec) {
         try { FS.unlink('/tmp/tkbcover.png'); } catch (e) { }
-        await window.renpy_exec('result = renpy.get_screen("main_menu") is not None and renpy.screenshot("/tmp/tkbcover.png")');
+        await window.renpy_exec(any ? 'result = renpy.screenshot("/tmp/tkbcover.png")' : 'result = renpy.get_screen("main_menu") is not None and renpy.screenshot("/tmp/tkbcover.png")');
         try { buf = FS.readFile('/tmp/tkbcover.png').buffer; FS.unlink('/tmp/tkbcover.png'); } catch (e) { buf = null; }
       }
     } catch (e) { buf = null; }
@@ -2320,6 +2360,31 @@ function gameAutosave() {
     try { GAME.frame.contentWindow.postMessage({ t: 'autosave' }, '*'); } catch (e) { done(false); }
   });
   return GAME.saving;
+}
+/* the gallery that keeps a game's screenshots (made the first time) */
+async function gameShotGallery(gid) {
+  const gm = await S.gal(gid);
+  let sg = (await S.gals()).find(x => x.shotsOf === gid);
+  if (!sg) { sg = newGallery(`${gm.title} — screenshots`); sg.shotsOf = gid; Tree.ensureRoot(sg); await saveGallery(sg); }
+  Tree.ensureRoot(sg); return sg;
+}
+function flashShot() { const f = h('div', { class: 'shotflash' }); document.body.append(f); setTimeout(() => f.remove(), 450); }
+/* switching mods while playing: Ren'Py reads its scripts once at the start, so the game is saved, started again with the new mods,
+   and put back where it was (like Continue) */
+async function liveMods(gid) {
+  const g = await S.gal(gid), mods = g.game.mods || [], want = new Map(mods.map(m => [m.id, m.on]));
+  const go1 = h('button', { class: 'btn primary', id: 'livemods-go', disabled: true, onclick: async () => {
+    go1.disabled = true; go1.lastChild.textContent = 'Saving…';
+    const saved = await gameAutosave();
+    for (const m of mods) if (want.get(m.id) !== m.on) await setModOn(gid, m.id, want.get(m.id));
+    closeSheet(); closeGame();
+    if (!saved) toast('The game could not be saved first, so it starts from your newest save.', 4000);
+    CUR.params = { id: gid, cont: 1 }; render('game', { id: gid, cont: 1 });
+  } }, icon('play'), h('span', {}, 'Restart with these mods'));
+  const rows = mods.map(m => h('div', { class: 'row modrow', style: 'justify-content:space-between;gap:10px' }, h('b', {}, m.name),
+    h('button', { class: 'switch', role: 'switch', 'aria-checked': String(m.on), 'aria-label': `Use the mod ${m.name}`, onclick: e => { want.set(m.id, !want.get(m.id)); e.currentTarget.setAttribute('aria-checked', String(want.get(m.id))); go1.disabled = mods.every(x => want.get(x.id) === x.on); } })));
+  openSheet('Mods', h('div', { class: 'stack', id: 'livemods' }, ...rows, go1,
+    h('p', { class: 'hint' }, 'Ren\'Py reads a game\'s mods only when it starts. The game is saved, started again with these mods, and put back where you are; it takes a few seconds. A mod that changes the scene you are in may not load that save well: then load an earlier save.')));
 }
 /* the newest save (Ren'Py writes its time inside each save), as a slot name like "1-1" or "auto-1" */
 async function newestSlot(idx) {
@@ -2435,7 +2500,20 @@ async function openGame(id, cont) {
     if (!names.length) return toast('No pictures are on screen right now.');
     openAssets(id, { only: [...new Set(names)], inGame: true, title: 'Pictures on screen' });
   } }, icon('image'));
-  const box = h('div', { id: 'gamebox' }, load, exit, lockB, picsB);
+  const camB = h('button', { class: 'gameexit gamecam', 'aria-label': 'Take a picture of the screen', title: 'Take a picture', onclick: async () => {
+    if (!GAME.loaded || camB.disabled) return; camB.disabled = true;
+    try {
+      const buf = await new Promise(res => { GAME.onShot = b => { GAME.onShot = null; res(b); }; frame.contentWindow.postMessage({ t: 'shot', any: true }, '*'); setTimeout(() => { if (GAME.onShot) { GAME.onShot = null; res(null); } }, 10000); });
+      if (!buf) return toast('The picture could not be taken.');
+      const sg = await gameShotGallery(id);
+      const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ').replace(/:/g, '-');
+      await importInto(sg, [{ title: sg.title, chId: sg.chapters[0].id, items: [{ name: `${stamp}.png`, get: async () => new Blob([buf], { type: 'image/png' }) }] }], () => { }, () => false);
+      flashShot(); toast(`Picture saved to “${sg.title}”.`, 2500);
+    } catch (e) { toast('The picture could not be saved: ' + (e.message || e)); }
+    finally { camB.disabled = false; }
+  } }, icon('camera'));
+  const modsB = (g.game.mods || []).length ? h('button', { class: 'gameexit gamemods', 'aria-label': 'Mods', title: 'Mods', onclick: () => GAME.loaded && liveMods(id) }, icon('layers')) : null;
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB, picsB, camB, modsB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
   document.body.classList.add('gaming'); document.body.append(box);
@@ -2464,13 +2542,27 @@ async function openGame(id, cont) {
           for (const [name, mm] of idx) if (RPY_MEDIA.test(name) && !loose.has(('game/' + name).toLowerCase())) (extract[i] = extract[i] || []).push([name, mm.o, mm.l, mm.p]);
         }
         rpyChunkCache.clear();
+        // big games: pictures and sounds on demand
+        let lazy = null, game = list.map((f, i) => ({ p: f.p, s: f.s, n: f.c.length, i }));
+        if (gameLazy(g, list)) {
+          lbl.textContent = 'Getting the game\'s pictures ready…';
+          try {
+            lazy = await rpyLazyPlan(g, list, (d, t) => { lbl.textContent = `Measuring the game's pictures (only the first time) · ${d.toLocaleString()} of ${t.toLocaleString()}`; bar.firstChild.style.width = (100 * d / Math.max(1, t)) + '%'; });
+            const skip = new Set(lazy.skip); game = game.filter(f => !skip.has(f.i)); for (const k of lazy.skip) delete extract[k];
+          } catch (x) { console.warn('lazy', x); lazy = null; }
+        }
+        GAME.lazy = lazy ? lazy.remote.length : 0;
         // Continue: Ren'Py loads this save itself when it starts (its own auto_load setting)
         const more = [];
         if (cont) { const slot = await newestSlot(saves || {}); if (slot) more.push({ p: 'game/zzzz_tankobon_continue.rpy', text: `init 1999 python:\n    config.auto_load = ${JSON.stringify(slot)}\n` }); }
-        win.postMessage({ t: 'boot', files, game: list.map(f => ({ p: f.p, s: f.s, n: f.c.length })), saves: sv, extract, more }, '*', [...Object.values(files), ...sv.map(s => s.buf)]);
+        win.postMessage({ t: 'boot', files, game, saves: sv, extract, more, lazy: lazy && { parts: lazy.parts, remote: lazy.remote } }, '*', [...Object.values(files), ...sv.map(s => s.buf)]);
         rt = null; // handed over
       } else if (m.t === 'chunk') {
         const buf = await rpyGet(GAME.list[m.i].c[m.k]); win.postMessage({ q: m.q, buf }, '*', [buf]);
+      } else if (m.t === 'part') {
+        const u = await rpyRange(GAME.list[m.i], m.o, m.l), buf = u.buffer.byteLength === u.length ? u.buffer : u.slice().buffer; win.postMessage({ q: m.q, buf }, '*', [buf]);
+      } else if (m.t === 'lazy') {
+        GAME.lazyGot = (GAME.lazyGot || 0) + 1;
       } else if (m.t === 'progress') {
         lbl.textContent = `Opening the game · ${mb(m.done)} of ${mb(m.total)}`; bar.firstChild.style.width = (100 * m.done / Math.max(1, m.total)) + '%';
       } else if (m.t === 'loaded') {
@@ -2618,6 +2710,77 @@ async function rpaIndex(f) {
 }
 async function rpaRead(f, m) { const body = await rpyRange(f, m.o, m.l); if (!m.p) return body; const u = new Uint8Array(m.p.length + body.length); u.set(m.p); u.set(body, m.p.length); return u; }
 const RPY_MEDIA = /\.(ogg|opus|mp3|wav|flac|m4a|aac|oga|webm|mp4|ogv|m4v|mkv|avi|mpg|mpeg)$/i;
+const RPY_AUDIO = /\.(ogg|opus|mp3|wav|flac|m4a|aac|oga)$/i;
+const RPY_LAZY_MB = 300; // games bigger than this load their pictures and sounds on demand (unless switched off)
+const gameLazy = (g, list) => g.game.lazy === true || (g.game.lazy !== false && list.reduce((n, f) => n + f.s, 0) > RPY_LAZY_MB * 1e6);
+/* the size of a picture from its first bytes (PNG, JPEG, WebP, GIF, BMP); null when it cannot be told */
+function picSize(u) {
+  const dv = new DataView(u.buffer, u.byteOffset, u.byteLength), n = u.length;
+  try {
+    if (u[0] === 0x89 && u[1] === 0x50) return [dv.getUint32(16), dv.getUint32(20)];
+    if (u[0] === 0x47 && u[1] === 0x49) return [dv.getUint16(6, true), dv.getUint16(8, true)];
+    if (u[0] === 0x42 && u[1] === 0x4d) return [dv.getInt32(18, true), Math.abs(dv.getInt32(22, true))];
+    if (u[0] === 0x52 && u[8] === 0x57 && u[12] === 0x56) { // RIFF....WEBPVP8
+      const k = String.fromCharCode(u[12], u[13], u[14], u[15]);
+      if (k === 'VP8 ') return [dv.getUint16(26, true) & 0x3fff, dv.getUint16(28, true) & 0x3fff];
+      if (k === 'VP8L') { const b = dv.getUint32(21, true); return [(b & 0x3fff) + 1, ((b >> 14) & 0x3fff) + 1]; }
+      if (k === 'VP8X') return [1 + (u[24] | u[25] << 8 | u[26] << 16), 1 + (u[27] | u[28] << 8 | u[29] << 16)];
+    }
+    if (u[0] === 0xff && u[1] === 0xd8) {
+      let o = 2;
+      while (o + 9 < n) {
+        if (u[o] !== 0xff) { o++; continue; }
+        const mk = u[o + 1]; if (mk === 0xff) { o++; continue; }
+        if (mk >= 0xc0 && mk <= 0xcf && mk !== 0xc4 && mk !== 0xc8 && mk !== 0xcc) return [dv.getUint16(o + 7), dv.getUint16(o + 5)];
+        if (mk === 0xd8 || (mk >= 0xd0 && mk <= 0xd7) || mk === 0x01) { o += 2; continue; }
+        o += 2 + dv.getUint16(o + 2);
+      }
+    }
+  } catch (e) { }
+  return null;
+}
+/* what a big game's player gets: the archives' other files to write (parts), the pictures and sounds to give on demand (remote),
+   and which files are not written whole (skip). Picture sizes are measured once and kept with the game. */
+async function rpyLazyPlan(g, list, onProg = () => { }) {
+  const dims = (g.game.dims && await rpyGetJSON(g.game.dims).catch(() => null)) || {};
+  const kind = n => RPY_PIC.test(n) ? 'image' : RPY_AUDIO.test(n) ? (/(^|\/)voices?(\/|$)/i.test(n) ? 'voice' : 'music') : null;
+  const onDemand = (n, size) => { const k = kind(n); return k && size > 20000 && !(k === 'image' && /^gui\//i.test(n)) ? k : null; }; // (the interface is needed at once)
+  const want = [], parts = [], skip = new Set(), seen = new Set();
+  // loose files first: they win over archived files of the same name
+  for (const [i, f] of list.entries()) {
+    if (!/^game\//i.test(f.p) || /\.rpa$/i.test(f.p)) continue;
+    const name = f.p.slice(5); seen.add(name.toLowerCase());
+    const k = onDemand(name, f.s); if (k) { want.push([name, i, 0, f.s, null, k]); skip.add(i); }
+  }
+  for (const [i, f] of list.entries()) {
+    if (!/^game\//i.test(f.p) || !/\.rpa$/i.test(f.p)) continue;
+    const idx = await rpaIndex(f).catch(() => null); if (!idx) continue; // (an archive that cannot be read is written whole)
+    skip.add(i);
+    for (const [n, m] of idx) {
+      const key = n.toLowerCase(); if (seen.has(key)) continue; seen.add(key);
+      const e = [n, i, m.o, m.l, m.p || null], k = onDemand(n, m.l);
+      if (k) want.push([...e, k]); else parts.push(e);
+    }
+  }
+  const remote = [], pics = want.filter(e => e[5] === 'image' && !dims[e[0] + '|' + e[3]]); let changed = false, d = 0;
+  const withPrefix = (u, p) => { if (!p) return u; const w = new Uint8Array(p.length + u.length); w.set(p); w.set(u, p.length); return w; };
+  for (const e of want) {
+    if (e[5] !== 'image') { remote.push([...e, e[3]]); continue; }
+    const dk = e[0] + '|' + e[3]; let sz = dims[dk];
+    if (!sz) {
+      const head = await rpyRange(list[e[1]], e[2], Math.min(e[3], 65536)).catch(() => null);
+      sz = head && picSize(withPrefix(head, e[4]));
+      if (!sz || !(sz[0] > 0 && sz[1] > 0)) { try { const bm = await createImageBitmap(new Blob([withPrefix(await rpyRange(list[e[1]], e[2], e[3]), e[4])])); sz = [bm.width, bm.height]; bm.close && bm.close(); } catch (x) { sz = null; } }
+      d++; if (d % 20 === 0) onProg(d, pics.length);
+      if (sz) { dims[dk] = sz; changed = true; }
+    }
+    if (sz) remote.push([...e, sz]);
+    else if (/\.rpa$/i.test(list[e[1]].p)) parts.push(e.slice(0, 5)); // a picture that cannot be measured is written whole
+    else skip.delete(e[1]);
+  }
+  if (changed) { const cur = await S.gal(g.id); if (cur.game.dims) await rpyPutJSON(dims, cur.game.dims); else { cur.game.dims = await rpyPutJSON(dims); await saveGallery(cur); } g.game.dims = cur.game.dims; }
+  return { parts, remote, skip: [...skip] };
+}
 const RPY_PIC = /\.(png|jpe?g|webp|avif|gif|bmp)$/i;
 /* every picture of a game: loose ones and the ones in its archives. [{name, size, read()}] */
 async function rpyPictures(list) {
