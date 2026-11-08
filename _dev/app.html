@@ -2438,8 +2438,9 @@ function rpyBoot(SCRIPTS, LOADER) {
     let idx = '';
     for (const e of LAZY.remote) idx += e[0] + '\n' + e[5] + ' ' + (e[5] === 'image' ? e[6].join(',') : e[6]) + '\n';
     FS.writeFile('/game/renpyweb_remote_files.txt', idx);
-    // a stand-in picture for each (Ren'Py stretches it to the real size until the real one is here)
-    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
+    // a stand-in picture for each (Ren'Py stretches it to the real size until the real one is here): see-through, so a picture
+    // still on its way shows nothing for a moment instead of a blue flash
+    const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABpfZFQAAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
     for (const e of LAZY.remote) if (e[5] === 'image') { const p = '/_placeholders/' + e[0]; mkdirs(p.slice(0, p.lastIndexOf('/'))); FS.writeFile(p, png); }
     let rw = null;
     const hook = v => {
@@ -2753,6 +2754,15 @@ const RPY_HOOKS = [
   '        with open("/tmp/tkbshot.png", "rb") as fh:',
   '            data = fh.read()',
   '        return {"png": base64.b64encode(data).decode("ascii"), "w": w, "h": h}',
+  // a drawing made while pictures were still on their way (big games: pictures come when needed) is drawn again a moment later
+  '    def _tkb_mark(r):',
+  '        try:',
+  '            pend = bool(getattr(renpy.webloader, "queue", None))',
+  '        except Exception:',
+  '            pend = False',
+  '        if pend and r is not None and hasattr(r, "keys"):',
+  '            r["_pending"] = True',
+  '        return r',
   '    def _tkb_withrule(key, rows, fn):',
   '        old = _tkb_condrules.get(key)',
   '        if key:',
@@ -3321,6 +3331,16 @@ async function brokenSwitches(err, first) {
   const live = out.filter(x => x.shown !== false && x.chosen >= 0 && x.rows[x.chosen] && x.rows[x.chosen][1] && x.rows[x.chosen][1].t === 'none');
   return live.length ? live : out.filter(x => x.shown !== false).length ? out.filter(x => x.shown !== false) : out;
 }
+/* a drawing from the game (Python returning the result): drawn again while pictures it needs are still on their way */
+async function gameShot(code, ms = 30000) {
+  let r = null;
+  for (let k = 0; k < 8; k++) {
+    r = await gamePy(code.replace(/^result = ([\s\S]*)$/, 'result = _tkb_mark($1)'), ms);
+    if (!r || !r._pending) break;
+    await new Promise(z => setTimeout(z, 700));
+  }
+  return r;
+}
 /* a small picture from the game, drawn by Ren'Py (base64 PNG), as an <img> */
 const pngImg = (b64, cls = 'fixthumb') => { const im = h('img', { class: cls, alt: '' }); if (b64) im.src = 'data:image/png;base64,' + b64; else im.style.visibility = 'hidden'; return im; };
 /* the game's scene drawn with a change, on top of the game (no restart): Back returns to the fix */
@@ -3374,7 +3394,7 @@ async function fixConditions(gid, err, which = 0, list = null, first = null) {
   // the preview: the scene drawn with these rows for a moment, shown over the game; nothing restarts
   const prevB = h('button', { class: 'btn primary', id: 'cond-preview', hidden: !sw.key, onclick: async () => {
     prevB.disabled = true; prevB.lastChild.textContent = 'Drawing…';
-    const r = await gamePy(`result = _tkb_preview(${JSON.stringify(sw.key)}, ${rowsJ()}, ${sw.tag ? JSON.stringify(sw.tag) : 'None'})`, 30000);
+    const r = await gameShot(`result = _tkb_preview(${JSON.stringify(sw.key)}, ${rowsJ()}, ${sw.tag ? JSON.stringify(sw.tag) : 'None'})`, 30000);
     prevB.disabled = false; prevB.lastChild.textContent = 'Preview';
     if (!r || !r.png) return toast(r && r.err ? (/NoneType/.test(r.err) ? 'With these rows the picture still shows nothing. Change the row that is true now.' : 'The preview could not be drawn: ' + r.err) : 'The preview could not be drawn.', 5000);
     closeSheet(); showFixPreview(r.png, 'Preview: the scene with your change (nothing is saved yet)', reopen);
@@ -3410,11 +3430,11 @@ async function fixConditions(gid, err, which = 0, list = null, first = null) {
       }),
       off.length ? h('details', {}, h('summary', {}, `Other parts, not shown now (${off.length})`), h('div', { class: 'stack', style: 'gap:2px;margin-top:6px' }, off.map(x => h('small', { class: 'hint' }, lab(x))))) : null);
   };
-  if (sw.tag) gamePy(`result = _tkb_layers(${JSON.stringify(sw.tag)}, 160)`, 30000).then(L => { layersL = L; drawLayers(); });
+  if (sw.tag) gameShot(`result = _tkb_layers(${JSON.stringify(sw.tag)}, 160)`, 30000).then(L => { layersL = L; drawLayers(); });
   // the picture each switch belongs to, drawn now (the empty part left empty), to tell them apart
   const nullRows = x => JSON.stringify(x.rows.map(([c, dsc], i) => [c == null ? 'True' : c, dsc && dsc.t === 'none' ? { none: 1 } : { keep: i }]));
   const shots = fixConditions.shots = fixConditions.shots || new Map();
-  const shotOf = x => { const k = x.key + '|' + x.tag; if (!shots.has(k)) shots.set(k, x.key && x.tag ? gamePy(`result = _tkb_tagshot(${JSON.stringify(x.tag)}, ${JSON.stringify(x.key)}, ${nullRows(x)}, 220)`, 20000).then(r => r && r.png).catch(() => null) : Promise.resolve(null)); return shots.get(k); };
+  const shotOf = x => { const k = x.key + '|' + x.tag; if (!shots.has(k)) shots.set(k, x.key && x.tag ? gameShot(`result = _tkb_tagshot(${JSON.stringify(x.tag)}, ${JSON.stringify(x.key)}, ${nullRows(x)}, 220)`, 20000).then(r => r && r.png).catch(() => null) : Promise.resolve(null)); return shots.get(k); };
   const thumbIn = (x, cls) => { const im = pngImg(null, cls); shotOf(x).then(b => { if (b) { im.src = 'data:image/png;base64,' + b; im.style.visibility = ''; } }); return im; };
   const render1 = () => openSheet('Fix the conditions', h('div', { class: 'stack', id: 'cond-sheet' },
     h('div', { class: 'banner' }, `The picture “${sw.name}” (or one of its layers, for a picture made of layers) shows different things depending on conditions, checked from the top; the first true one is shown. Right now ${sw.chosen >= 0 ? `row ${sw.chosen + 1} is true and it shows nothing` : 'none is true'}. Change a condition or a picture so the right row shows something.`),
@@ -3512,7 +3532,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
   const showsPics = P.kind === 'image' || P.kind === 'dynimg';
   const thumbs = new Map(ranked.map(x => [x, showsPics ? pngImg(null, 'swthumb') : null]));
   const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: showsPics ? 'fixpick' : 'row', style: showsPics ? '' : 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; valChoice = null; drawVals(); paint(); } }), thumbs.get(x), h('span', { style: 'min-width:0' }, h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null))) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
-  if (showsPics && ranked.length) gamePy(P.kind === 'image' ? `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, x]))}, 200)` : `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, '']))}, 200, ${JSON.stringify(P.tpl)}, ${JSON.stringify(P.name)})`, 30000)
+  if (showsPics && ranked.length) gameShot(P.kind === 'image' ? `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, x]))}, 200)` : `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, '']))}, 200, ${JSON.stringify(P.tpl)}, ${JSON.stringify(P.name)})`, 30000)
     .then(r => { for (const [x, im] of thumbs) { if (r && r[x]) { im.src = 'data:image/png;base64,' + r[x]; im.style.visibility = ''; } else if (im) { im.replaceWith(h('span', { class: 'swthumb', style: 'display:grid;place-items:center;font-size:.75em;color:var(--muted,#888);text-align:center' }, 'no picture')); } } });
   // a picture named after a variable: maybe the variable has a value the game never gives it (it is set earlier in the story,
   // and that did not happen in this playthrough). The values that have pictures, each shown: choosing one gives the variable
@@ -3539,7 +3559,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
     // earlier fixes made for this: the variable made to follow another one, and pictures "…0" made to show the "…2" files
     oldFixes = (await fixBlocksOf(gid).catch(() => [])).filter(b => (b.key.startsWith('picture ') && b.key.includes('[' + P.name + ']')) || (b.key.startsWith('image ') && b.key.endsWith(curS) && (() => { const m = b.block.match(/=\s*"([^"]+)"/); if (!m) return false; const base = m[1].split('/').pop().replace(/\.[^.]+$/, '').toLowerCase(), stem = b.key.slice(6, b.key.length - curS.length).toLowerCase(); return valGood.some(v => base === stem + String(v).toLowerCase()); })()));
     drawVals();
-    const sh = await gamePy(`result = _tkb_imgshot(${JSON.stringify(valGood.map(v => [String(v), P.tpl.split('[' + P.name + ']').join(String(v))]))}, 200)`, 30000);
+    const sh = await gameShot(`result = _tkb_imgshot(${JSON.stringify(valGood.map(v => [String(v), P.tpl.split('[' + P.name + ']').join(String(v))]))}, 200)`, 30000);
     Object.assign(valThumbs, sh || {}); drawVals();
   } catch (e) { console.warn('fix values', e); } })();
   const preview = h('pre', { class: 'errlog', id: 'fix-preview' });
@@ -3605,7 +3625,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
     prevB.disabled = true; prevB.lastChild.textContent = 'Drawing…';
     // the picture of the error (for a picture name with a variable: the picture it is a part of), drawn in if it is not on screen
     const xs = P.kind === 'dynimg' ? `[_tkb_owner(${JSON.stringify(P.tpl)}) or ${JSON.stringify(P.tpl)}]` : JSON.stringify([want || P.name].filter(Boolean));
-    const r = await gamePy(`result = _tkb_preview2(${pl.prev.imgs || '[]'}, ${pl.prev.vals || '[]'}, None, ${xs})`, 30000);
+    const r = await gameShot(`result = _tkb_preview2(${pl.prev.imgs || '[]'}, ${pl.prev.vals || '[]'}, None, ${xs})`, 30000);
     prevB.disabled = false; prevB.lastChild.textContent = 'Preview';
     if (!r || !r.png) return toast('The preview could not be drawn' + (r && r.err ? ': ' + r.err : '.'), 5000);
     const title = $('#sheetTitle').textContent; closeSheet();

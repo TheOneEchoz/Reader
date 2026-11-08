@@ -1,6 +1,6 @@
 {
- "version": 132,
- "name": "1.23.0-beta.34",
+ "version": 133,
+ "name": "1.23.0-beta.35",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Pictures no longer turn blue when tapped, double-tapped or long-pressed: anywhere in the app (the picture choices when fixing errors too), and inside games (Ren'Py, and the pictures and canvas of HTML and RPG Maker games). Only boxes you type in, and errors and code meant for copying, can still be selected."
+  "Big games (pictures loaded when needed): a picture still on its way no longer flashes blue for a moment, in the game or in the fix tools. The stand-in Ren'Py shows until a picture arrives is now see-through instead of blue.",
+  "The pictures in the fix tools (choices, parts of a layered picture, Preview) are drawn again once the pictures they need have arrived, so they are never shown with stand-ins."
  ]
 }
