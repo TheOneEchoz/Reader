@@ -1,5 +1,14 @@
 [
  {
+  "v": 132,
+  "name": "1.23.0-beta.34",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Pictures no longer turn blue when tapped, double-tapped or long-pressed: anywhere in the app (the picture choices when fixing errors too), and inside games (Ren'Py, and the pictures and canvas of HTML and RPG Maker games). Only boxes you type in, and errors and code meant for copying, can still be selected."
+  ]
+ },
+ {
   "v": 131,
   "name": "1.23.0-beta.33",
   "date": "2026-11-08",

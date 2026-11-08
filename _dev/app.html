@@ -226,6 +226,12 @@ body:has(#sheet:not([hidden])) #toast{top:calc(16px + env(safe-area-inset-top,0p
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
 img,svg,.btile,.card,.pcell,.savecard,.chrow,.btn,.iconbtn,.cover,.hero,.bgrid,.seg,.rbar,.gamecover{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* nothing turns blue when tapped, double-tapped or long-pressed: only what you type in (and code or errors to copy) can be selected */
+body{-webkit-user-select:none;user-select:none}
+input,textarea,[contenteditable],pre,.errlog,.codeedit{-webkit-user-select:text;user-select:text}
+img::selection,svg::selection,canvas::selection,iframe::selection{background:transparent}
+img{-webkit-user-drag:none}
+#gamebox,#gamebox *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 img{-webkit-user-drag:none}
 img::selection,.btile ::selection,.card ::selection,.pcell ::selection{background:transparent}
 #shield{position:fixed;inset:0;z-index:500;background:var(--bg);display:grid;place-items:center}
@@ -2382,7 +2388,7 @@ function rpyDoc(html, loader) {
   html = html.replace(/<link\b[^>]*>/gi, '').replace(/navigator\.serviceWorker/g, '(void 0)').replace(/<img\b[^>]*\bid=["']?presplash\b[^>]*>/i, '<img id="presplash" alt="">');
   const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; connect-src blob: data:; img-src blob: data:; media-src blob: data:; style-src 'unsafe-inline'; font-src blob: data:; worker-src blob:; form-action 'none'";
   html = html.replace(/<head>/i, `<head><meta http-equiv="Content-Security-Policy" content="${csp}"><script>try{Object.defineProperty(Navigator.prototype,'serviceWorker',{get:function(){return undefined},configurable:true})}catch(e){}<\/script>`);
-  html = html.replace(/<\/head>/i, '<style>#ContextContainer,#statusDiv,#statusbar_container,#presplash{display:none!important}html,body{background:#000}</style></head>');
+  html = html.replace(/<\/head>/i, '<style>#ContextContainer,#statusDiv,#statusbar_container,#presplash{display:none!important}html,body{background:#000}html,body,canvas,img,video,div{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}::selection{background:transparent}canvas,img{outline:none}</style><script>document.addEventListener("selectstart",function(e){var t=e.target;if(!(t&&t.closest&&t.closest("input,textarea,[contenteditable]")))e.preventDefault()},true)<\/script></head>');
   html = html.replace(/<\/body>(?![\s\S]*<\/body>)/i, `<script>(${rpyBoot.toString()})(${JSON.stringify(scripts)}, ${JSON.stringify(loader)});<\/script></body>`);
   return html;
 }
@@ -4133,7 +4139,9 @@ function htmlDoc(html, base) {
   html = html.replace(/<meta\b[^>]*http-equiv[^>]*>/gi, '');
   const csp = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; connect-src blob: data:; img-src blob: data:; media-src blob: data:; style-src 'unsafe-inline' blob:; font-src blob: data:; worker-src blob:; form-action 'none'";
   const head = `<meta http-equiv="Content-Security-Policy" content="${csp}"><base href="https://game.invalid/${base}"><script>try{Object.defineProperty(Navigator.prototype,'serviceWorker',{get:function(){return undefined},configurable:true})}catch(e){}<\/script><script>(${htmlBoot.toString()})(${JSON.stringify(items).replace(/<\//g, '<\\/')}, ${JSON.stringify(css)});<\/script>`;
-  if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, m => m + head); else html = head + html;
+  // pictures and the game's canvas never turn blue when tapped (the game's text can still be selected)
+  const nosel = '<style>html{-webkit-tap-highlight-color:transparent}img,canvas,video{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}img::selection,canvas::selection,video::selection{background:transparent}</style>';
+  if (/<head\b[^>]*>/i.test(html)) html = html.replace(/<head\b[^>]*>/i, m => m + head + nosel); else html = head + nosel + html;
   return html;
 }
 /* Runs inside the sealed frame of an HTML game, before the game's own scripts. */
