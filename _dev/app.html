@@ -2689,7 +2689,6 @@ function parseGameError(e) {
   else if ((m = sh.match(/NameError: (?:global )?name '([^']+)' is not defined/))) { kind = 'name'; name = m[1]; }
   else if ((m = sh.match(/could not find label '([^']+)'/i))) { kind = 'label'; name = m[1]; }
   else if ((m = sh.match(/Image '([^']+)' not found/i)) || (m = sh.match(/image '([^']+)' (?:is not defined|not found)/i))) { kind = 'image'; name = m[1]; }
-  else if ((m = sh.match(/AttributeError: .* has no attribute '([^']+)'/))) { kind = 'attr'; name = m[1]; }
   const where = [...(sh.match(/File "([^"]+)", line (\d+)/g) || [])].map(x => x.match(/File "([^"]+)", line (\d+)/)).filter(x => !/^renpy\//.test(x[1]) && !/zzzz_tankobon/.test(x[1]))[0];
   return { kind, name, tpl, file: where ? where[1].replace(/^\/+/, '').replace(/^game\//, 'game/') : null, line: where ? +where[2] : null };
 }
@@ -2725,8 +2724,46 @@ async function addFixBlock(gid, key, block, modId) { // the file of small fixes:
 }
 /* fix one error: the right name (from the running game's own names, closest spelling first), the line it is on, and the fix,
    which goes into the game's "Fixes" mod; "Try it" plays the scene again with the fix */
-async function fixSheet(gid, err, byHand, pickedFile) {
+async function brokenPictures() {
+  // every picture on screen, inside out: a picture name the game does not have, or an empty spot (None) inside one
+  return (await gamePy([
+    '_tkbb = []',
+    'def _tkbname(d, renpy=renpy):',
+    '    raw = " ".join(d.name)',
+    '    return raw, (raw if isinstance(d.name, tuple) else renpy.substitute(raw))',
+    '_tkbself = {}',
+    'def _tkbwalk(d, nm, depth, _tkbb=_tkbb, renpy=renpy, _tkbname=_tkbname, _tkbself=_tkbself):',
+    '    if depth > 60:',
+    '        return',
+    '    if d is None:',
+    '        if nm and nm not in _tkbb:',
+    '            _tkbb.append(nm)',
+    '        return',
+    '    try:',
+    '        if isinstance(d, (renpy.display.image.ImageReference, renpy.display.image.DynamicImage)):',
+    '            raw, ev = _tkbname(d)',
+    '            nm = [raw, ev]',
+    '            if not renpy.has_image(ev, exact=True) and nm not in _tkbb:',
+    '                _tkbb.append(nm)',
+    '        kids = d.visit() or []',
+    '    except Exception:',
+    '        return',
+    '    for c in kids:',
+    '        _tkbself["w"](c, nm, depth + 1)',
+    '_tkbself["w"] = _tkbwalk',
+    '_tsl = renpy.game.context().scene_lists',
+    'for _l in list(_tsl.layers):',
+    '    for _sle in _tsl.layers.get(_l, []):',
+    '        _tkbwalk(_sle.displayable, None, 0)',
+    'result = _tkbb'].join('\n'))) || [];
+}
+async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
   const g = await S.gal(gid), P = parseGameError(err);
+  if (!P.kind && !byHand) {
+    // an error caused by a picture that could not be found (skipped earlier, it leaves an empty spot): fix that picture
+    const bad = await brokenPictures();
+    if (bad.length) { const [raw, ev] = bad[brokenPick || 0]; P.kind = 'image'; P.name = ev; P.raw = raw; P.broken = bad; }
+  }
   if (!P.kind || byHand) return fixByHand(gid, err, P);
   const codes = {
     name: 'result = sorted(set(k for k, v in renpy.store.__dict__.items() if not k.startswith("_") and type(v).__name__ not in ("module", "function", "builtin_function_or_method", "type", "classobj", "instancemethod", "method")))',
@@ -2817,6 +2854,8 @@ async function fixSheet(gid, err, byHand, pickedFile) {
   } }, icon('play'), 'Try it');
   const saveB = h('button', { class: 'btn', id: 'fix-save', onclick: async () => { await apply(); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
   openSheet(P.kind === 'label' ? 'Fix a missing scene' : P.kind === 'image' ? 'Fix a missing picture' : 'Fix a misspelt name', h('div', { class: 'stack', id: 'fix-sheet' },
+    P.broken ? h('div', { class: 'banner', id: 'fix-broken' }, `This error comes from a picture on screen that the game cannot find: “${P.name}”${P.raw && P.raw !== P.name ? ` (written “${P.raw}” in the game)` : ''}. Choose the picture it should be.`,
+      P.broken.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:6px' }, P.broken.map(([r, e], i) => h('button', { class: 'btn small' + (e === P.name ? ' primary' : ''), onclick: () => fixSheet(gid, err, false, null, i) }, e))) : null) : null,
     h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'dynimg' ? `The picture “${P.tpl}” is named after the variable “${P.name}”, and with its value there is no such picture. Variables that look like it (✓: with its value, the picture exists):` : P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
     pickedFile ? null : picks, pickedFile ? null : custom, pickB, pickedBox, evB, preview, how,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
@@ -2833,6 +2872,19 @@ async function fixByHand(gid, err, P) {
   const a = lines && P.line ? Math.max(0, P.line - 6) : 0, z = lines && P.line ? Math.min(lines.length, P.line + 5) : 0;
   const ed = h('textarea', { class: 'text codeedit', id: 'fix-edit', spellcheck: 'false', rows: lines ? String(Math.min(14, z - a + 1)) : '8' },
     lines ? lines.slice(a, z).join('\n') : '# Ren\'Py code that runs when the game starts, for example:\n# define name_with_a_typo = right_name\n# label missing_scene:\n#     jump existing_scene\n');
+  const ctxBox = h('pre', { class: 'errlog', id: 'fix-context', hidden: true });
+  if (!lines && P.file && P.line) gamePy([`_f = ${JSON.stringify(P.file.split('/').pop().replace(/\.rpyc?$/i, ''))}`, `_l = ${P.line}`, '_out = []',
+    'for _n in getattr(renpy.game.script, "all_stmts", []):',
+    '    try:',
+    '        if _n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and abs(_n.linenumber - _l) <= 7:',
+    '            try:',
+    '                _c = _n.get_code()',
+    '            except Exception:',
+    '                _c = "(" + type(_n).__name__ + ")"',
+    '            _out.append([_n.linenumber, _c])',
+    '    except Exception:',
+    '        pass',
+    'result = sorted(_out)'].join('\n')).then(r => { if (r && r.length) { ctxBox.hidden = false; ctxBox.textContent = `What the game does around line ${P.line} (rebuilt from its compiled script):\n` + r.map(([n, c]) => `${n === P.line ? '>' : ' '}${String(n).padStart(5)}  ${c}`).join('\n'); } });
   const fixMods = (g.game.mods || []).filter(m => m.fixes);
   const newName = h('input', { class: 'text', id: 'fix-newmod', hidden: true, autocomplete: 'off', placeholder: 'Name of the new mod', value: 'More fixes' });
   const into = h('select', { class: 'text', id: 'fix-into', 'aria-label': 'Put the fix in', onchange: () => { newName.hidden = into.value !== 'new'; } }, fixMods.length ? fixMods.map(m => h('option', { value: m.id }, `The mod “${m.name}”`)) : h('option', { value: '' }, 'The mod “Fixes” (made now)'), h('option', { value: 'new' }, 'A new mod…'));
@@ -2850,6 +2902,7 @@ async function fixByHand(gid, err, P) {
     h('pre', { class: 'errlog' }, (err.short || '').trim().split('\n').slice(-4).join('\n')),
     lines ? h('p', { class: 'hint', style: 'margin:0' }, `Lines ${a + 1} to ${z} of ${src.p.slice(5)}; the error is on line ${P.line}. Change what is wrong, then try it. A corrected copy of the file goes into the mod; the game's own file is not changed.`)
       : h('p', { class: 'hint', style: 'margin:0' }, P.file ? `The error is in ${P.file.replace(/^game\//, '')}${P.line ? `, line ${P.line}` : ''}, but the game does not include that script (only its compiled version), so it cannot be edited. You can write a fix in Ren'Py's language instead; it runs when the game starts.` : 'Write a fix in Ren\'Py\'s language; it runs when the game starts.'),
+    lines ? null : ctxBox,
     ed,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
     h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, h('button', { class: 'btn', onclick: async () => { await apply(); closeSheet(); toast('Fix saved. It works from the next start.', 3000); } }, 'Save the fix'),

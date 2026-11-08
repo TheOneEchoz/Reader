@@ -1,5 +1,16 @@
 [
  {
+  "v": 122,
+  "name": "1.23.0-beta.24",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing game errors: errors that are not a typo (like “'NoneType' object has no attribute 'style'”) now look for a picture on screen that the game cannot find, and say which one it is; then choose the picture it should be from the game's pictures. Several broken pictures can be chosen between.",
+   "For games that only include their compiled scripts, the fix sheet shows what the game does around the broken line (rebuilt from the compiled script), for context.",
+   "Fixed: the Fix button could open a sheet whose Try it stayed greyed out."
+  ]
+ },
+ {
   "v": 121,
   "name": "1.23.0-beta.23",
   "date": "2026-11-08",

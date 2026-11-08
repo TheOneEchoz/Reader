@@ -1,6 +1,6 @@
 {
- "version": 121,
- "name": "1.23.0-beta.23",
+ "version": 122,
+ "name": "1.23.0-beta.24",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixing game errors is much faster: Try it (and Undo) no longer start the whole game again. The fix is written into the running game and Ren'Py reloads its script in place (a few seconds, even for big games), then plays the scene again. If that cannot be done, the game starts again as before."
+  "Fixing game errors: errors that are not a typo (like “'NoneType' object has no attribute 'style'”) now look for a picture on screen that the game cannot find, and say which one it is; then choose the picture it should be from the game's pictures. Several broken pictures can be chosen between.",
+  "For games that only include their compiled scripts, the fix sheet shows what the game does around the broken line (rebuilt from the compiled script), for context.",
+  "Fixed: the Fix button could open a sheet whose Try it stayed greyed out."
  ]
 }
