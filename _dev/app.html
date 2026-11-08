@@ -569,6 +569,11 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .layerrow .bad{color:#e06c66;font-weight:600}
 .fixpick{display:flex;align-items:center;gap:10px;padding:4px;border-radius:8px}
 .fixpick .swthumb{width:72px;height:72px}
+#gamebox .gamespin{position:absolute;right:18px;bottom:18px;z-index:4;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .2s}
+#gamebox .gamespin.on{opacity:1}
+#gamebox .gamespin span{width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:var(--accent);animation:gspin .8s linear infinite}
+@keyframes gspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#gamebox .gamespin span{animation-duration:2s}}
 #fixprev{position:absolute;inset:0;z-index:6;background:#000;display:flex;align-items:center;justify-content:center}
 #fixprev img{max-width:100%;max-height:100%;object-fit:contain;user-select:none}
 #fixprev .fixprevbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;background:rgba(0,0,0,.75);color:#fff;padding:8px 10px 8px 14px;border-radius:12px;max-width:calc(100% - 32px);flex-wrap:wrap;font-size:.9em}
@@ -2401,6 +2406,7 @@ function rpyBoot(SCRIPTS, LOADER) {
   const mediaEls = () => [...document.querySelectorAll('audio,video')];
   window.__tkbAudio = ACTX;
   const P = window.parent, post = (m, t) => P.postMessage(m, '*', t || []);
+  window.tkbSpin = on => post({ t: 'spin', on: !!on }); // called by Ren'Py (the hooks): a picture on screen is still on its way
   const URLS = {}, waiting = new Map(); let FILES = [], SAVES = [], EXTRACT = {}, MORE = [], LAZY = null, seq = 0;
   const ask = m => new Promise(res => { const q = ++seq; waiting.set(q, res); post(Object.assign({ q }, m)); });
   const mime = n => /\.wasm$/.test(n) ? 'application/wasm' : /\.js$/.test(n) ? 'text/javascript' : 'application/octet-stream';
@@ -2681,6 +2687,46 @@ const RPY_HOOKS = [
   '            except Exception:',
   '                pass',
   '    config.periodic_callbacks.append(_tkb_keepfiles)',
+  // a picture drawn on screen while it is still on its way (its stand-in is drawn): the app shows a loading wheel until it is here
+  '    _tkb_wait = set()',
+  '    _tkb_spin_on = [False]',
+  '    def _tkb_pending():',
+  '        try:',
+  '            return set(rr.data for rr in renpy.webloader.queue if rr.rtype == "image")',
+  '        except Exception:',
+  '            return set()',
+  '    if renpy.emscripten and not getattr(renpy.display.im.cache, "_tkb_get", None):',
+  '        _tkb_get0 = renpy.display.im.cache.get',
+  '        def _tkb_cget(image, predict=False, texture=False, render=False, _g=_tkb_get0, _w=_tkb_wait):',
+  '            rv = _g(image, predict=predict, texture=texture, render=render)',
+  '            if render and not predict:',
+  '                try:',
+  '                    pend = _tkb_pending()',
+  '                    if pend:',
+  '                        for f in image.predict_files():',
+  '                            if f in pend:',
+  '                                _w.add(f)',
+  '                except Exception:',
+  '                    pass',
+  '            return rv',
+  '        renpy.display.im.cache.get = _tkb_cget',
+  '        renpy.display.im.cache._tkb_get = _tkb_get0',
+  '    def _tkb_spin(_w=_tkb_wait, _on=_tkb_spin_on):',
+  '        if not _w and not _on[0]:',
+  '            return',
+  '        pend = _tkb_pending()',
+  '        for f in list(_w):',
+  '            if f not in pend:',
+  '                _w.discard(f)',
+  '        on = bool(_w)',
+  '        if on != _on[0]:',
+  '            _on[0] = on',
+  '            try:',
+  '                import emscripten',
+  '                emscripten.run_script("window.tkbSpin && window.tkbSpin(%d)" % (1 if on else 0))',
+  '            except Exception:',
+  '                pass',
+  '    config.periodic_callbacks.append(_tkb_spin)',
   '    def _tkb_switches(name):',
   '        d = renpy.display.image.images.get(tuple(name.split()))',
   '        out = []',
@@ -4055,6 +4101,12 @@ async function openGame(id, cont) {
         const u = await rpyRange(GAME.list[m.i], m.o, m.l), buf = u.buffer.byteLength === u.length ? u.buffer : u.slice().buffer; win.postMessage({ q: m.q, buf }, '*', [buf]);
       } else if (m.t === 'lazy') {
         GAME.lazyGot = (GAME.lazyGot || 0) + 1;
+      } else if (m.t === 'spin') {
+        // a picture on screen is still on its way: a loading wheel (after a moment, so quick ones show none)
+        let sp = box.querySelector('.gamespin');
+        if (!sp) { sp = h('div', { class: 'gamespin', role: 'status', 'aria-label': 'Loading a picture' }, h('span')); box.append(sp); }
+        clearTimeout(GAME.spinT);
+        if (m.on) GAME.spinT = setTimeout(() => sp.classList.add('on'), 150); else sp.classList.remove('on');
       } else if (m.t === 'progress') {
         lbl.textContent = `Opening the game · ${mb(m.done)} of ${mb(m.total)}`; bar.firstChild.style.width = (100 * m.done / Math.max(1, m.total)) + '%';
       } else if (m.t === 'loaded') {

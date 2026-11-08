@@ -37,16 +37,26 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.screenshot({ path: '/tmp/claude-0/shots/lazy-menu.png' });
   const box = await (await p.$('#gamebox iframe')).boundingBox();
   for (let k = 0; k < 4; k++) { // Start (again if the menu was not ready)
+    if (k === 0) await p.evaluate(() => {
+      new MutationObserver(() => { if (document.querySelector('#gamebox .gamespin.on')) window.__spinSeen = (window.__spinSeen || 0) + 1; }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true }); });
     await p.mouse.click(box.x + box.width * 0.057, box.y + box.height * 0.40); await p.waitForTimeout(4000);
     if (await fr.evaluate(() => window.renpy_exec('result = renpy.get_screen("main_menu") is None')).catch(() => false)) break;
   }
   for (let k = 0; k < 2; k++) { await p.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6); await p.waitForTimeout(2500); }
+  // a picture not here yet, shown straight away (no time to load it ahead), with pictures slowed down
+  await p.evaluate(() => { const o = window.rpyRange; window.rpyRange = async (...a) => { await new Promise(r => setTimeout(r, 3000)); return o(...a); }; });
+  const shown = await fr.evaluate(() => window.renpy_exec(['import os', '_n = None', 'for _k, _v in renpy.display.image.images.items():', '    _f = getattr(_v, "filename", None)', '    if isinstance(_f, str) and _f in renpy.loader.remote_files and not os.path.exists(os.path.join(renpy.config.gamedir, _f)):', '        _n = _k', '        break', 'if _n:', '    renpy.show(" ".join(_n), tag="tkbspin")', '    renpy.restart_interaction()', 'result = _n and " ".join(_n)'].join('\n'))).catch(e => String(e));
+  console.log('SHOWN', JSON.stringify(shown));
+  for (let k = 0; k < 40; k++) { await p.waitForTimeout(250); if (await p.$('#gamebox .gamespin.on')) { await p.waitForTimeout(300); await p.screenshot({ path: '/tmp/claude-0/shots/spin.png' }); break; } }
+  await p.waitForTimeout(6000);
   await p.screenshot({ path: '/tmp/claude-0/shots/lazy-story.png' });
   const got = await p.evaluate(() => GAME.lazyGot || 0);
   const pix = Math.round(require('fs').statSync('/tmp/claude-0/shots/lazy-story.png').size / 1000); // a real background makes a big picture; a flat stand-in a tiny one
   const bg = await fr.evaluate(() => window.renpy_exec('result = [renpy.loader.loadable("images/bg lecturehall.jpg"), "images/bg lecturehall.jpg" in renpy.loader.remote_files]')).catch(e => String(e));
   console.log('GOT', got, 'colours', pix, JSON.stringify(bg));
   ok('pictures are asked for and given as the story goes', got >= 2, String(got));
+  const spin = await p.evaluate(() => [window.__spinSeen || 0, !!document.querySelector('#gamebox .gamespin.on')]);
+  ok('while a picture on screen is still on its way, a loading wheel shows; then it goes', spin[0] > 0 && !spin[1], JSON.stringify(spin));
   ok('the background shows (not a blank stand-in)', pix > 300, pix + ' kB screenshot');
   // pictures that arrived are kept (Ren'Py would free them after a minute and load them again when they come back)
   await p.waitForTimeout(1000);

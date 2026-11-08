@@ -1,6 +1,6 @@
 {
- "version": 134,
- "name": "1.23.0-beta.36",
+ "version": 135,
+ "name": "1.23.0-beta.37",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Big games (pictures loaded when needed): pictures that arrived are now kept instead of freed a minute later, so a character or place that comes back appears straight away instead of being loaded again. They are kept as long as they fit in a share of the device's memory; past that, the oldest go first."
+  "Big games: while a picture that should be on screen is still loading, a loading wheel turns in the corner of the game, and goes away as soon as the picture is there. Pictures loading ahead of time (not on screen yet) show no wheel, and quick ones show none either."
  ]
 }
