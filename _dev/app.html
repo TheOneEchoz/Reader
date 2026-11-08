@@ -2658,14 +2658,86 @@ const RPY_HOOKS = [
   '    def _tkb_switch_pick(x):',
   '        for i, (c, dd) in enumerate(x.args[0]):',
   '            try:',
-  '                ok = (c is None) or renpy.python.py_eval(c)',
+  '                ok = (c is None) or (c if isinstance(c, bool) else renpy.python.py_eval(c))',
   '            except Exception:',
   '                ok = False',
   '            if ok:',
   '                return i, dd',
   '        return -1, None',
+  // a switch is known by its conditions and what each shows: a fix (rule) for it applies wherever the game builds it, also the
+  // switches a layered image builds for its "if" layers each time it is shown, which are in no list of the game's pictures
+  '    def _tkb_swkey(switch):',
+  '        out = []',
+  '        for c, dd in switch:',
+  '            ds = _tkb_desc(dd)',
+  '            out.append(("None" if c is None else str(c)) + "\\t" + ds["t"] + ":" + str(ds.get("v", "")))',
+  '        return "\\n".join(out)',
+  '    _tkb_condrules = {}',
+  '    _tkb_rulecache = {}',
+  '    def _tkb_condrule(key, rows):',
+  '        rr = []',
+  '        for cond, spec in rows:',
+  '            if "file" in spec:',
+  '                rr.append((cond, "d", renpy.easy.displayable(spec["file"])))',
+  '            elif "keep" in spec:',
+  '                rr.append((cond, "k", spec["keep"]))',
+  '            else:',
+  '                rr.append((cond, "d", renpy.display.layout.Null()))',
+  '        _tkb_condrules[key] = rr',
+  '        _tkb_rulecache.clear()',
+  '    if not hasattr(renpy.display.layout, "_tkb_orig_pick"):',
+  '        renpy.display.layout._tkb_orig_pick = renpy.display.layout.condition_switch_pick',
+  '    def _tkb_pick(switch, _orig=renpy.display.layout._tkb_orig_pick, _rules=_tkb_condrules, _cache=_tkb_rulecache, _key=_tkb_swkey):',
+  '        if _rules:',
+  '            hit = _cache.get(id(switch))',
+  '            if hit is None or hit[0] is not switch:',
+  '                if len(_cache) > 2000:',
+  '                    _cache.clear()',
+  '                built = None',
+  '                try:',
+  '                    rr = _rules.get(_key(switch))',
+  '                    if rr is not None:',
+  '                        built = []',
+  '                        for cond, kind, v in rr:',
+  '                            dd = (switch[v][1] if v < len(switch) else None) if kind == "k" else v',
+  '                            built.append((cond, renpy.display.layout.Null() if dd is None else dd))',
+  '                except Exception:',
+  '                    built = None',
+  '                hit = (switch, built)',
+  '                _cache[id(switch)] = hit',
+  '            if hit[1] is not None:',
+  '                return _orig(hit[1])',
+  '        return _orig(switch)',
+  '    renpy.display.layout.condition_switch_pick = _tkb_pick',
+  '    def _tkb_swinfo(x, name, shown):',
+  '        i, dd = _tkb_switch_pick(x)',
+  '        return {"name": name, "k": 0, "chosen": i, "shown": shown, "rows": _tkb_switch_rows(x), "key": _tkb_swkey(x.args[0])}',
   '    def _tkb_broken_switches():',
   '        res = []',
+  '        seen = set()',
+  '        try:',
+  '            sls = renpy.game.context().scene_lists',
+  '            def walk(x, depth, tag, _seen=seen, _res=res):',
+  '                if x is None or depth > 60:',
+  '                    return',
+  '                if isinstance(x, renpy.display.layout.DynamicDisplayable) and getattr(getattr(x, "function", None), "__name__", "") == "condition_switch_show":',
+  '                    if _tkb_switch_pick(x)[1] is None:',
+  '                        r = _tkb_swinfo(x, tag, True)',
+  '                        if r["key"] not in _seen:',
+  '                            _seen.add(r["key"])',
+  '                            _res.append(r)',
+  '                try:',
+  '                    kids = x.visit() or []',
+  '                except Exception:',
+  '                    kids = []',
+  '                for c in kids:',
+  '                    walk(c, depth + 1, tag)',
+  '            for l in list(sls.layers):',
+  '                for sle in list(sls.layers[l]):',
+  '                    if sle.tag:',
+  '                        walk(sle.displayable, 0, sle.tag)',
+  '        except Exception:',
+  '            pass',
   '        shown = set()',
   '        try:',
   '            for l in renpy.config.layers:',
@@ -2681,7 +2753,11 @@ const RPY_HOOKS = [
   '            for k, x in enumerate(sws):',
   '                i, dd = _tkb_switch_pick(x)',
   '                if dd is None:',
-  '                    res.append({"name": name, "k": k, "chosen": i, "shown": nm[0] in shown, "rows": _tkb_switch_rows(x)})',
+  '                    r = _tkb_swinfo(x, name, nm[0] in shown)',
+  '                    r["k"] = k',
+  '                    if r["key"] not in seen:',
+  '                        seen.add(r["key"])',
+  '                        res.append(r)',
   '        res.sort(key=lambda r: not r["shown"])',
   '        return res[:30]',
   '    def _tkb_setswitch(name, k, rows):',
@@ -2715,9 +2791,11 @@ const RPY_HOOKS = [
   '                f = getattr(d, "function", None)',
   '                co = getattr(f, "__code__", None)',
   '                conds = []',
+  '                sw = None',
   '                if getattr(f, "__name__", "") == "condition_switch_show":',
   '                    conds = [str(c) for c, _x in d.args[0]]',
-  '                return {"dyn": True, "near": nm, "fn": getattr(f, "__name__", str(f)), "names": list(co.co_names) if co else [], "consts": [c for c in (co.co_consts if co else ()) if isinstance(c, (int, float, str)) and len(str(c)) < 60][:40], "conds": conds}',
+  '                    sw = _tkb_swinfo(d, None, True)',
+  '                return {"switch": sw, "dyn": True, "near": nm, "fn": getattr(f, "__name__", str(f)), "names": list(co.co_names) if co else [], "consts": [c for c in (co.co_consts if co else ()) if isinstance(c, (int, float, str)) and len(str(c)) < 60][:40], "conds": conds}',
   '            for c in (d.visit() or []):',
   '                if c is None:',
   '                    return {"dyn": True, "near": nm, "fn": "", "names": [], "consts": [], "conds": []}',
@@ -2892,8 +2970,19 @@ async function brokenPictures() {
    values now, and the values it compares them with), and let a variable be set, to see the picture come back */
 /* a picture that switches on conditions (Ren'Py's ConditionSwitch) and now chooses nothing: its rows, to change the
    conditions and pictures; the fix rewrites the rows when the game starts (only while the Fixes mod is on) */
-async function fixConditions(gid, err, which = 0, list = null) {
-  list = list || (await gamePy('result = _tkb_broken_switches()', 20000)) || [];
+/* the switches: the ones caught when the error happened (the game took that picture away to go on, so it may no longer be on
+   screen), then any on screen or among the game's pictures that choose nothing now */
+async function brokenSwitches(err, first) {
+  const out = [], seen = new Set(), add = x => { if (x && x.rows && !seen.has(x.key || JSON.stringify(x.rows))) { seen.add(x.key || JSON.stringify(x.rows)); out.push(x); } };
+  const named = d => d.switch ? { ...d.switch, name: d.switch.name || (d.near ? (d.near[1] || d.near[0]) : d.tag) || 'picture' } : null;
+  if (first) add(named(first));
+  for (const d of (err && err.broken) || []) if (d && d.dyn) add(named(d));
+  for (const x of (await gamePy('result = _tkb_broken_switches()', 20000)) || []) add(x);
+  return out;
+}
+const strHash = t => { let x = 5381; for (let i = 0; i < t.length; i++) x = (x * 33 + t.charCodeAt(i)) >>> 0; return x.toString(36); };
+async function fixConditions(gid, err, which = 0, list = null, first = null) {
+  list = list || await brokenSwitches(err, first);
   if (!list.length) return toast('No picture with conditions is choosing nothing right now. Play to where the error happens, then try again.', 5000);
   const sw = list[which] || list[0], g = await S.gal(gid);
   const pics = await rpyPictures(await gameFileList(g, 'on')).catch(() => []);
@@ -2914,13 +3003,16 @@ async function fixConditions(gid, err, which = 0, list = null) {
         h('div', { class: 'row', style: 'gap:8px' }, h('b', { class: 'num', style: 'flex:none' }, i === 0 ? 'If' : 'Else if'), cond,
           h('button', { class: 'iconbtn', 'aria-label': `Delete row ${i + 1}`, onclick: () => { rows.splice(i, 1); draw(); } }, icon('trash'))),
         h('div', { class: 'row', style: 'gap:10px' }, img, h('span', { style: 'flex:1;min-width:0' }, 'show ', h('b', {}, what), i === sw.chosen ? h('small', { class: 'hint' }, ' · true now') : null),
-          h('button', { class: 'btn small', onclick: () => openAssets(gid, { pick: p0 => { r.spec = { file: p0.name }; reopen(); }, onCancel: reopen, query: sw.name.split(/\s/)[0], title: `Picture for “${r.cond}”` }) }, icon('image'), 'Change'),
+          h('button', { class: 'btn small', onclick: () => openAssets(gid, { pick: p0 => { r.spec = { file: p0.name }; reopen(); }, onCancel: reopen, query: String(sw.name || '').split(/\s/)[0], title: `Picture for “${r.cond}”` }) }, icon('image'), 'Change'),
           h('button', { class: 'btn ghost small', onclick: () => { r.spec = { none: 1 }; draw(); } }, 'Nothing')));
     }));
   };
   const addB = h('button', { class: 'btn small ghost', onclick: () => { rows.push({ cond: 'True', spec: { none: 1 }, dsc: { t: 'null' } }); draw(); } }, icon('plus'), 'Add a row (“True” = otherwise)');
-  const code = () => `init 2001 python:\n    _tkb_setswitch(${JSON.stringify(sw.name)}, ${sw.k}, ${JSON.stringify(rows.map(r => [r.cond.trim() || 'False', r.spec.file ? { file: r.spec.file } : r.spec.none ? { none: 1 } : { keep: r.spec.keep }]))})`;
-  const key = `conditions ${sw.name} ${sw.k}`;
+  const rowsJ = () => JSON.stringify(rows.map(r => [r.cond.trim() || 'False', r.spec.file ? { file: r.spec.file } : r.spec.none ? { none: 1 } : { keep: r.spec.keep }]));
+  // a fix for this switch wherever the game builds it (known by its conditions and pictures), also inside layered images
+  const code = () => sw.key ? `init 2001 python:\n    # ${sw.name}\n    _tkb_condrule(${JSON.stringify(sw.key)}, ${rowsJ()})`
+    : `init 2001 python:\n    _tkb_setswitch(${JSON.stringify(sw.name)}, ${sw.k}, ${rowsJ()})`;
+  const key = sw.key ? `conditions ${sw.name} ${strHash(sw.key)}` : `conditions ${sw.name} ${sw.k}`;
   const tryB = h('button', { class: 'btn primary', id: 'cond-try', onclick: async () => {
     const P0 = parseGameError(err || {});
     const scene = P0.file && P0.line ? await gamePy(`_f = ${JSON.stringify(P0.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P0.line}] or [(0, None)])[1]`) : null;
@@ -2929,7 +3021,7 @@ async function fixConditions(gid, err, which = 0, list = null) {
   const saveB = h('button', { class: 'btn', onclick: async () => { await addFixBlock(gid, key, code()); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
   let reopen = () => {};
   const render1 = () => openSheet('Fix the conditions', h('div', { class: 'stack', id: 'cond-sheet' },
-    h('div', { class: 'banner' }, `The picture “${sw.name}” shows different things depending on conditions, checked from the top; the first true one is shown. Right now ${sw.chosen >= 0 ? `row ${sw.chosen + 1} is true and it shows nothing` : 'none is true'}. Change a condition or a picture so the right row shows something.`),
+    h('div', { class: 'banner' }, `The picture “${sw.name}” (or one of its layers, for a picture made of layers) shows different things depending on conditions, checked from the top; the first true one is shown. Right now ${sw.chosen >= 0 ? `row ${sw.chosen + 1} is true and it shows nothing` : 'none is true'}. Change a condition or a picture so the right row shows something.`),
     list.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, list.map((x, i) => h('button', { class: 'btn small' + (x === sw ? ' primary' : ''), onclick: () => fixConditions(gid, err, i, list) }, x.name + (x.shown ? ' (on screen)' : '')))) : null,
     box, addB,
     h('div', {}, h('div', { class: 'label' }, 'The variables in these conditions, now'), valsBox),
@@ -2966,7 +3058,7 @@ async function fixPickedByCode(gid, err, d) {
     vals.length ? h('div', { class: 'stack', style: 'gap:6px' }, h('div', { class: 'label' }, 'Try a value'), h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, varSel, valIn, setB), status) : null,
     h('p', { class: 'hint' }, 'Setting a value changes this playthrough only (like the game would have), so you can see which value brings the picture back. If a typo in the game keeps giving the wrong value, fix that typo too (its error is in the list).'),
     // a sure way out: replace the whole picture with one you choose (or leave it out); it no longer changes with the variables
-    d.conds && d.conds.length ? h('button', { class: 'btn primary', id: 'fix-conditions', onclick: () => fixConditions(gid, err) }, icon('edit'), 'Fix the conditions') : null,
+    d.conds && d.conds.length ? h('button', { class: 'btn primary', id: 'fix-conditions', onclick: () => fixConditions(gid, err, 0, null, d) }, icon('edit'), 'Fix the conditions') : null,
     nearName ? h('div', { class: 'panel stack', style: 'gap:8px', id: 'fix-replace' }, h('div', { class: 'label' }, `Or replace the picture “${nearName}”`),
       h('p', { class: 'hint', style: 'margin:0' }, 'If no value works, show one picture of your choice in its place (it will always be that one), or leave it out.'),
       h('div', { class: 'row', style: 'flex-wrap:wrap' },
@@ -2981,7 +3073,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
     const all = [...await brokenPictures(), ...(err.broken || [])], bad = all.filter(x => Array.isArray(x)), dyn = all.filter(x => x && x.dyn);
     if (bad.length) { const [raw, ev] = bad[brokenPick || 0]; P.kind = 'image'; P.name = ev; P.raw = raw; P.broken = bad; }
     else if (dyn.length) return fixPickedByCode(gid, err, dyn[0]);
-    else if (/NoneType/.test(err.short || '')) { const sws = (await gamePy('result = _tkb_broken_switches()', 20000)) || []; if (sws.length) return fixConditions(gid, err, 0, sws); }
+    else if (/NoneType/.test(err.short || '')) { const sws = await brokenSwitches(err); if (sws.length) return fixConditions(gid, err, 0, sws); }
   }
   if (!P.kind || byHand) return fixByHand(gid, err, P);
   const codes = {

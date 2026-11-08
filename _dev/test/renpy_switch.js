@@ -57,7 +57,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const ne = await p.evaluate(n => (GAME.errors || []).slice(n).filter(e => /NoneType/.test(e.short)).length, e0);
   ok('Try it: the scene plays with the changed row, no error', Array.isArray(st) && st[0] === true && ne === 0, JSON.stringify([st, ne]));
   const fx = await p.evaluate(async gid => { const g = await S.gal(gid), m = g.game.mods.find(x => x.fixes), l = await rpyGetJSON(m.list), f = l.find(x => /zzzz_tankobon_fixes/.test(x.p)); return new TextDecoder().decode(await rpyRead(f.c, f.s)); }, gid);
-  ok('the fix is in the Fixes mod', fx.includes('_tkb_setswitch("tkbsw", 0, [["tkb_dawb2 == 1",{"keep":0}],["tkb_dawb2 == 2",{"file":"images/bg club.jpg"}]])'), fx.slice(-300));
+  ok('the fix is in the Fixes mod', fx.includes('[["tkb_dawb2 == 1",{"keep":0}],["tkb_dawb2 == 2",{"file":"images/bg club.jpg"}]])') && /_tkb_condrule\(/.test(fx), fx.slice(-300));
   errs.splice(0, errs.length, ...errs.filter(e => !/serviceWorker/.test(e)));
   ok('no errors', errs.length === 0, errs.slice(0, 3).join(' | '));
   console.log(fails ? `${fails} FAILED` : 'ALL PASSED');

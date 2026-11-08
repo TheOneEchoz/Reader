@@ -1,6 +1,6 @@
 {
- "version": 126,
- "name": "1.23.0-beta.28",
+ "version": 127,
+ "name": "1.23.0-beta.29",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,7 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixing game errors: “Fix the conditions”, for a picture that switches on conditions (Ren'Py's ConditionSwitch) and now chooses nothing. It finds that picture by itself, shows its rows in order (each condition, editable, and the picture it shows, with Change or Nothing), marks the row that is true now and shows the variables' values; rows can be added (“True” for otherwise) or deleted. Try it plays the scene with the changes; the fix goes into the Fixes mod. Works for games that only include compiled scripts.",
-  "For a picture chosen by the game's code: “Or replace the picture” shows one picture of your choice in its place, or leaves it out."
+  "Fixing game errors: “Fix the conditions” now also works for pictures made of layers (Ren'Py's layered images), where an “if” layer has no picture. It no longer says “No picture with conditions is choosing nothing right now” for these: it uses the picture caught when the error happened (even after the game took it off the screen to go on), and also looks at what is on screen.",
+  "The fix applies wherever the game builds that picture, so it works for layered images too. It is saved in the Fixes mod as before, and Try it shows the scene with it."
  ]
 }
