@@ -1,5 +1,15 @@
 [
  {
+  "v": 124,
+  "name": "1.23.0-beta.26",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Game errors from a picture the game chooses with its own code (like “'NoneType' object has no attribute 'style'”): the broken picture is taken off the screen instead of the error repeating on every line (which made the story skip ahead). Fix shows the code that picks the picture, the variables it looks at with their values now, and the numbers it compares them with; “Set it now” tries a value in the game, to see which one brings the picture back.",
+   "Mods can be edited: the edit button next to a mod on the game's page lists its files; open a text file (like a script or the fixes file) to change it, or delete it. The fixes file shows each fix on its own, so one made by mistake (like a wrong picture) can be deleted."
+  ]
+ },
+ {
   "v": 123,
   "name": "1.23.0-beta.25",
   "date": "2026-11-08",

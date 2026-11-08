@@ -142,6 +142,45 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('choosing a picture makes the fix for that picture', /image tkbnothere 3 = /.test(await p.$eval('#fix-preview', e => e.innerText)));
   await p.evaluate(() => closeSheet());
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
+  // a picture chosen by the game's own code that chose nothing: what the code looks at, and setting a value
+  await p.click('#game-play'); fr = await start();
+  await p.evaluate(() => { window.__realBP = brokenPictures; let fixed = false; window.brokenPictures = async () => fixed ? [] : [{ dyn: true, near: ['tkbdyn', 'tkbdyn'], fn: 'tkb_pick', names: ['tkb_stage', 'Solid'], consts: [1, 2, '#3a3'], conds: [] }]; window.__fixDyn = () => { fixed = true; }; });
+  await p.evaluate(() => fixSheet(GAME.g.id, { short: "While running game code:\n  File \"game/zz_errtest.rpy\", line 3, in script\nAttributeError: 'NoneType' object has no attribute 'style'" }));
+  await p.waitForSelector('#fix-dyn');
+  const code = await p.$eval('#fix-sheet', e => e.innerText);
+  ok('a picture chosen by the game\'s code: it shows the variables it looks at, with their values', /tkb_stage = 0/.test(code) && /Numbers it uses: 1, 2/.test(code), code.slice(0, 400));
+  await p.fill('#fix-val', '2'); await p.evaluate(() => window.__fixDyn()); await p.click('#fix-setvar'); await p.waitForTimeout(1500);
+  const sv = await fr.evaluate(() => window.renpy_exec('result = store.tkb_stage')).catch(e => String(e));
+  ok('Set it now sets the variable in the game, and says the picture is back', sv === 2 && /picture is back/.test(await p.$eval('#fix-varstatus', e => e.innerText)), JSON.stringify(sv));
+  await p.evaluate(() => { window.brokenPictures = window.__realBP; closeSheet(); });
+  await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
+  // the real thing: a picture the game's code picks comes out empty; the drawing error would repeat on every line, so the
+  // broken picture is taken off the screen (the story does not race on), and Fix shows what the code looks at
+  await p.click('#game-play'); fr = await start();
+  await fr.evaluate(() => window.renpy_exec(['store.tkb_stage = 0', 'store._tkbjd6 = False', 'def _tkbj6(store=store, renpy=renpy):', '    if store._tkbjd6:', '        return', '    store._tkbjd6 = True', '    renpy.jump("tkb_err_test6")', 'config.periodic_callbacks.append(_tkbj6)', 'result = True'].join('\n')));
+  await p.waitForTimeout(4000);
+  const where6 = await fr.evaluate(() => window.renpy_exec('result = [renpy.get_say_attributes(), str(renpy.game.context().current), renpy.showing("td")]')).catch(e => String(e));
+  const nerr6 = await p.evaluate(() => (GAME.errors || []).filter(e => /NoneType/.test(e.short)).length);
+  ok('the broken picture is taken off the screen; the story does not race on', Array.isArray(where6) && where6[2] !== true && nerr6 <= 2 && /zz_errtest/.test(where6[1]), JSON.stringify([where6, nerr6]));
+  await p.click('#gamebox .gameerr'); await p.waitForSelector('#gameerrors');
+  await p.click('#gameerrors .fixbtn:has-text("Fix this error")'); await p.waitForSelector('#fix-sheet');
+  const code6 = await p.$eval('#fix-sheet', e => e.innerText).catch(() => '');
+  ok('Fix shows the code that picks the picture, and what it looks at', /tkb_pick/.test(code6) && /tkb_stage = 0/.test(code6) && /Numbers it uses: 1, 2/.test(code6), code6.slice(0, 500));
+  await p.evaluate(() => closeSheet());
+  await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
+  // edit the Fixes mod: the file of small fixes shows each fix, which can be deleted
+  await p.evaluate(gid => go('detail', { id: gid }), gid); await p.waitForTimeout(1000);
+  await p.evaluate(async gid => { const g = await S.gal(gid); g.game.mods.forEach(m => m.on = true); await saveGallery(g); renderDetail(gid); }, gid); await p.waitForTimeout(800);
+  await p.click('#game-mods button[aria-label="Edit the mod Fixes"]'); await p.waitForSelector('#mod-editor');
+  const mfiles = await p.$$eval('#mod-editor .chrow', a => a.map(e => e.dataset.p));
+  ok('a mod\'s files are listed to edit', mfiles.includes('game/zzzz_tankobon_fixes.rpy') && mfiles.includes('game/zz_errtest.rpy'), JSON.stringify(mfiles));
+  await p.click('#mod-editor .chrow[data-p="game/zzzz_tankobon_fixes.rpy"]'); await p.waitForSelector('#mod-file');
+  const fixes = await p.$$eval('#mod-file .fixrow code', a => a.map(e => e.innerText));
+  ok('the fixes file shows each fix', fixes.some(x => /image tkbface 7/.test(x)), JSON.stringify(fixes));
+  await p.click('#mod-file button[aria-label="Delete the fix image tkbface 7"]'); await p.waitForSelector('.askyes'); await p.click('.askyes button:has-text("Delete")'); await p.waitForTimeout(1200);
+  const afterDel = await p.evaluate(async gid => { const g = await S.gal(gid), m = g.game.mods.find(x => x.fixes), l = await rpyGetJSON(m.list), f = l.find(x => /zzzz_tankobon_fixes/.test(x.p)); return new TextDecoder().decode(await rpyRead(f.c, f.s)); }, gid);
+  ok('a fix can be deleted (for a picture chosen by mistake)', !/tkbface 7/.test(afterDel) && /# Fixes/.test(afterDel), afterDel.slice(0, 200));
+  await p.evaluate(() => closeSheet());
   // Show the game's error screen (with the fix switched off, so the error happens again)
   await p.evaluate(async gid => { const g = await S.gal(gid); g.game.mods.forEach(m => m.on = false); await saveGallery(g); renderDetail(gid); }, gid); await p.waitForTimeout(800);
   await p.click('#game-errors button:has-text("Show")'); await p.waitForTimeout(800);

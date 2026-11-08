@@ -1,6 +1,6 @@
 {
- "version": 123,
- "name": "1.23.0-beta.25",
+ "version": 124,
+ "name": "1.23.0-beta.26",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixing game errors: every fix sheet can now choose a picture. When the error is not recognised and no broken picture is on screen any more, “Is it a missing picture?” suggests the pictures the game could not find earlier (like “mox4dawn 0”), or lets you type the name; then choose the picture it should be from the game's pictures."
+  "Game errors from a picture the game chooses with its own code (like “'NoneType' object has no attribute 'style'”): the broken picture is taken off the screen instead of the error repeating on every line (which made the story skip ahead). Fix shows the code that picks the picture, the variables it looks at with their values now, and the numbers it compares them with; “Set it now” tries a value in the game, to see which one brings the picture back.",
+  "Mods can be edited: the edit button next to a mod on the game's page lists its files; open a text file (like a script or the fixes file) to change it, or delete it. The fixes file shows each fix on its own, so one made by mistake (like a wrong picture) can be deleted."
  ]
 }
