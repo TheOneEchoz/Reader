@@ -1,5 +1,16 @@
 [
  {
+  "v": 131,
+  "name": "1.23.0-beta.33",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing a missing picture or a picture named after a variable: Preview draws the scene with the fix straight over the game, with no restart. If the game could not show the picture at all, Preview draws it in (for a part of a layered picture, the whole picture). Replaying the scene is still there as a smaller button. A fix that changes a script line still needs the scene played again.",
+   "For a picture named after a variable (like “dawn3a b[dawb]”): a new “Give the variable a value that has pictures” at the top shows the value the variable has now and the values the game has pictures for, each with its picture. Choosing one gives the variable that value whenever it has one with no pictures. It is set in the game at once and stays in your saves.",
+   "Choosing a value also offers to remove the earlier fixes it replaces: pictures like “…0” made to show the “…2” files one by one, and the variable made to follow another one."
+  ]
+ },
+ {
   "v": 130,
   "name": "1.23.0-beta.32",
   "date": "2026-11-08",

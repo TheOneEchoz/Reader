@@ -2765,7 +2765,7 @@ const RPY_HOOKS = [
   '            for e in ents:',
   '                if e.tag == tag:',
   '                    return e.displayable',
-  '        for hl, hi, hd, ht in _tkb_hidden:',
+  '        for hl, hi, hd, ht, hs in _tkb_hidden:',
   '            if ht == tag:',
   '                return hd',
   '        return None',
@@ -2776,11 +2776,12 @@ const RPY_HOOKS = [
   '        for l in renpy.config.layers:',
   '            if l in ("screens", "overlay", "transient"):',
   '                continue',
-  '            ents = [e.displayable for e in ctx.scene_lists.layers.get(l, [])]',
-  '            if tag and not any(e.tag == tag for e in ctx.scene_lists.layers.get(l, [])):',
-  '                for hl, hi, hd, ht in _tkb_hidden:',
-  '                    if hl == l and ht == tag:',
-  '                        ents.insert(min(hi, len(ents)), hd)',
+  '            les = ctx.scene_lists.layers.get(l, [])',
+  '            ents = [e.displayable for e in les]',
+  // the pictures taken away after an error: the one being fixed, and any taken away at this same line of the story
+  '            for hl, hi, hd, ht, hs in _tkb_hidden:',
+  '                if hl == l and not any(e.tag == ht for e in les) and ((tag and ht == tag) or hs == ctx.current):',
+  '                    ents.insert(min(hi, len(ents)), hd)',
   '            for e in ents:',
   '                f.add(e)',
   '        return f',
@@ -2789,6 +2790,98 @@ const RPY_HOOKS = [
   '            return _tkb_withrule(key, rows, lambda: _tkb_png(_tkb_scene(tag)))',
   '        except Exception as e:',
   '            return {"err": str(e)[:300]}',
+  // pictures in a scene look their pictures up again (after a picture name is defined, or a variable in a name changes)
+  '    def _tkb_refind(d, depth=0):',
+  '        if d is None or depth > 60:',
+  '            return',
+  '        if isinstance(d, (renpy.display.image.ImageReference, renpy.display.image.DynamicImage)):',
+  '            try:',
+  '                d.find_target()',
+  '            except Exception:',
+  '                pass',
+  '        try:',
+  '            kids = d.visit() or []',
+  '        except Exception:',
+  '            kids = []',
+  '        for c in kids:',
+  '            _tkb_refind(c, depth + 1)',
+  // the scene drawn with picture names defined and variables set for a moment (then all put back as it was): the preview of
+  // a picture or variable fix, with no restart
+  // the picture that a picture name with a variable belongs to (a layer of a layered image, say), to draw it in a preview:
+  // when its picture cannot be found the game cannot show it at all, so it is not on screen
+  '    def _tkb_has_dyn(d, tpl, depth=0):',
+  '        if d is None or depth > 12:',
+  '            return False',
+  '        if isinstance(d, renpy.display.image.DynamicImage) and d.name == tpl:',
+  '            return True',
+  '        for c in [getattr(d, "child", None)] + list(getattr(d, "children", None) or []):',
+  '            if c is not None and c is not d and _tkb_has_dyn(c, tpl, depth + 1):',
+  '                return True',
+  '        return False',
+  '    def _tkb_owner(tpl):',
+  '        for k, v in list(renpy.display.image.images.items()):',
+  '            try:',
+  '                if hasattr(v, "layers"):',
+  '                    for ly in v.layers:',
+  '                        parts = [getattr(ly, "image", None)] + [getattr(c, "image", None) for c in (getattr(ly, "conditions", None) or [])]',
+  '                        if any(_tkb_has_dyn(x, tpl) for x in parts):',
+  '                            return " ".join(k)',
+  '                elif _tkb_has_dyn(v, tpl):',
+  '                    return " ".join(k)',
+  '            except Exception:',
+  '                pass',
+  '        return None',
+  '    def _tkb_preview2(imgs, vals, tag=None, extra=()):',
+  '        miss = object()',
+  '        idict = renpy.display.image.images',
+  '        oldi, oldv = [], []',
+  '        try:',
+  '            for n, t in imgs:',
+  '                k = tuple(n.split())',
+  '                oldi.append((k, idict.get(k, miss)))',
+  '                idict[k] = renpy.easy.displayable(t) if t else renpy.display.layout.Null()',
+  '            for v, val in vals:',
+  '                oldv.append((v, getattr(store, v, miss)))',
+  '                setattr(store, v, val)',
+  '            sc = _tkb_scene(tag)',
+  '            shown = set(e.tag for l, es in _tkb_gamectx().scene_lists.layers.items() for e in es if e.tag)',
+  '            for n in extra:',
+  '                if n and n.split()[0] not in shown:',
+  '                    xd = renpy.display.image.DynamicImage(n) if "[" in n else renpy.display.image.ImageReference(tuple(n.split()))',
+  // where a picture shown with no position goes: centred at the bottom
+  '                    sc.add(renpy.display.motion.Transform(child=xd, xpos=0.5, xanchor=0.5, ypos=1.0, yanchor=1.0))',
+  '            _tkb_refind(sc)',
+  '            return _tkb_png(sc)',
+  '        except Exception as e:',
+  '            return {"err": str(e)[:300]}',
+  '        finally:',
+  '            for k, o in reversed(oldi):',
+  '                if o is miss:',
+  '                    idict.pop(k, None)',
+  '                else:',
+  '                    idict[k] = o',
+  '            for v, o in reversed(oldv):',
+  '                if o is miss:',
+  '                    try:',
+  '                        delattr(store, v)',
+  '                    except Exception:',
+  '                        pass',
+  '                else:',
+  '                    setattr(store, v, o)',
+  '            try:',
+  '                _tkb_refind(_tkb_scene(tag))',
+  '            except Exception:',
+  '                pass',
+  // the values of a variable for which the picture named after it exists
+  '    def _tkb_goodvals(tpl, var):',
+  '        out = []',
+  '        for v in list(range(0, 21)) + ["a", "b", "c"]:',
+  '            try:',
+  '                if renpy.has_image(tpl.replace("[" + var + "]", str(v)), exact=True):',
+  '                    out.append(v)',
+  '            except Exception:',
+  '                pass',
+  '        return out',
   '    def _tkb_tagshot(tag, key, rows, maxw):',
   '        d = _tkb_tagd(tag) if tag else None',
   '        if d is None:',
@@ -3033,7 +3126,7 @@ const RPY_HOOKS = [
   '                        if i:',
   '                            i["tag"] = sle.tag',
   '                            broken.append(i)',
-  '                            _tkb_hidden[:] = [x for x in _tkb_hidden if x[3] != sle.tag][-10:] + [(l, si, sle.displayable, sle.tag)]',
+  '                            _tkb_hidden[:] = [x for x in _tkb_hidden if x[3] != sle.tag][-10:] + [(l, si, sle.displayable, sle.tag, renpy.game.context().current)]',
   '                            _tkb_hidname[sle.tag] = tuple(getattr(sle, "name", None) or ())',
   '                            renpy.hide(sle.tag, layer=l)',
   '            except Exception:',
@@ -3139,6 +3232,20 @@ async function addFixBlock(gid, key, block, modId) { // the file of small fixes:
   const re = new RegExp(`\\n# fix: ${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n[\\s\\S]*?(?=\\n# fix: |$)`); text = text.replace(re, '');
   const r = await setFixFile(gid, FIXES_FILE, text.replace(/\s*$/, '\n') + `\n# fix: ${key}\n${block.replace(/\s*$/, '\n')}`, modId);
   return { path: FIXES_FILE, before: r.before, modId: r.modId };
+}
+/* the blocks of the fixes file of the Fixes mod ({key, block}), and removing some of them */
+async function fixBlocksOf(gid) {
+  const g = await S.gal(gid), mod = (g.game.mods || []).find(m => m.fixes), list = mod ? ((await rpyGetJSON(mod.list)) || []) : [], f = list.find(x => x.p === FIXES_FILE);
+  const text = f ? new TextDecoder().decode(await rpyRead(f.c, f.s)) : '';
+  return text.split(/\n(?=# fix: )/).slice(1).map(b => { const i = b.indexOf('\n'); return { key: b.slice(7, i < 0 ? undefined : i).trim(), block: i < 0 ? '' : b.slice(i + 1) }; });
+}
+async function removeFixBlocks(gid, keys) {
+  if (!keys.length) return;
+  const g = await S.gal(gid), mod = (g.game.mods || []).find(m => m.fixes), list = mod ? ((await rpyGetJSON(mod.list)) || []) : [], f = list.find(x => x.p === FIXES_FILE);
+  if (!f) return;
+  let text = new TextDecoder().decode(await rpyRead(f.c, f.s));
+  for (const key of keys) text = text.replace(new RegExp(`\\n# fix: ${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n[\\s\\S]*?(?=\\n# fix: |$)`), '');
+  await setFixFile(gid, FIXES_FILE, text.replace(/\s*$/, '\n'), mod.id);
 }
 /* fix one error: the right name (from the running game's own names, closest spelling first), the line it is on, and the fix,
    which goes into the game's "Fixes" mod; "Try it" plays the scene again with the fix */
@@ -3394,13 +3501,41 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
   const pickB = want ? h('button', { class: 'btn small', id: 'fix-search', onclick: () => openAssets(gid, { pick: p0 => fixSheet(gid, err, false, p0.name), query: searchFor, title: `Which picture should “${want}” be?` }) }, icon('search'), pickedFile ? 'Choose another picture' : 'Search the game\'s pictures') : null;
   const pickedBox = pickedFile ? h('div', { class: 'row', style: 'gap:10px', id: 'fix-picked' }, h('img', { class: 'contshot', style: 'width:96px;height:auto;max-height:72px;object-fit:contain', alt: '' }), h('span', {}, 'Chosen picture: ', h('code', {}, pickedFile))) : null;
   if (pickedBox) { const f = files.find(x => x.p.toLowerCase() === ('game/' + pickedFile).toLowerCase()); const im = pickedBox.querySelector('img'); (async () => { try { const pics = await rpyPictures(files); const p0 = pics.find(x => x.name === pickedFile); if (p0) im.src = URL.createObjectURL(new Blob([await p0.read()])); } catch (e) { } })(); }
-  const custom = h('input', { class: 'text', id: 'fix-custom', autocomplete: 'off', placeholder: 'Or type the right name', oninput: e => { choice = e.target.value.trim(); $$('input[name=fixpick]').forEach(r => r.checked = false); paint(); } });
+  const custom = h('input', { class: 'text', id: 'fix-custom', autocomplete: 'off', placeholder: 'Or type the right name', oninput: e => { choice = e.target.value.trim(); $$('input[name=fixpick]').forEach(r => r.checked = false); valChoice = null; drawVals(); paint(); } });
   // suggested pictures (and, for a picture named after a variable, the picture each variable gives) are shown, not only named
   const showsPics = P.kind === 'image' || P.kind === 'dynimg';
   const thumbs = new Map(ranked.map(x => [x, showsPics ? pngImg(null, 'swthumb') : null]));
-  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: showsPics ? 'fixpick' : 'row', style: showsPics ? '' : 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), thumbs.get(x), h('span', { style: 'min-width:0' }, h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null))) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
+  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: showsPics ? 'fixpick' : 'row', style: showsPics ? '' : 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; valChoice = null; drawVals(); paint(); } }), thumbs.get(x), h('span', { style: 'min-width:0' }, h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null))) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
   if (showsPics && ranked.length) gamePy(P.kind === 'image' ? `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, x]))}, 200)` : `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, '']))}, 200, ${JSON.stringify(P.tpl)}, ${JSON.stringify(P.name)})`, 30000)
     .then(r => { for (const [x, im] of thumbs) { if (r && r[x]) { im.src = 'data:image/png;base64,' + r[x]; im.style.visibility = ''; } else if (im) { im.replaceWith(h('span', { class: 'swthumb', style: 'display:grid;place-items:center;font-size:.75em;color:var(--muted,#888);text-align:center' }, 'no picture')); } } });
+  // a picture named after a variable: maybe the variable has a value the game never gives it (it is set earlier in the story,
+  // and that did not happen in this playthrough). The values that have pictures, each shown: choosing one gives the variable
+  // that value whenever it has one with no picture (it stays fixed, unlike following another variable)
+  let valChoice = null, valCur = null, valGood = [], oldFixes = [], dropOld = true;
+  const valBox = h('div', { class: 'panel stack', id: 'fix-values', hidden: true, style: 'gap:8px' });
+  const drawVals = () => {
+    if (!valGood.length) { valBox.hidden = true; return; }
+    valBox.hidden = false;
+    const btns = valGood.map(v => { const im = pngImg(valThumbs[String(v)] || null, 'swthumb');
+      return h('button', { class: 'swpick' + (valChoice === v ? ' on' : ''), 'aria-pressed': String(valChoice === v), onclick: () => { valChoice = valChoice === v ? null : v; if (valChoice != null) { choice = ''; custom.value = ''; $$('input[name=fixpick]').forEach(r => r.checked = false); } drawVals(); paint(); } }, im, h('span', {}, `${P.name} = ${v}`)); });
+    const olds = oldFixes.filter(x => valChoice != null);
+    valBox.replaceChildren(h('div', { class: 'label' }, `Give “${P.name}” a value that has pictures`),
+      h('p', { class: 'hint', style: 'margin:0' }, `“${P.name}” is ${valCur} now, and the game has pictures for ${P.name} = ${valGood.join(', ')}. Most likely the game sets it earlier in the story and that did not happen in this playthrough. Choose the value it should have: the fix gives it that value whenever it has one with no pictures.`),
+      h('div', { class: 'row', style: 'flex-wrap:wrap;gap:8px' }, btns),
+      olds.length ? h('label', { class: 'row', style: 'gap:8px;align-items:flex-start' }, h('input', { type: 'checkbox', id: 'fix-dropold', checked: dropOld, onchange: e => { dropOld = e.target.checked; } }),
+        h('span', {}, `Also remove ${plural(olds.length, 'earlier fix', 'earlier fixes')} made for this, which this one replaces: `, h('code', {}, olds.map(x => x.key.replace(/^(image|picture) /, '')).join(', ')))) : null);
+  };
+  const valThumbs = {};
+  if (P.kind === 'dynimg') (async () => { try {
+    const r = await gamePy(`result = [repr(getattr(renpy.store, ${JSON.stringify(P.name)}, None)), _tkb_goodvals(${JSON.stringify(P.tpl)}, ${JSON.stringify(P.name)})]`, 20000);
+    if (!r || !r[1] || !r[1].length) return;
+    [valCur, valGood] = r; const curS = valCur.replace(/^'(.*)'$/, '$1');
+    // earlier fixes made for this: the variable made to follow another one, and pictures "…0" made to show the "…2" files
+    oldFixes = (await fixBlocksOf(gid).catch(() => [])).filter(b => (b.key.startsWith('picture ') && b.key.includes('[' + P.name + ']')) || (b.key.startsWith('image ') && b.key.endsWith(curS) && (() => { const m = b.block.match(/=\s*"([^"]+)"/); if (!m) return false; const base = m[1].split('/').pop().replace(/\.[^.]+$/, '').toLowerCase(), stem = b.key.slice(6, b.key.length - curS.length).toLowerCase(); return valGood.some(v => base === stem + String(v).toLowerCase()); })()));
+    drawVals();
+    const sh = await gamePy(`result = _tkb_imgshot(${JSON.stringify(valGood.map(v => [String(v), P.tpl.split('[' + P.name + ']').join(String(v))]))}, 200)`, 30000);
+    Object.assign(valThumbs, sh || {}); drawVals();
+  } catch (e) { console.warn('fix values', e); } })();
   const preview = h('pre', { class: 'errlog', id: 'fix-preview' });
   const others = lines ? lines.reduce((n, l, i) => n + (i !== P.line - 1 ? (l.match(word) || []).length : 0), 0) : 0;
   const evB = others ? h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'checkbox', onchange: e => { everywhere = e.target.checked; paint(); } }), `Also the ${plural(others, 'other place')} in this file`) : null;
@@ -3409,15 +3544,17 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
   const tplFiles = P.kind === 'dynimg' ? (await Promise.all(files.filter(f => /^game\/.*\.rpy$/i.test(f.p) && f.s < 8e6).map(async f => { const t = new TextDecoder().decode(await rpyRead(f.c, f.s)); return t.includes(P.tpl) ? { f, t } : null; }))).filter(Boolean) : [];
   const plan = () => {
     // a picture chosen from the game's pictures: the missing picture name is made to show it
-    if (pickedFile && want) return { block: `image ${want} = ${JSON.stringify(pickedFile)}`, key: 'image ' + want, label: `“${want}” will show ${pickedFile}. (Only that name: if the game later looks for another one, like “${want.replace(/\d+$/, n => +n + 1)}”, fix that one too.)` };
+    if (valChoice != null && P.kind === 'dynimg') { const lit = typeof valChoice === 'number' ? String(valChoice) : JSON.stringify(valChoice);
+      return { value: lit, prev: { vals: `[(${JSON.stringify(P.name)}, ${lit})]` }, key: 'value ' + P.name, block: ['init 1999 python:', `    def _tkbfix_value_${P.name}():`, `        if getattr(renpy.store, "${P.name}", None) not in (${valGood.map(v => typeof v === 'number' ? v : JSON.stringify(v)).join(', ')},):`, `            setattr(renpy.store, "${P.name}", ${lit})`, `    config.start_interact_callbacks.append(_tkbfix_value_${P.name})`].join('\n'), label: `“${P.name}” will be ${lit} whenever it has a value with no pictures (now ${valCur}). Your saves from now on keep it.` }; }
+    if (pickedFile && want) return { prev: { imgs: `[[${JSON.stringify(want)}, ${JSON.stringify(pickedFile)}]]` }, block: `image ${want} = ${JSON.stringify(pickedFile)}`, key: 'image ' + want, label: `“${want}” will show ${pickedFile}. (Only that name: if the game later looks for another one, like “${want.replace(/\d+$/, n => +n + 1)}”, fix that one too.)` };
     if (!choice) return null;
     if (P.kind === 'dynimg') {
       const fixed = P.tpl.split('[' + P.name + ']').join('[' + choice + ']');
       if (tplFiles.length) return { files: tplFiles.map(x => ({ p: x.f.p, text: x.t.split(P.tpl).join(fixed) })), tplFiles, fixed, label: `“${P.tpl}” becomes “${fixed}” in ${tplFiles.map(x => x.f.p.slice(5)).join(', ')} (corrected copies, only while the Fixes mod is on).` };
-      return { block: ['init 1999 python:', `    def _tkbfix_${P.name}():`, `        setattr(renpy.store, "${P.name}", getattr(renpy.store, "${choice}", None))`, `    config.start_interact_callbacks.append(_tkbfix_${P.name})`].join('\n'), key: 'picture ' + P.tpl, label: `The picture “${P.tpl}” will use “${choice}” (the game's script is not included, so “${P.name}” is made to follow “${choice}”).` };
+      return { prev: { vals: `[(${JSON.stringify(P.name)}, getattr(renpy.store, ${JSON.stringify(choice)}, None))]` }, block: ['init 1999 python:', `    def _tkbfix_${P.name}():`, `        setattr(renpy.store, "${P.name}", getattr(renpy.store, "${choice}", None))`, `    config.start_interact_callbacks.append(_tkbfix_${P.name})`].join('\n'), key: 'picture ' + P.tpl, label: `The picture “${P.tpl}” will use “${choice}” (the game's script is not included, so “${P.name}” is made to follow “${choice}”).` };
     }
     if (P.kind === 'label') return { block: `label ${P.name}:\n    jump ${choice}`, key: 'label ' + P.name, label: `The scene “${P.name}” does not exist; going there will go to “${choice}”.` };
-    if (P.kind === 'image') return { block: `image ${P.name} = ${JSON.stringify(choice)}`, key: 'image ' + P.name, label: `The picture “${P.name}” will show “${choice}”.` };
+    if (P.kind === 'image') return { prev: { imgs: `[[${JSON.stringify(P.name)}, ${JSON.stringify(choice)}]]` }, block: `image ${P.name} = ${JSON.stringify(choice)}`, key: 'image ' + P.name, label: `The picture “${P.name}” will show “${choice}”.` };
     if (lines && P.line) {
       const out = lines.map((l, i) => (i === P.line - 1 || everywhere) ? l.replace(word, choice) : l);
       if (out.join('\n') !== text) return { file: src.p, text: out.join('\n'), lines: out, label: `A corrected copy of ${src.p.slice(5)} (only while the Fixes mod is on; the game's own file is not changed).` };
@@ -3427,7 +3564,8 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
   };
   const paint = () => {
     const pl = plan(); how.textContent = pl ? pl.label : 'Choose the right name.';
-    if (pl && pl.tplFiles) {
+    if (pl && pl.value) preview.textContent = pl.block;
+    else if (pl && pl.tplFiles) {
       preview.textContent = pl.tplFiles.map(x => { const ls = x.t.split('\n'); return ls.map((l, i) => l.includes(P.tpl) ? `${x.f.p.slice(5)}:${i + 1}\n  - ${l.trim()}\n  + ${l.split(P.tpl).join(pl.fixed).trim()}` : null).filter(Boolean).slice(0, 4).join('\n'); }).join('\n');
     } else if (P.kind === 'dynimg' || pickedFile) preview.textContent = pl ? pl.block : '';
     else if (lines && P.line) {
@@ -3435,6 +3573,9 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
       preview.textContent = lines.slice(a, z).map((l, i) => { const n = a + i + 1; return n === P.line && out ? `${String(n).padStart(4)} - ${l}\n${String(n).padStart(4)} + ${out[n - 1]}` : `${String(n).padStart(4)}   ${l}`; }).join('\n');
     } else preview.textContent = pl && pl.block ? pl.block : '';
     tryB.disabled = saveB.disabled = !pl;
+    // a picture or a variable can be seen at once (drawn over the game); a changed script line needs the scene played again
+    prevB.hidden = !(pl && pl.prev); prevB.disabled = !pl;
+    tryB.className = pl && pl.prev ? 'btn ghost small' : 'btn primary'; tryB.lastChild.textContent = pl && pl.prev ? 'Replay the scene with it' : 'Try it (plays the scene again)';
   };
   const fixMods = (g.game.mods || []).filter(m => m.fixes);
   const newName = h('input', { class: 'text', id: 'fix-newmod', hidden: true, autocomplete: 'off', placeholder: 'Name of the new mod', value: 'More fixes' });
@@ -3442,6 +3583,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
     fixMods.length ? fixMods.map(m => h('option', { value: m.id }, `The mod “${m.name}”`)) : h('option', { value: '' }, 'The mod “Fixes” (made now)'), h('option', { value: 'new' }, 'A new mod…'));
   const modArg = () => into.value === 'new' ? 'new:' + (newName.value.trim() || 'More fixes') : into.value || null;
   const apply = async () => { const pl = plan(); if (!pl) return null;
+    if (pl.value) { if (dropOld && oldFixes.length) await removeFixBlocks(gid, oldFixes.map(x => x.key)); await gamePy(`renpy.store.${P.name} = ${pl.value}\nrenpy.restart_interaction()\nresult = True`); }
     if (pl.files) { let first = null; for (const f of pl.files) { const r = await setFixFile(gid, f.p, f.text, modArg()); first = first || { path: f.p, before: r.before, modId: r.modId }; } return first; }
     if (pl.file) { const r = await setFixFile(gid, pl.file, pl.text, modArg()); return { path: pl.file, before: r.before, modId: r.modId }; } return addFixBlock(gid, pl.key, pl.block, modArg()); };
   const tryB = h('button', { class: 'btn primary', id: 'fix-try', onclick: async () => {
@@ -3451,16 +3593,29 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
     const done = await apply(); closeSheet();
     await gameTrial(gid, done, scene);
   } }, icon('play'), 'Try it');
-  const saveB = h('button', { class: 'btn', id: 'fix-save', onclick: async () => { await apply(); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
-  openSheet(P.kind === 'label' ? 'Fix a missing scene' : P.kind === 'image' ? 'Fix a missing picture' : 'Fix a misspelt name', h('div', { class: 'stack', id: 'fix-sheet' },
+  const saveB = h('button', { class: 'btn', id: 'fix-save', onclick: async () => { const pl = plan(); await apply(); closeSheet(); toast(pl && pl.value ? `Fix saved in the Fixes mod, and “${P.name}” is ${pl.value} in this game now.` : 'Fix saved in the Fixes mod. It works from the next start.', 4000); } }, 'Save the fix');
+  const prevB = h('button', { class: 'btn primary', id: 'fix-prev', hidden: true, onclick: async () => {
+    const pl = plan(); if (!pl || !pl.prev) return;
+    prevB.disabled = true; prevB.lastChild.textContent = 'Drawing…';
+    // the picture of the error (for a picture name with a variable: the picture it is a part of), drawn in if it is not on screen
+    const xs = P.kind === 'dynimg' ? `[_tkb_owner(${JSON.stringify(P.tpl)}) or ${JSON.stringify(P.tpl)}]` : JSON.stringify([want || P.name].filter(Boolean));
+    const r = await gamePy(`result = _tkb_preview2(${pl.prev.imgs || '[]'}, ${pl.prev.vals || '[]'}, None, ${xs})`, 30000);
+    prevB.disabled = false; prevB.lastChild.textContent = 'Preview';
+    if (!r || !r.png) return toast('The preview could not be drawn' + (r && r.err ? ': ' + r.err : '.'), 5000);
+    const title = $('#sheetTitle').textContent; closeSheet();
+    showFixPreview(r.png, 'Preview: the scene with this fix (nothing is saved yet)', () => openSheet(title, sheetNode));
+  } }, icon('eye'), h('span', {}, 'Preview'));
+  const sheetNode = h('div', { class: 'stack', id: 'fix-sheet' },
+    valBox,
     P.broken ? h('div', { class: 'banner', id: 'fix-broken' }, `This error comes from a picture on screen that the game cannot find: “${P.name}”${P.raw && P.raw !== P.name ? ` (written “${P.raw}” in the game)` : ''}. Choose the picture it should be.`,
       P.broken.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:6px' }, P.broken.map(([r, e], i) => h('button', { class: 'btn small' + (e === P.name ? ' primary' : ''), onclick: () => fixSheet(gid, err, false, null, i) }, e))) : null) : null,
-    h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'dynimg' ? `The picture “${P.tpl}” is named after the variable “${P.name}”, and with its value there is no such picture. Variables that look like it (✓: with its value, the picture exists):` : P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
+    h('p', { class: 'hint', style: 'margin:0' }, P.kind === 'dynimg' ? `The picture “${P.tpl}” is named after the variable “${P.name}”, and with its value there is no such picture. If “${P.name}” is a misspelling of another variable, choose that one (✓: with its value, the picture exists); “${P.name}” will then always follow it:` : P.kind === 'label' ? `The game tried to go to the scene “${P.name}”, which does not exist. Scenes with a similar name:` : P.kind === 'image' ? `The game tried to show the picture “${P.name}”, which does not exist. Pictures with a similar name:` : `The game used the name “${P.name}”, which it does not have. Names the game has that look like it:`),
     pickedFile ? null : picks, pickedFile ? null : custom, pickB, pickedBox, evB, preview, how,
     h('div', { class: 'field' }, h('label', { class: 'label', for: 'fix-into' }, 'Put the fix in'), into, newName),
-    h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, saveB),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, prevB, saveB, tryB),
     h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: () => fixSheet(gid, err, true) }, icon('edit'), 'Edit the line yourself instead'),
-    h('p', { class: 'hint' }, 'All fixes go into the same mod (“Fixes”), unless you choose another. It is on the game\'s page with the other mods: switch it off any time to play the game as it was.')));
+    h('p', { class: 'hint' }, 'All fixes go into the same mod (“Fixes”), unless you choose another. It is on the game\'s page with the other mods: switch it off any time to play the game as it was.'));
+  openSheet(P.kind === 'label' ? 'Fix a missing scene' : P.kind === 'image' ? 'Fix a missing picture' : P.kind === 'dynimg' ? 'Fix a picture named after a variable' : 'Fix a misspelt name', sheetNode);
   paint();
 }
 /* any error: edit the lines around the broken one (a corrected copy of that script file), or write a fix by hand */

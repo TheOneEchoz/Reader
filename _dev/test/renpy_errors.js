@@ -117,6 +117,11 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#fix-picked');
   const pv = await p.$eval('#fix-preview', e => e.innerText);
   ok('the chosen picture is shown, and the fix makes the missing name show it', /image tkbface 7 = "images\/bg club\.jpg"/.test(pv), pv);
+  await p.click('#fix-prev'); await p.waitForSelector('#fixprev img', { timeout: 30000 }).catch(() => { });
+  const pw = await p.$eval('#fixprev img', im => new Promise(r => { const f = () => r(im.naturalWidth); im.complete ? f() : im.onload = f; })).catch(() => 0);
+  await p.screenshot({ path: '/tmp/claude-0/shots/image-preview.png' });
+  ok('a chosen picture can be previewed over the game, without restarting it', pw >= 800, String(pw));
+  await p.click('#fixprev-back').catch(() => { }); await p.waitForSelector('#fix-sheet');
   const e4before = await p.evaluate(() => (GAME.errors || []).length);
   await p.click('#fix-try');
   for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);
