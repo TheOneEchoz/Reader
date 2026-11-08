@@ -557,6 +557,10 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .swpick{display:grid;gap:4px;justify-items:center;padding:6px;border-radius:10px;border:2px solid var(--line,#444);background:none;color:inherit;font:inherit;font-size:.85em;cursor:pointer;max-width:130px}
 .swpick.on{border-color:var(--accent,#e8a33d)}
 .swpick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:118px}
+.layerrow{display:flex;gap:10px;align-items:center;padding:4px;border-radius:8px}
+.layerrow .swthumb{width:72px;height:72px}
+.layerrow.bad{outline:2px solid #d9534f}
+.layerrow .bad{color:#e06c66;font-weight:600}
 .fixpick{display:flex;align-items:center;gap:10px;padding:4px;border-radius:8px}
 .fixpick .swthumb{width:72px;height:72px}
 #fixprev{position:absolute;inset:0;z-index:6;background:#000;display:flex;align-items:center;justify-content:center}
@@ -2809,6 +2813,120 @@ const RPY_HOOKS = [
   '            except Exception:',
   '                pass',
   '        return out',
+  // all the parts of a picture made of layers (Ren'Py's layeredimage) shown with this tag: each layer, whether it is shown
+  // now, its picture, and the one whose picture is missing
+  '    _tkb_hidname = {}',
+  '    def _tkb_file(d, depth=0):',
+  '        if d is None or depth > 8:',
+  '            return None',
+  '        fn = getattr(d, "filename", None)',
+  '        if isinstance(fn, str):',
+  '            return fn',
+  '        if isinstance(d, renpy.display.image.ImageReference):',
+  '            return " ".join(d.name)',
+  '        try:',
+  '            for c in (d.visit() or []):',
+  '                r = _tkb_file(c, depth + 1)',
+  '                if r:',
+  '                    return r',
+  '        except Exception:',
+  '            pass',
+  '        return None',
+  '    def _tkb_true(c):',
+  '        try:',
+  '            return c is None or (c if isinstance(c, bool) else bool(renpy.python.py_eval(c)))',
+  '        except Exception:',
+  '            return False',
+  '    def _tkb_emptyswitch(d, depth=0):',
+  '        if d is None or depth > 20:',
+  '            return False',
+  '        if isinstance(d, renpy.display.layout.DynamicDisplayable) and getattr(getattr(d, "function", None), "__name__", "") == "condition_switch_show":',
+  '            return _tkb_switch_pick(d)[1] is None',
+  '        try:',
+  '            kids = d.visit() or []',
+  '        except Exception:',
+  '            kids = []',
+  '        for c in kids:',
+  '            if _tkb_emptyswitch(c, depth + 1):',
+  '                return True',
+  '        return False',
+  // the picture name a shown thing was asked by (show NAME as TAG): the first picture reference inside it
+  '    def _tkb_refname(d, depth=0):',
+  '        if d is None or depth > 12:',
+  '            return None',
+  '        if isinstance(d, renpy.display.image.ImageReference) and isinstance(d.name, tuple):',
+  '            return tuple(d.name)',
+  '        try:',
+  '            for c in (d.visit() or []):',
+  '                r = _tkb_refname(c, depth + 1)',
+  '                if r:',
+  '                    return r',
+  '        except Exception:',
+  '            pass',
+  '        return None',
+  '    def _tkb_layers(tag, maxw=160):',
+  '        name = _tkb_refname(_tkb_tagd(tag))',
+  '        if not name:',
+  '            for l, ents in _tkb_gamectx().scene_lists.layers.items():',
+  '                for e in ents:',
+  '                    if e.tag == tag and getattr(e, "name", None):',
+  '                        name = tuple(e.name)',
+  '        if not name:',
+  '            name = _tkb_hidname.get(tag)',
+  '        if not name:',
+  '            return None',
+  '        li, base = None, None',
+  '        for n in range(len(name), 0, -1):',
+  '            x = renpy.display.image.images.get(tuple(name[:n]))',
+  '            x = getattr(x, "image", x) if not hasattr(x, "layers") else x',
+  '            if x is not None and hasattr(x, "layers"):',
+  '                li, base = x, tuple(name[:n])',
+  '                break',
+  '        if li is None:',
+  '            return {"name": " ".join(name), "layers": None}',
+  '        attrs = set(name[len(base):])',
+  '        alls = [o for o in li.layers if type(o).__name__ == "Attribute"]',
+  '        out = []',
+  '        for i, ly in enumerate(li.layers):',
+  '            t = type(ly).__name__',
+  '            r = {"i": i, "t": t}',
+  '            try:',
+  '                img = getattr(ly, "image", None)',
+  '                if t == "Attribute":',
+  '                    r["label"] = str(ly.attribute)',
+  '                    r["group"] = None if ly.group is None else str(ly.group)',
+  '                    on = ly.attribute in attrs or (bool(getattr(ly, "default", False)) and not any(o.group == ly.group and o.attribute in attrs for o in alls if o.group is not None))',
+  '                elif t == "Condition":',
+  '                    r["label"] = "if " + str(ly.condition)',
+  '                    on = _tkb_true(ly.condition)',
+  '                elif t == "ConditionGroup":',
+  '                    on, img = False, None',
+  '                    r["label"] = "if " + " / elif ".join(str(c.condition) for c in ly.conditions)',
+  '                    for c in ly.conditions:',
+  '                        if _tkb_true(c.condition):',
+  '                            on, img = True, c.image',
+  '                            r["label"] = "if " + str(c.condition)',
+  '                            break',
+  '                else:',
+  '                    r["label"] = "always" if t == "Always" else t',
+  '                    on = True',
+  '                bad = False',
+  '                if on:',
+  '                    try:',
+  '                        bad = _tkb_emptyswitch(ly.get_displayable(attrs))',
+  '                    except Exception:',
+  '                        bad = img is None',
+  '                r["on"], r["bad"] = bool(on), bool(bad)',
+  '                r["file"] = None if bad else _tkb_file(img)',
+  '                if on and not bad and img is not None:',
+  '                    try:',
+  '                        r["png"] = (_tkb_png(renpy.easy.displayable(img), maxw) or {}).get("png")',
+  '                    except Exception:',
+  '                        pass',
+  '            except Exception as e:',
+  '                r["err"] = str(e)[:120]',
+  '            out.append(r)',
+  '        return {"name": " ".join(name), "layers": out}',
   '    def _tkb_broken_switches():',
   '        res = []',
   '        seen = set()',
@@ -2916,6 +3034,7 @@ const RPY_HOOKS = [
   '                            i["tag"] = sle.tag',
   '                            broken.append(i)',
   '                            _tkb_hidden[:] = [x for x in _tkb_hidden if x[3] != sle.tag][-10:] + [(l, si, sle.displayable, sle.tag)]',
+  '                            _tkb_hidname[sle.tag] = tuple(getattr(sle, "name", None) or ())',
   '                            renpy.hide(sle.tag, layer=l)',
   '            except Exception:',
   '                pass',
@@ -3151,6 +3270,34 @@ async function fixConditions(gid, err, which = 0, list = null, first = null) {
   const saveB = h('button', { class: 'btn', id: 'cond-save', onclick: async () => { await addFixBlock(gid, key, code()); if (sw.key) await gamePy(`_tkb_condrule(${JSON.stringify(sw.key)}, ${rowsJ()})\nrenpy.restart_interaction()\nresult = True`); closeSheet(); toast(sw.key ? 'Fix saved in the Fixes mod and already working in this game. On Ren\'Py\'s error page, press Ignore to go on.' : 'Fix saved in the Fixes mod. It works from the next start.', 5000); } }, 'Save the fix');
   tryB.className = 'btn ghost small'; tryB.lastChild.textContent = 'Replay the scene with it';
   let reopen = () => {};
+  // a picture made of layers: all its parts, each with its picture, and the missing one (the fix gives a picture to that part
+  // only; the others stay as they are)
+  const layersBox = h('div', { class: 'panel stack', id: 'cond-layers', hidden: true, style: 'gap:6px' });
+  let layersL = null;
+  const drawLayers = () => {
+    const L = layersL; if (!L || !L.layers || !L.layers.length) { layersBox.hidden = true; return; }
+    layersBox.hidden = false;
+    const files = L.layers.map(x => x.file).filter(f => f && /\./.test(f)).map(f => f.split('/').pop().replace(/\.[^.]+$/, ''));
+    let pre = files[0] || ''; for (const f of files) while (pre && !f.startsWith(pre)) pre = pre.slice(0, -1);
+    const query = pre.replace(/[_\- ]+$/, '').length >= 3 ? pre.replace(/[_\- ]+$/, '') : L.name.split(/\s/)[0];
+    const badRow = rows[sw.chosen];
+    const on = L.layers.filter(x => x.on), off = L.layers.filter(x => !x.on);
+    const lab = x => (x.t === 'Attribute' ? (x.group ? `${x.group}: ` : '') + x.label : x.label) || x.t;
+    layersBox.replaceChildren(
+      h('div', { class: 'label' }, `All the parts of “${L.name}”`),
+      h('p', { class: 'hint', style: 'margin:0' }, 'This picture is made of these parts, put on top of each other (the first at the back). Only the missing part needs a picture; the other parts stay as they are.'),
+      ...on.map(x => {
+        const im = pngImg(x.png || null, 'swthumb');
+        if (x.bad && badRow && badRow.spec.file) thumbOf(im, badRow.spec.file), im.style.visibility = '';
+        return h('div', { class: 'layerrow' + (x.bad ? ' bad' : '') }, im,
+          h('div', { class: 'stack', style: 'gap:2px;min-width:0;flex:1' }, h('b', {}, lab(x)),
+            x.bad ? h('span', {}, badRow && badRow.spec.file ? ['will show ', h('code', {}, badRow.spec.file)] : badRow && badRow.spec.none ? 'will show nothing' : h('span', { class: 'bad' }, 'MISSING: this part has no picture, which causes the error'))
+              : h('small', { class: 'hint' }, x.file || '')),
+          x.bad && badRow ? h('button', { class: 'btn small primary', id: 'cond-layerpick', onclick: () => openAssets(gid, { pick: p0 => { badRow.spec = { file: p0.name }; reopen(); }, onCancel: reopen, query, title: `Picture for the missing part (${lab(x)})` }) }, icon('image'), 'Choose a picture for this part') : null);
+      }),
+      off.length ? h('details', {}, h('summary', {}, `Other parts, not shown now (${off.length})`), h('div', { class: 'stack', style: 'gap:2px;margin-top:6px' }, off.map(x => h('small', { class: 'hint' }, lab(x))))) : null);
+  };
+  if (sw.tag) gamePy(`result = _tkb_layers(${JSON.stringify(sw.tag)}, 160)`, 30000).then(L => { layersL = L; drawLayers(); });
   // the picture each switch belongs to, drawn now (the empty part left empty), to tell them apart
   const nullRows = x => JSON.stringify(x.rows.map(([c, dsc], i) => [c == null ? 'True' : c, dsc && dsc.t === 'none' ? { none: 1 } : { keep: i }]));
   const shots = fixConditions.shots = fixConditions.shots || new Map();
@@ -3159,11 +3306,11 @@ async function fixConditions(gid, err, which = 0, list = null, first = null) {
   const render1 = () => openSheet('Fix the conditions', h('div', { class: 'stack', id: 'cond-sheet' },
     h('div', { class: 'banner' }, `The picture “${sw.name}” (or one of its layers, for a picture made of layers) shows different things depending on conditions, checked from the top; the first true one is shown. Right now ${sw.chosen >= 0 ? `row ${sw.chosen + 1} is true and it shows nothing` : 'none is true'}. Change a condition or a picture so the right row shows something.`),
     list.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap;gap:8px', id: 'cond-which' }, list.map((x, i) => h('button', { class: 'swpick' + (x === sw ? ' on' : ''), 'aria-pressed': String(x === sw), onclick: () => fixConditions(gid, err, i, list) }, thumbIn(x, 'swthumb'), h('span', {}, x.name)))) : h('div', { class: 'row', style: 'gap:10px' }, thumbIn(sw, 'swthumb'), h('small', { class: 'hint' }, `“${sw.name}” now (the empty part left out)`)),
-    box, addB,
+    layersBox, h('div', { class: 'label' }, 'The conditions of the missing part'), box, addB,
     h('div', {}, h('div', { class: 'label' }, 'The variables in these conditions, now'), valsBox),
     h('div', { class: 'row', style: 'flex-wrap:wrap' }, prevB, saveB, tryB),
     h('p', { class: 'hint' }, 'The fix changes these rows when the game starts, only while the Fixes mod is on (the game\'s own files are not changed). You can change it again later from the mod.')));
-  reopen = () => { render1(); draw(); };
+  reopen = () => { render1(); draw(); drawLayers(); };
   reopen(); showVals();
 }
 async function fixPickedByCode(gid, err, d) {

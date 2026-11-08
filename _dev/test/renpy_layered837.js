@@ -51,6 +51,17 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('it shows the rows: conditions, what each shows, which is true now', rows.length === 3 && rows[0][0] === 'tkb_outfit == 1' && rows[1][0] === 'tkb_outfit == 2' && /NOTHING/.test(rows[1][1]) && /now/.test(rows[1][2]), JSON.stringify(rows));
   await p.waitForFunction(() => /=/.test(($('#cond-vals') || {}).innerText || ''), null, { timeout: 10000 }).catch(() => { });
   ok('and the variables in them, with their values', /tkb_outfit = 2/.test(await p.$eval('#cond-vals', e => e.innerText)));
+  await p.waitForSelector('#cond-layers:not([hidden]) .layerrow', { timeout: 30000 }).catch(() => { });
+  const lays = await p.$$eval('#cond-layers .layerrow', a => a.map(e => [e.innerText.replace(/\s+/g, ' ').trim(), e.classList.contains('bad'), (e.querySelector('img') || {}).naturalWidth || 0]));
+  const offTxt = await p.$eval('#cond-layers details', e => e.textContent).catch(() => '');
+  ok('it lists all the parts of the layered picture, with their pictures, and marks the missing one', lays.length === 3 && /always/.test(lays[0][0]) && lays[0][2] > 0 && /face: happy/.test(lays[1][0]) && lays[1][2] > 0 && /if tkb_outfit == 2/.test(lays[2][0]) && lays[2][1] && /MISSING/.test(lays[2][0]) && /face: sad/.test(offTxt), JSON.stringify([lays, offTxt]));
+  // the missing part gets a picture from the parts list
+  await p.click('#cond-layerpick'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  await p.fill('#sheetBody input.search', 'club'); await p.waitForTimeout(400);
+  await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#cond-layers .layerrow.bad');
+  await p.evaluate(() => $('#cond-layers').scrollIntoView()); await p.waitForTimeout(500); await p.screenshot({ path: '/tmp/claude-0/shots/layered-parts.png' });
+  const badTxt = await p.$eval('#cond-layers .layerrow.bad', e => e.innerText.replace(/\s+/g, ' '));
+  ok('Choose a picture for this part: the missing part will show it', /will show images\/bg club\.jpg/.test(badTxt), badTxt);
   await p.click('#cond-rows .condrow:nth-child(2) button:has-text("Change")'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
   await p.fill('#sheetBody input.search', 'club'); await p.waitForTimeout(400);
   await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#cond-rows .condrow');
