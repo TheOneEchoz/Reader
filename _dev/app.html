@@ -2481,6 +2481,7 @@ function rpyBoot(SCRIPTS, LOADER) {
     else if (m.t === 'onscreen') onscreen();
     else if (m.t === 'compose') compose(m.picks || []);
     else if (m.t === 'pyq') { (async () => { let result = null, err = null; try { result = window.renpy_exec ? await window.renpy_exec(m.code) : null; } catch (e) { err = String(e); } post({ t: 'pyres', q: m.q, result, err }); })(); }
+    else if (m.t === 'writefiles') { let ok = true; for (const f of m.files || []) { const path = '/' + f.p; try { if (f.text == null) FS.unlink(path); else { mkdirs(path.slice(0, path.lastIndexOf('/'))); try { FS.unlink(path); } catch (e) { } FS.writeFile(path, f.text); } } catch (e) { if (f.text != null) ok = false; } } post({ t: 'pyres', q: m.q, result: ok }); }
     else if (m.t === 'rpycmd') { try { window.renpy_exec && window.renpy_exec('store._tkb_cmd = ' + JSON.stringify(m.cmd).replace(/^\[/, '(').replace(/\]$/, ',)') + '\nresult = True'); } catch (e) { } }
     else if (m.t === 'gamesound') { for (const c of ACTX) { try { m.on ? c.resume() : c.suspend(); } catch (e) { } } for (const el of mediaEls()) { try { if (m.on) { if (el.__tkbPaused) { el.__tkbPaused = false; el.play(); } } else if (!el.paused) { el.__tkbPaused = true; el.pause(); } } catch (e) { } } }
     else if (m.q && waiting.has(m.q)) { const r = waiting.get(m.q); waiting.delete(m.q); r(m); }
@@ -2648,6 +2649,8 @@ const RPY_HOOKS = [
   '                renpy.notify(c[3])',
   '            except Exception:',
   '                renpy.notify("The game could not be saved here.")',
+  '        elif c[0] == "reload":',
+  '            renpy.reload_script()',
   '        elif c[0] == "jump":',
   '            if renpy.has_label(c[1]):',
   '                renpy.jump(c[1])',
@@ -2854,16 +2857,69 @@ async function fixByHand(gid, err, P) {
   setTimeout(() => { if (lines && P.line) { const pos = lines.slice(a, P.line - 1).join('\n').length + (P.line - 1 > a ? 1 : 0); ed.focus(); ed.setSelectionRange(pos, pos + (lines[P.line - 1] || '').length); } }, 80);
 }
 /* trying a fix: the game starts again with it, goes back to where it was and plays the scene again; then Keep or Undo */
+const TRIAL_FILE = 'game/zzzz_tankobon_trial.rpy';
+const trialText = scene => `init 1999 python:\n    def _tkb_trial_after():\n        store._tkb_cmd = ("jump", ${JSON.stringify(scene)})\n    config.after_load_callbacks.append(_tkb_trial_after)\n`;
+function gameWrite(files, ms = 8000) {
+  return new Promise(res => {
+    if (!GAME.frame || !GAME.loaded) return res(false);
+    GAME.pyq = GAME.pyq || new Map(); const q = Math.random().toString(36).slice(2);
+    const t = setTimeout(() => { GAME.pyq.delete(q); res(false); }, ms);
+    GAME.pyq.set(q, m => { clearTimeout(t); res(!!m.result); });
+    GAME.frame.contentWindow.postMessage({ t: 'writefiles', q, files }, '*');
+  });
+}
+/* the fixes mods' files as they are now (to write into the running game) */
+async function fixFilesNow(gid) {
+  const g = await S.gal(gid), out = [];
+  for (const m of (g.game.mods || []).filter(x => x.fixes && x.on)) for (const f of (await rpyGetJSON(m.list)) || []) out.push({ p: f.p, text: new TextDecoder().decode(await rpyRead(f.c, f.s)) });
+  return out;
+}
+/* Ren'Py reloads its script in place: much faster than starting the game again (nothing is read again) */
+async function fastReload(gid, files) {
+  if (!GAME.frame || !GAME.loaded || !GAME.g || GAME.g.id !== gid || !isRenpy(GAME.g)) return false;
+  if (!(await gameWrite(files))) return false;
+  await gameAutosave(); // (to come back to, if Ren'Py cannot put the game back where it was after reloading)
+  const before = await gamePy('result = id(renpy.game.script)', 3000); if (before == null) return false;
+  gameCmd(['reload']);
+  let menuSince = 0, loaded = false;
+  for (let k = 0; k < 90; k++) { // (until the reloaded game is back where it was)
+    await new Promise(z => setTimeout(z, 500));
+    const r = await gamePy('result = [id(renpy.game.script), renpy.get_screen("main_menu") is None and renpy.game.context().current is not None]', 2000);
+    if (window.TKB_DEBUG) console.log('reload wait', k, JSON.stringify(r), before, menuSince, loaded);
+    if (!r || r[0] === before) continue;
+    if (r[1]) return true;
+    // reloaded, but at the main menu (the place could not be found again, as when the script changed there): load the auto-save
+    menuSince = menuSince || Date.now();
+    if (!loaded && Date.now() - menuSince > 1500) { const g = await S.gal(gid), slot = await newestSlot((await rpyGetJSON(g.game.sv)) || {}); if (window.TKB_DEBUG) console.log('reload load', slot); if (!slot) return false; gameCmd(['load', slot]); loaded = true; }
+  }
+  return false;
+}
 async function gameTrial(gid, done, scene) {
+  const bar = () => h('div', { class: 'fixbar', role: 'status' }, h('span', {}, scene ? 'Playing the scene again with the fix.' : 'The game is running with the fix.'),
+    h('button', { class: 'btn small primary', onclick: async e => { e.currentTarget.parentNode.remove(); await gameWrite([{ p: TRIAL_FILE, text: null }]); toast('The fix is kept in the Fixes mod.'); } }, 'Keep the fix'),
+    h('button', { class: 'btn small', onclick: async e => {
+      e.currentTarget.parentNode.remove(); if (done) await setFixFile(gid, done.path, done.before, done.modId);
+      // what the file was before: the earlier fix, or the game's own file (or nothing, for the file of small fixes)
+      let was = done ? done.before : null;
+      if (done && was == null && done.path !== FIXES_FILE) { const g0 = await S.gal(gid), f0 = ((await rpyGetJSON(g0.game.list)) || []).find(f => f.p.toLowerCase() === done.path.toLowerCase()); if (f0) was = new TextDecoder().decode(await rpyRead(f0.c, f0.s)); }
+      const back = done ? [{ p: done.path, text: was }] : [];
+      if (await fastReload(gid, [...back, { p: TRIAL_FILE, text: null }])) return toast('The fix was undone.');
+      await gameAutosave(); closeGame(); render('game', { id: gid, cont: 1 }); toast('The fix was undone.');
+    } }, 'Undo'));
+  // quick: write the fix into the running game and let Ren'Py reload its script
+  const files = [...await fixFilesNow(gid), ...(scene ? [{ p: TRIAL_FILE, text: trialText(scene) }] : [])];
+  const t0 = Date.now(), lbl = h('div', { class: 'fixbar loading', role: 'status' }, h('span', {}, 'Reloading the game with the fix…'));
+  if (GAME.box) GAME.box.append(lbl);
+  const quick = await fastReload(gid, files);
+  lbl.remove();
+  if (quick) { if (GAME.box) GAME.box.append(bar()); console.log('fix reload', Date.now() - t0, 'ms'); return; }
+  // otherwise: start the game again
   await gameAutosave();
   closeGame();
   GAME.nextScene = scene || null;
   GAME.afterReady = async () => {
     for (let k = 0; k < 40; k++) { const r = await gamePy('result = renpy.get_screen("main_menu") is None and renpy.game.context().current is not None', 3000); if (r) break; await new Promise(z => setTimeout(z, 500)); }
-    const bar = h('div', { class: 'fixbar', role: 'status' }, h('span', {}, scene ? 'Playing the scene again with the fix.' : 'The game is running with the fix.'),
-      h('button', { class: 'btn small primary', onclick: () => { bar.remove(); toast('The fix is kept in the Fixes mod.'); } }, 'Keep the fix'),
-      h('button', { class: 'btn small', onclick: async () => { bar.remove(); if (done) await setFixFile(gid, done.path, done.before, done.modId); await gameAutosave(); closeGame(); render('game', { id: gid, cont: 1 }); toast('The fix was undone.'); } }, 'Undo'));
-    if (GAME.box) GAME.box.append(bar);
+    if (GAME.box) GAME.box.append(bar());
   };
   CUR.params = { id: gid, cont: 1 }; render('game', { id: gid, cont: 1 });
 }

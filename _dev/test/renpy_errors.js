@@ -8,7 +8,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
   await ctx.route('**/fonts.g*/**', r => r.abort());
   await ctx.route('https://theoneechoz.github.io/Reader/renpy/**', r => { const f = path.join(RT, decodeURIComponent(new URL(r.request().url()).pathname.replace('/Reader/renpy/', ''))); fs.existsSync(f) ? r.fulfill({ status: 200, body: fs.readFileSync(f) }) : r.fulfill({ status: 404 }); });
-  const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+  const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (/fix reload/.test(m.text())) console.log('TIMING', m.text()); });
   await p.goto('http://localhost:8768/?stay'); await p.waitForSelector('#user1');
   await p.waitForFunction(() => document.activeElement && document.activeElement.id === 'user1').catch(() => { });
   await p.fill('#user1', 'errors'); await p.fill('#pw1', 'errorpass1'); await p.fill('#pw2', 'errorpass1'); await p.click('#v-lock button[type=submit]');
@@ -47,7 +47,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('the broken line is shown, before and after', /- .*tkb_affection_sylive/.test(prev) && /\+ .*tkb_affection_sylvie \+ 1/.test(prev), prev);
   await p.screenshot({ path: '/tmp/claude-0/shots/fix-sheet.png' });
   await p.click('#fix-try');
-  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);
   await p.waitForTimeout(2500);
   fr = p.frames().find(f => f !== p.mainFrame());
   const after = await fr.evaluate(() => window.renpy_exec('result = [getattr(store, "tkb_result", None), str(renpy.game.context().current)]')).catch(e => String(e));
@@ -71,7 +71,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('it shows the lines around it, with the broken one selected', /"points: " \+ 5/.test(sel), sel);
   await p.$eval('#fix-edit', e => { e.value = e.value.replace('"points: " + 5', '"points: " + str(5)'); });
   await p.click('#fix-try');
-  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);
   await p.waitForTimeout(2500);
   fr = p.frames().find(f => f !== p.mainFrame());
   const after2 = await fr.evaluate(() => window.renpy_exec('result = [getattr(store, "tkb_label2", None), getattr(store, "tkb_after2", None)]')).catch(e => String(e));
@@ -92,12 +92,13 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const dprev = await p.$eval('#fix-preview', e => e.innerText);
   ok('the variable that gives a picture the game has comes first, marked', /^tkb_dawn ✓/.test(dp[0] || ''), JSON.stringify(dp));
   ok('the script lines that name the picture are shown, before and after', /- .*tkbpic \[tkb_dawb\]/.test(dprev) && /\+ .*tkbpic \[tkb_dawn\]/.test(dprev), dprev);
+  const e3before = await p.evaluate(() => (GAME.errors || []).length);
   await p.click('#fix-try');
-  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);
   await p.waitForTimeout(3000);
   fr = p.frames().find(f => f !== p.mainFrame());
   const d3 = await fr.evaluate(() => window.renpy_exec('result = [renpy.showing("tp"), renpy.get_screen("main_menu") is None, str(renpy.game.context().current)]')).catch(e => String(e));
-  const newErr = await p.evaluate(() => (GAME.errors || []).filter(e => /tkbpic/.test(e.short)).length);
+  const newErr = await p.evaluate(n => (GAME.errors || []).slice(n).filter(e => /tkbpic/.test(e.short)).length, e3before);
   ok('Try it plays the scene again, showing the right picture, with no error', Array.isArray(d3) && d3[0] === true && d3[1] === true && newErr === 0, JSON.stringify([d3, newErr]));
   await p.click('.fixbar button:has-text("Keep the fix")');
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
@@ -113,12 +114,13 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#fix-picked');
   const pv = await p.$eval('#fix-preview', e => e.innerText);
   ok('the chosen picture is shown, and the fix makes the missing name show it', /image tkbface 7 = "images\/bg club\.jpg"/.test(pv), pv);
+  const e4before = await p.evaluate(() => (GAME.errors || []).length);
   await p.click('#fix-try');
-  for (let k = 0; k < 60 && !(await p.$('.fixbar')); k++) await p.waitForTimeout(500);
+  for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);
   await p.waitForTimeout(3000);
   fr = p.frames().find(f => f !== p.mainFrame());
   const d4 = await fr.evaluate(() => window.renpy_exec('result = [renpy.showing("tf"), renpy.has_image("tkbface 7"), str(renpy.game.context().current)]')).catch(e => String(e));
-  const err4 = await p.evaluate(() => (GAME.errors || []).filter(e => /tkbface/.test(e.short)).length);
+  const err4 = await p.evaluate(n => (GAME.errors || []).slice(n).filter(e => /tkbface/.test(e.short)).length, e4before);
   ok('Try it shows the chosen picture in the scene, with no error', Array.isArray(d4) && d4[0] === true && d4[1] === true && err4 === 0, JSON.stringify([d4, err4]));
   await p.click('.fixbar button:has-text("Keep the fix")');
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);

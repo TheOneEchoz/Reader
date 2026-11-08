@@ -1,5 +1,14 @@
 [
  {
+  "v": 121,
+  "name": "1.23.0-beta.23",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing game errors is much faster: Try it (and Undo) no longer start the whole game again. The fix is written into the running game and Ren'Py reloads its script in place (a few seconds, even for big games), then plays the scene again. If that cannot be done, the game starts again as before."
+  ]
+ },
+ {
   "v": 120,
   "name": "1.23.0-beta.22",
   "date": "2026-11-08",

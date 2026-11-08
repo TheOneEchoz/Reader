@@ -1,6 +1,6 @@
 {
- "version": 120,
- "name": "1.23.0-beta.22",
+ "version": 121,
+ "name": "1.23.0-beta.23",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixing a missing picture (also one named after a variable): “Search the game's pictures” opens all the game's pictures, already searched by the picture's name, to choose the one it should be. The fix makes the missing name show that picture; Try it plays the scene again with it."
+  "Fixing game errors is much faster: Try it (and Undo) no longer start the whole game again. The fix is written into the running game and Ren'Py reloads its script in place (a few seconds, even for big games), then plays the scene again. If that cannot be done, the game starts again as before."
  ]
 }
