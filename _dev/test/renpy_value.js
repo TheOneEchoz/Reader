@@ -1,5 +1,5 @@
-// A picture that layered1 on conditions (ConditionSwitch) and chooses nothing: Fix the conditions shows its rows,
-// a row's picture is changed, and Try it plays the scene with it.
+// A picture named after a variable whose value has no pictures: the values with pictures are shown, Preview draws the scene with
+// one (no restart), and the fix replaces earlier ones; also for a part of a layered picture.
 const { chromium } = require('/home/claude/tankobon/test/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const GAMEDIR = '/tmp/claude-0/games/g8.3.7/the_question-7.0-pc', RT = '/home/claude/reader/renpy/';

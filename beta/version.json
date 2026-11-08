@@ -1,6 +1,6 @@
 {
- "version": 135,
- "name": "1.23.0-beta.37",
+ "version": 136,
+ "name": "1.23.0-beta.38",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,11 @@
   "qrcode.js"
  ],
  "notes": [
-  "Big games: while a picture that should be on screen is still loading, a loading wheel turns in the corner of the game, and goes away as soon as the picture is there. Pictures loading ahead of time (not on screen yet) show no wheel, and quick ones show none either."
+  "Ren'Py games: a new Edit this scene button (the brush, top right) changes the scene you are in. Each edit works at once in the game, and is kept in a mod of its own, “Scene edits”: switch it off on the game's page to play the game as it was.",
+  "Pictures made of layers: each part shown now, with its picture. Change a part's picture, remove a part, or add a part. Other pictures: change the picture, or hide it. Choose whether a change applies only at this line or everywhere.",
+  "Add a picture to this line: a file of the game, or any picture the game has a name for (also a layered picture with its parts, like “dawn3a happy”). Put it left, centre, right or over the whole screen, in front of or behind the characters. It shows while this line is on screen.",
+  "Add a step before or after this line: one or more pictures, over the scene or on their own, and a line of text if you like (with who says it). Preview draws it; then the game goes on as normal.",
+  "Skip this line: the story jumps over it from now on, so what it shows or says is left out.",
+  "The edits made at a line are listed there, and each can be taken back."
  ]
 }

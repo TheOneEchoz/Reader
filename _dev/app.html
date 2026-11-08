@@ -545,7 +545,9 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gamemods{left:208px}
 #gamebox .gamequick[hidden]+.gamemods{left:168px}
 #gamebox .gameexit[hidden]{display:none}
-#gamebox .gameerr{left:auto;right:8px;color:#ffb648;opacity:.9}
+#gamebox .gameerr{left:auto;right:48px;color:#ffb648;opacity:.9}
+#gamebox .gameedit{left:auto;right:8px}
+.layerrow.off{opacity:.55}
 #gamebox .gameerr::after{content:attr(data-n);position:absolute;top:2px;right:2px;font-size:10px;font-weight:700;background:#c0392b;color:#fff;border-radius:8px;padding:0 4px;line-height:14px}
 .pcell.game .gamebadge{position:absolute;left:6px;top:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center}
 .pcell.game .gamebadge svg{width:13px;height:13px}
@@ -3077,12 +3079,23 @@ const RPY_HOOKS = [
   '        attrs = set(name[len(base):])',
   '        alls = [o for o in li.layers if type(o).__name__ == "Attribute"]',
   '        out = []',
-  '        for i, ly in enumerate(li.layers):',
-  '            t = type(ly).__name__',
-  '            r = {"i": i, "t": t}',
+  '        orig = getattr(li, "_tkb_orig", None)',
+  '        for i, top in enumerate(li.layers):',
+  // a part changed in Tankobon: its edits (newest first), the part it was, and what it shows now
+  '            eds, ly = [], top',
+  '            while type(ly).__name__ == "_TkbLayer":',
+  '                eds.append(ly)',
+  '                ly = ly.orig',
+  '            t = "Added" if ly is None else type(ly).__name__',
+  '            r = {"i": i, "t": t, "oi": (orig.index(ly) if orig and ly in orig else (i if ly is not None else None))}',
+  '            if eds:',
+  '                r["edits"] = [{"mode": e.mode, "here": e.here is not None, "eid": e.eid} for e in eds]',
   '            try:',
-  '                img = getattr(ly, "image", None)',
-  '                if t == "Attribute":',
+  '                img = getattr(ly, "image", None) if ly is not None else None',
+  '                if t == "Added":',
+  '                    r["label"] = "added part"',
+  '                    on, img = True, eds[-1].d',
+  '                elif t == "Attribute":',
   '                    r["label"] = str(ly.attribute)',
   '                    r["group"] = None if ly.group is None else str(ly.group)',
   '                    on = ly.attribute in attrs or (bool(getattr(ly, "default", False)) and not any(o.group == ly.group and o.attribute in attrs for o in alls if o.group is not None))',
@@ -3100,12 +3113,21 @@ const RPY_HOOKS = [
   '                else:',
   '                    r["label"] = "always" if t == "Always" else t',
   '                    on = True',
+  '                for e in eds:',
+  '                    if e.here is None or e.here == _tkb_st.cur:',
+  '                        if e.mode == "remove":',
+  '                            r["removed"] = True',
+  '                        elif e.mode in ("change", "add"):',
+  '                            img = e.d',
+  '                        break',
   '                bad = False',
-  '                if on:',
+  '                if on and ly is not None and not r.get("removed"):',
   '                    try:',
   '                        bad = _tkb_emptyswitch(ly.get_displayable(attrs))',
   '                    except Exception:',
   '                        bad = img is None',
+  '                if r.get("removed"):',
+  '                    img = None',
   '                r["on"], r["bad"] = bool(on), bool(bad)',
   '                r["file"] = None if bad else _tkb_file(img)',
   '                if on and not bad and img is not None:',
@@ -3116,7 +3138,7 @@ const RPY_HOOKS = [
   '            except Exception as e:',
   '                r["err"] = str(e)[:120]',
   '            out.append(r)',
-  '        return {"name": " ".join(name), "layers": out}',
+  '        return {"name": " ".join(name), "base": " ".join(base), "layers": out}',
   '    def _tkb_broken_switches():',
   '        res = []',
   '        seen = set()',
@@ -3276,6 +3298,238 @@ const RPY_HOOKS = [
   '                _tkb_old_periodic()',
   '            _tkb_periodic()',
   '        config.periodic_callback = _tkb_periodic2',
+  'init 1999 python:',
+  // scene edits (made in Tankobon): parts of layered pictures changed, removed or added, pictures changed or hidden, pictures
+  // added at a line, and steps added before or after a line. "here" is the line (statement) an edit is for, or None: everywhere.
+  '    class _TkbState(object):',
+  '        pass',
+  '    _tkb_st = _TkbState()',
+  '    _tkb_st.cur = ""',
+  '    _tkb_st.inbeat = False',
+  '    _tkb_st.adds = _tkb_coll.OrderedDict()',
+  '    _tkb_st.before = _tkb_coll.OrderedDict()',
+  '    _tkb_st.after = _tkb_coll.OrderedDict()',
+  '    _tkb_st.shown = []',
+  '    _tkb_st.images = _tkb_coll.OrderedDict()',
+  '    _tkb_st.skips = _tkb_coll.OrderedDict()',
+  // a line of the story, known by its file and line number (the same at every start, also for scripts compiled at the start)
+  '    def _tkb_key():',
+  '        try:',
+  '            n = renpy.game.script.namemap.get(renpy.game.context().current)',
+  '            if n is None:',
+  '                return str(renpy.game.context().current)',
+  '            f = str(n.filename).replace(chr(92), "/").lstrip("/")',
+  '            if f.startswith("game/"):',
+  '                f = f[5:]',
+  '            return "%s:%d" % (f, n.linenumber)',
+  '        except Exception:',
+  '            return ""',
+  '    def _tkb_at(k):',
+  '        return _tkb_st.cur == k',
+  '    def _tkb_posat(pos):',
+  '        S = renpy.store',
+  '        if pos == "full":',
+  '            return [renpy.display.transform.Transform(xysize=(renpy.config.screen_width, renpy.config.screen_height), fit="contain", xalign=0.5, yalign=0.5)]',
+  '        if pos == "fill":',
+  '            return [renpy.display.transform.Transform(xysize=(renpy.config.screen_width, renpy.config.screen_height), fit="cover", xalign=0.5, yalign=0.5)]',
+  '        t = getattr(S, pos, None) if pos in ("left", "right", "center", "truecenter") else None',
+  '        return [t or S.center]',
+  '    def _tkb_disp(spec):',
+  '        if spec.get("none"):',
+  '            return renpy.display.layout.Null()',
+  '        if spec.get("file"):',
+  '            return renpy.easy.displayable(spec["file"])',
+  '        return renpy.display.image.ImageReference(tuple(str(spec.get("name", "")).split()))',
+  '    def _tkb_show_spec(spec, tag):',
+  '        d = _tkb_disp(spec)',
+  '        behind = []',
+  '        if not spec.get("front", True):',
+  '            tags = [e.tag for e in renpy.game.context().scene_lists.layers.get("master", []) if e.tag and not e.tag.startswith("tkbadd") and not e.tag.startswith("tkbbeat")]',
+  '            behind = tags[1:]',
+  '        renpy.show(tag, what=d, at_list=_tkb_posat(spec.get("pos", "center")), zorder=(50 if spec.get("front", True) else 0), behind=behind)',
+  '    class _TkbLayer(object):',
+  '        def __init__(self, orig, mode, d=None, here=None, eid=None):',
+  '            self.orig = orig',
+  '            self.mode = mode',
+  '            self.d = d',
+  '            self.here = here',
+  '            self.eid = eid',
+  '        def __getattr__(self, n):',
+  '            o = self.__dict__.get("orig")',
+  '            if o is None or n.startswith("__"):',
+  '                raise AttributeError(n)',
+  '            return getattr(o, n)',
+  '        def get_displayable(self, attributes):',
+  '            od = self.orig.get_displayable(attributes) if self.orig is not None else None',
+  '            if self.mode == "add":',
+  '                new = self.d',
+  '            elif self.mode == "change":',
+  '                if od is None:',
+  '                    return None',
+  '                new = self.d',
+  '            else:',
+  '                new = renpy.display.layout.Null()',
+  '            if self.here is None:',
+  '                return new',
+  '            return renpy.display.layout.ConditionSwitch("_tkb_at(%r)" % self.here, new, "True", od if od is not None else renpy.display.layout.Null())',
+  '    def _tkb_base(ly):',
+  '        while isinstance(ly, _TkbLayer) and ly.orig is not None:',
+  '            ly = ly.orig',
+  '        return None if isinstance(ly, _TkbLayer) else ly',
+  '    def _tkb_li(name):',
+  '        li = renpy.display.image.images.get(tuple(str(name).split()))',
+  '        li = getattr(li, "image", li) if not hasattr(li, "layers") else li',
+  '        return li if li is not None and hasattr(li, "layers") else None',
+  '    def _tkb_edit_layer(name, op, idx=None, spec=None, here=None, eid=None):',
+  '        li = _tkb_li(name)',
+  '        if li is None:',
+  '            return False',
+  '        if not hasattr(li, "_tkb_orig"):',
+  '            li._tkb_orig = [l for l in li.layers]',
+  '        d = _tkb_disp(spec) if spec else None',
+  '        if op == "add":',
+  '            li.layers.append(_TkbLayer(None, "add", d, here, eid))',
+  '            return True',
+  '        if idx is None or idx >= len(li._tkb_orig):',
+  '            return False',
+  '        o = li._tkb_orig[idx]',
+  '        for j, ly in enumerate(li.layers):',
+  '            if ly is o or _tkb_base(ly) is o:',
+  '                li.layers[j] = _TkbLayer(ly, op, d, here, eid)',
+  '                return True',
+  '        return False',
+  '    def _tkb_edit_image(name, spec, here=None, eid=None):',
+  '        k = tuple(str(name).split())',
+  '        idict = renpy.display.image.images',
+  '        if k not in _tkb_st.images:',
+  '            _tkb_st.images[k] = idict.get(k)',
+  '        cur = idict.get(k)',
+  '        new = _tkb_disp(spec)',
+  '        if here is not None:',
+  '            new = renpy.display.layout.ConditionSwitch("_tkb_at(%r)" % here, new, "True", cur if cur is not None else renpy.display.layout.Null())',
+  '        idict[k] = new',
+  '        _tkb_st.images.setdefault(("__eid__", eid), (k, cur))',
+  '        return True',
+  '    def _tkb_add_here(here, spec, eid=None):',
+  '        s = dict(spec)',
+  '        s["eid"] = eid',
+  '        _tkb_st.adds.setdefault(here, []).append(s)',
+  // a line skipped: the story jumps over it (its pictures and text never show)
+  '    def _tkb_add_skip(here, eid=None):',
+  '        _tkb_st.skips[here] = eid',
+  '    def _tkb_add_step(when, here, step, eid=None):',
+  '        s = dict(step)',
+  '        s["eid"] = eid',
+  '        (_tkb_st.before if when == "before" else _tkb_st.after).setdefault(here, []).append(s)',
+  // taking an edit back (while playing): parts and pictures put back, additions and steps removed
+  '    def _tkb_undo(eid):',
+  '        for k, v in list(renpy.display.image.images.items()):',
+  '            if hasattr(v, "layers"):',
+  '                for j, ly in enumerate(list(v.layers)):',
+  '                    if isinstance(ly, _TkbLayer):',
+  '                        if ly.eid == eid:',
+  '                            if ly.orig is None:',
+  '                                v.layers.remove(ly)',
+  '                            else:',
+  '                                v.layers[j] = ly.orig',
+  '                        else:',
+  '                            p = ly',
+  '                            while isinstance(p.orig, _TkbLayer):',
+  '                                if p.orig.eid == eid:',
+  '                                    p.orig = p.orig.orig',
+  '                                    break',
+  '                                p = p.orig',
+  '        for k in [k for k, v in _tkb_st.skips.items() if v == eid]:',
+  '            del _tkb_st.skips[k]',
+  '        hit = _tkb_st.images.pop(("__eid__", eid), None)',
+  '        if hit:',
+  '            renpy.display.image.images[hit[0]] = hit[1]',
+  '        for dd in (_tkb_st.adds, _tkb_st.before, _tkb_st.after):',
+  '            for k in list(dd.keys()):',
+  '                dd[k] = [s for s in dd[k] if s.get("eid") != eid]',
+  '    def _tkb_run_step(b):',
+  '        _tkb_st.inbeat = True',
+  '        try:',
+  '            renpy.call_in_new_context("_tkb_step_label", b, _clear_layers=bool(b.get("alone")))',
+  '        finally:',
+  '            _tkb_st.inbeat = False',
+  '    def _tkb_step_body(b):',
+  '        for i, spec in enumerate(b.get("pics", [])):',
+  '            _tkb_show_spec(spec, "tkbbeat%d" % i)',
+  '        try:',
+  '            renpy.with_statement(renpy.store.dissolve)',
+  '        except Exception:',
+  '            pass',
+  '        if b.get("text"):',
+  '            renpy.say(b.get("who") or None, b["text"])',
+  '        else:',
+  '            renpy.pause()',
+  // pictures added at a line: the previous line's go, this line's come
+  '    def _tkb_apply_adds(k=None):',
+  '        if k is None:',
+  '            k = _tkb_st.cur',
+  '        for t in _tkb_st.shown:',
+  '            try:',
+  '                renpy.hide(t)',
+  '            except Exception:',
+  '                pass',
+  '        _tkb_st.shown = []',
+  '        for i, spec in enumerate(_tkb_st.adds.get(k, [])):',
+  '            t = "tkbadd%d" % i',
+  '            try:',
+  '                _tkb_show_spec(spec, t)',
+  '                _tkb_st.shown.append(t)',
+  '            except Exception:',
+  '                pass',
+  '    def _tkb_stmt(name):',
+  '        if _tkb_st.inbeat:',
+  '            return',
+  '        try:',
+  '            if len(renpy.game.contexts) > 1:',
+  '                return',
+  '            k = _tkb_key()',
+  '        except Exception:',
+  '            return',
+  '        if k in _tkb_st.skips and not renpy.game.after_rollback:',
+  '            n = renpy.game.script.namemap.get(renpy.game.context().current)',
+  '            nxt = getattr(n, "next", None)',
+  '            if nxt is not None:',
+  '                raise renpy.game.JumpException(nxt.name)',
+  '        prev = _tkb_st.cur',
+  '        _tkb_st.cur = k',
+  '        _tkb_apply_adds(k)',
+  '        if k == prev or renpy.game.after_rollback:',
+  '            return',
+  '        for b in list(_tkb_st.after.get(prev, [])) + list(_tkb_st.before.get(k, [])):',
+  '            try:',
+  '                _tkb_run_step(b)',
+  '            except renpy.game.CONTROL_EXCEPTIONS:',
+  '                raise',
+  '            except Exception:',
+  '                pass',
+  '    if hasattr(config, "statement_callbacks"):',
+  '        config.statement_callbacks.append(_tkb_stmt)',
+  // a step drawn (for its preview): over the scene, or on its own
+  '    def _tkb_step_png(b):',
+  '        f = renpy.display.layout.Fixed()',
+  '        if not b.get("alone"):',
+  '            f.add(_tkb_scene(None))',
+  '        for spec in b.get("pics", []):',
+  '            d = _tkb_disp(spec)',
+  '            for t in _tkb_posat(spec.get("pos", "center")):',
+  '                d = t(child=d)',
+  '            f.add(d)',
+  '        return _tkb_png(f)',
+  // where the story is: the line, its file and number, and what it says
+  '    def _tkb_where():',
+  '        try:',
+  '            fn, ln = renpy.get_filename_line()',
+  '        except Exception:',
+  '            fn, ln = "", 0',
+  '        return {"key": _tkb_st.cur or _tkb_key(), "file": fn, "line": ln, "what": str(getattr(store, "_last_raw_what", "") or "")[:200], "who": str(getattr(store, "_last_say_who", "") or "")}',
+  'label _tkb_step_label(b=None):',
+  '    $ _tkb_step_body(_args[0] if _args else b)',
+  '    return',
   ''].join('\n');
 /* ask the running Ren'Py game something (Python; the answer is what it puts in `result`) */
 function gamePy(code, ms = 8000) {
@@ -3329,6 +3583,177 @@ async function addFixBlock(gid, key, block, modId) { // the file of small fixes:
   const re = new RegExp(`\\n# fix: ${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n[\\s\\S]*?(?=\\n# fix: |$)`); text = text.replace(re, '');
   const r = await setFixFile(gid, FIXES_FILE, text.replace(/\s*$/, '\n') + `\n# fix: ${key}\n${block.replace(/\s*$/, '\n')}`, modId);
   return { path: FIXES_FILE, before: r.before, modId: r.modId };
+}
+/* Scene edits: a mod of its own ("Scene edits"), one block per edit (found again by its id). Each edit is put to work in the
+   running game at once, and from the next start by the block. "Here": the line of the story it is for (or everywhere). */
+const EDITS_FILE = 'game/zzzz_tankobon_edits.rpy';
+async function editsModOf(gid) { const g = await S.gal(gid); return { g, mod: (g.game.mods || []).find(m => m.edits) }; }
+async function editsText(gid) {
+  const { mod } = await editsModOf(gid); if (!mod) return '';
+  const list = (await rpyGetJSON(mod.list)) || [], f = list.find(x => x.p === EDITS_FILE);
+  return f ? new TextDecoder().decode(await rpyRead(f.c, f.s)) : '';
+}
+async function setEditsText(gid, text) {
+  const { g, mod: m0 } = await editsModOf(gid); let mod = m0;
+  const list = mod ? ((await rpyGetJSON(mod.list)) || []) : [];
+  const i = list.findIndex(f => f.p === EDITS_FILE);
+  if (i >= 0) { await ST.delMany('images', list[i].c).catch(() => { }); list.splice(i, 1); }
+  const buf = Crypt.te.encode(text).buffer, id = await rpyPut(buf); list.push({ p: EDITS_FILE, s: buf.byteLength, c: [id], t: Date.now() });
+  if (!mod) { mod = { id: uid(), name: 'Scene edits', edits: true, on: true, list: await rpyPutJSON(list), files: 0, size: 0, addedAt: Date.now() }; g.game.mods = [...(g.game.mods || []), mod]; }
+  else await rpyPutJSON(list, mod.list);
+  mod.files = list.length; mod.size = list.reduce((n, f) => n + f.s, 0); mod.on = true;
+  await saveGallery(g);
+}
+const editBlocks = text => text.split(/\n(?=# edit: )/).slice(1).map(b => { const i = b.indexOf('\n'); return { eid: b.slice(8, i < 0 ? undefined : i).trim(), block: i < 0 ? '' : b.slice(i + 1) }; });
+async function addEditBlock(gid, eid, block) {
+  const text = (await editsText(gid)) || '# Scene edits made in Tankobon. Each block is one edit; switch the mod off to play the game as it was.\n';
+  await setEditsText(gid, text.replace(/\s*$/, '\n') + `\n# edit: ${eid}\n${block.replace(/\s*$/, '\n')}`);
+}
+async function removeEditBlock(gid, eid) {
+  const text = await editsText(gid); if (!text) return;
+  await setEditsText(gid, text.replace(new RegExp(`\\n# edit: ${eid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n[\\s\\S]*?(?=\\n# edit: |$)`), '').replace(/\s*$/, '\n'));
+}
+/* a JS value as Python (strings as JSON strings, which Python reads the same) */
+const pyLit = v => v === null || v === undefined ? 'None' : v === true ? 'True' : v === false ? 'False' : typeof v === 'number' ? String(v) : typeof v === 'string' ? JSON.stringify(v)
+  : Array.isArray(v) ? `[${v.map(pyLit).join(', ')}]` : `{${Object.entries(v).map(([k, x]) => `${JSON.stringify(k)}: ${pyLit(x)}`).join(', ')}}`;
+const POSITIONS = [['left', 'Left'], ['center', 'Centre'], ['right', 'Right'], ['full', 'Whole screen'], ['fill', 'Fill the screen']];
+/* a picture (a file of the game, or a picture name of the game) drawn small by the game */
+function specThumb(spec, cls = 'swthumb') {
+  const im = pngImg(null, cls);
+  gameShot(`result = _tkb_png(_tkb_disp(${pyLit(spec)}), 200)`, 20000).then(r => { if (r && r.png) { im.src = 'data:image/png;base64,' + r.png; im.style.visibility = ''; } }).catch(() => { });
+  return im;
+}
+const specName = s => s.none ? 'nothing' : s.file ? s.file.split('/').pop() : s.name;
+/* choosing a picture for an edit: a file of the game (with the asset search), or a picture of the game by its name (a layered
+   picture with the attributes to show, like “dawn3a happy”) */
+function pickSceneSource(gid, title, onPick, onCancel) {
+  const q = h('input', { class: 'text', type: 'search', id: 'gp-q', placeholder: 'A picture name of the game, like “eileen happy”', autocomplete: 'off' });
+  const list = h('div', { class: 'row', id: 'gp-list', style: 'flex-wrap:wrap;gap:8px' });
+  let t = 0, done = false;
+  const use = n => { done = true; closeSheet(); onPick({ name: n }); };
+  const search = async () => {
+    const v = q.value.trim().toLowerCase();
+    const names = (await gamePy(`_q = ${JSON.stringify(v)}\nresult = sorted(set(" ".join(k) for k in renpy.display.image.images if k and not str(k[0]).startswith("_") and _q in " ".join(k).lower()))[:36]`, 20000)) || [];
+    const typed = v && !names.includes(v) ? [v] : [];
+    list.replaceChildren(...[...typed, ...names].map(n => h('button', { class: 'swpick', onclick: () => use(n) }, specThumb({ name: n }), h('span', {}, n))));
+    if (!names.length && !typed.length) list.replaceChildren(h('p', { class: 'hint' }, 'No picture with that name.'));
+  };
+  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(search, 300); });
+  openSheet(title, h('div', { class: 'stack', id: 'gp-sheet' },
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('button', { class: 'btn', id: 'gp-file', onclick: () => { done = true; openAssets(gid, { pick: p0 => onPick({ file: p0.name }), onCancel, title }); } }, icon('image'), 'Choose a file of the game'),
+      h('span', { class: 'hint' }, 'or a picture the game has a name for:')),
+    q, list,
+    h('p', { class: 'hint' }, 'For a picture made of layers, add the parts to show after its name (as the game does), like “dawn3a happy”.')), () => { if (!done && onCancel) onCancel(); });
+  search();
+}
+async function sceneEditor(gid) {
+  if (!GAME.loaded) return;
+  const W = await gamePy('result = _tkb_where()', 20000);
+  if (!W || !W.key) return toast('The game is not at a line of the story right now.', 3500);
+  const shown = (await gamePy('_c = _tkb_gamectx()\nresult = [[e.tag, " ".join(_tkb_refname(e.displayable) or ())] for e in _c.scene_lists.layers.get("master", []) if e.tag and not e.tag.startswith("tkbadd") and not e.tag.startswith("tkbbeat")]', 20000)) || [];
+  const layered = {};
+  for (const [tag] of shown) { const L = await gameShot(`result = _tkb_layers(${JSON.stringify(tag)}, 160)`, 30000); if (L && L.layers) layered[tag] = L; }
+  let here = true;
+  const again = () => sceneEditor(gid);
+  // an edit: put to work now (and the scene drawn again), and kept in the "Scene edits" mod
+  const apply = async (desc, call) => {
+    const eid = uid().slice(0, 10);
+    const code = call(eid);
+    const r = await gamePy(`${code}\n_tkb_refind(_tkb_scene(None))\n_tkb_apply_adds()\nrenpy.restart_interaction()\nresult = True`, 20000);
+    await addEditBlock(gid, eid, `init 2002 python:\n    # ${desc.replace(/\n/g, ' ')}\n    ${code}`);
+    toast(r ? 'Done. It is in the “Scene edits” mod.' : 'Saved in the “Scene edits” mod; it shows from the next start.', 3000);
+    again();
+  };
+  const H = () => here ? JSON.stringify(W.key) : 'None';
+  const where = W.file ? `${W.file.split('/').pop()}, line ${W.line}` : '';
+  const scope = h('div', { class: 'seg', role: 'group', id: 'se-scope', 'aria-label': 'Where the changes to pictures apply' }, [[true, 'Only at this line'], [false, 'Everywhere']].map(([v, l]) =>
+    h('button', { 'aria-pressed': String(here === v), onclick: e => { here = v; $$('button', scope).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l)));
+  const partRow = (tag, L, x) => {
+    const lab = (x.t === 'Attribute' ? (x.group ? `${x.group}: ` : '') + x.label : x.label) || x.t;
+    const im = pngImg(x.png || null, 'swthumb');
+    const state = x.removed ? 'removed' + (x.edits && x.edits[0].here ? ' at this line' : '') : x.edits ? 'changed' : (x.file || '');
+    return h('div', { class: 'layerrow' + (x.removed ? ' off' : ''), 'data-part': String(x.oi) }, im,
+      h('div', { class: 'stack', style: 'gap:2px;min-width:0;flex:1' }, h('b', {}, lab), h('small', { class: 'hint' }, state)),
+      x.oi != null ? h('button', { class: 'btn small', onclick: () => pickSceneSource(gid, `New picture for “${lab}”`, sp => apply(`${L.base}: part ${lab} shows ${specName(sp)}${here ? ' at ' + where : ''}`, eid => `_tkb_edit_layer(${JSON.stringify(L.base)}, "change", ${x.oi}, ${pyLit(sp)}, ${H()}, ${JSON.stringify(eid)})`), again) }, 'Change') : null,
+      x.oi != null && !x.removed ? h('button', { class: 'btn small ghost', onclick: () => apply(`${L.base}: part ${lab} removed${here ? ' at ' + where : ''}`, eid => `_tkb_edit_layer(${JSON.stringify(L.base)}, "remove", ${x.oi}, None, ${H()}, ${JSON.stringify(eid)})`) }, icon('trash'), 'Remove') : null);
+  };
+  const picRow = ([tag, name]) => {
+    const L = layered[tag];
+    const im = pngImg(null, 'swthumb');
+    gameShot(`result = _tkb_tagshot(${JSON.stringify(tag)}, None, [], 200)`, 20000).then(r => { if (r && r.png) { im.src = 'data:image/png;base64,' + r.png; im.style.visibility = ''; } });
+    const head = h('div', { class: 'row', style: 'gap:10px;align-items:center' }, im, h('div', { class: 'stack', style: 'gap:2px;flex:1;min-width:0' }, h('b', {}, name || tag), h('small', { class: 'hint' }, L ? `made of ${plural(L.layers.filter(x => x.on).length, 'part')} shown now` : 'a picture')));
+    if (L) {
+      const on = L.layers.filter(x => x.on || x.removed), off = L.layers.filter(x => !x.on && !x.removed);
+      return h('div', { class: 'panel stack se-pic', 'data-tag': tag, style: 'gap:6px' }, head, ...on.map(x => partRow(tag, L, x)),
+        h('button', { class: 'btn small', style: 'justify-self:start', onclick: () => pickSceneSource(gid, `Add a part to “${L.base}”`, sp => apply(`${L.base}: part added (${specName(sp)})${here ? ' at ' + where : ''}`, eid => `_tkb_edit_layer(${JSON.stringify(L.base)}, "add", None, ${pyLit(sp)}, ${H()}, ${JSON.stringify(eid)})`), again) }, icon('plus'), 'Add a part'),
+        off.length ? h('details', {}, h('summary', {}, `Other parts, not shown now (${off.length})`), h('div', { class: 'stack', style: 'gap:2px;margin-top:6px' }, off.map(x => h('small', { class: 'hint' }, (x.group ? x.group + ': ' : '') + x.label)))) : null);
+    }
+    return h('div', { class: 'panel stack se-pic', 'data-tag': tag, style: 'gap:6px' }, head, name ? h('div', { class: 'row', style: 'flex-wrap:wrap' },
+      h('button', { class: 'btn small', onclick: () => pickSceneSource(gid, `New picture for “${name}”`, sp => apply(`${name} shows ${specName(sp)}${here ? ' at ' + where : ''}`, eid => `_tkb_edit_image(${JSON.stringify(name)}, ${pyLit(sp)}, ${H()}, ${JSON.stringify(eid)})`), again) }, 'Change the picture'),
+      h('button', { class: 'btn small ghost', onclick: () => apply(`${name} hidden${here ? ' at ' + where : ''}`, eid => `_tkb_edit_image(${JSON.stringify(name)}, {"none": 1}, ${H()}, ${JSON.stringify(eid)})`) }, icon('eyeoff'), 'Hide it')) : null);
+  };
+  // a picture added at this line: where, and in front of or behind the characters
+  let pos = 'center', front = true;
+  const segOf = (id, label, opts, get, set) => { const el = h('div', { class: 'seg', role: 'group', id, 'aria-label': label }, opts.map(([v, l]) => h('button', { 'aria-pressed': String(get() === v), onclick: e => { set(v); $$('button', el).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l))); return el; };
+  const addB = h('button', { class: 'btn primary', id: 'se-add', onclick: () => pickSceneSource(gid, 'Add a picture to this line', sp => apply(`picture added at ${where}: ${specName(sp)}`, eid => `_tkb_add_here(${JSON.stringify(W.key)}, ${pyLit({ ...sp, pos, front })}, ${JSON.stringify(eid)})`), again) }, icon('plus'), 'Add a picture');
+  // the edits at this line (and the ones for everywhere), to take back
+  const blocks = editBlocks(await editsText(gid));
+  const mine = blocks.filter(b => b.block.includes(JSON.stringify(W.key)) || /, None, "[^"]*"\)\s*$/.test(b.block.trim()));
+  const undo = async b => { await gamePy(`_tkb_undo(${JSON.stringify(b.eid)})\n_tkb_refind(_tkb_scene(None))\n_tkb_apply_adds()\nrenpy.restart_interaction()\nresult = True`, 20000); await removeEditBlock(gid, b.eid); toast('Edit taken back.', 2500); again(); };
+  const descOf = b => (b.block.match(/# (.*)/) || [, 'edit'])[1];
+  openSheet('Edit this scene', h('div', { class: 'stack', id: 'se-sheet' },
+    h('p', { class: 'hint', style: 'margin:0' }, W.what ? ['At this line: ', h('i', {}, `“${W.what.slice(0, 120)}${W.what.length > 120 ? '…' : ''}”`), where ? ` (${where})` : ''] : `At ${where || 'this point of the story'}.`),
+    h('div', { class: 'label' }, 'On screen now'),
+    h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;align-items:center' }, h('small', { class: 'hint' }, 'Changes to pictures apply:'), scope),
+    ...(shown.length ? shown.map(picRow) : [h('p', { class: 'hint' }, 'No pictures on screen.')]),
+    h('div', { class: 'label' }, 'Add a picture to this line'),
+    h('p', { class: 'hint', style: 'margin:0' }, 'It shows while this line is on screen, with the game\'s own pictures.'),
+    segOf('se-pos', 'Where', POSITIONS, () => pos, v => pos = v),
+    segOf('se-front', 'In front or behind', [[true, 'In front'], [false, 'Behind the characters']], () => front, v => front = v),
+    addB,
+    h('div', { class: 'label' }, 'Skip this line'),
+    h('p', { class: 'hint', style: 'margin:0' }, 'The story jumps over this line from now on: what it shows or says is left out, and the game goes on with the next one.'),
+    h('button', { class: 'btn', id: 'se-skip', style: 'justify-self:start', onclick: () => apply(`line skipped: ${where}${W.what ? ' (“' + W.what.slice(0, 50) + '”)' : ''}`, eid => `_tkb_add_skip(${JSON.stringify(W.key)}, ${JSON.stringify(eid)})`) }, icon('play'), 'Skip this line'),
+    h('div', { class: 'label' }, 'Add a step'),
+    h('p', { class: 'hint', style: 'margin:0' }, 'A moment of its own, before or after this line: pictures (and a line of text, if you like), then the game goes on as normal.'),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('button', { class: 'btn', id: 'se-before', onclick: () => stepEditor(gid, W, 'before', again) }, 'Before this line'), h('button', { class: 'btn', id: 'se-after', onclick: () => stepEditor(gid, W, 'after', again) }, 'After this line')),
+    h('div', { class: 'label' }, `Edits here (${mine.length})`),
+    mine.length ? h('div', { class: 'stack', id: 'se-edits', style: 'gap:4px' }, mine.map(b => h('div', { class: 'row', style: 'gap:8px;align-items:center' }, h('span', { style: 'flex:1;min-width:0' }, descOf(b)), h('button', { class: 'btn small ghost', onclick: () => undo(b) }, icon('undo'), 'Take back')))) : h('p', { class: 'hint', style: 'margin:0' }, 'None yet. All edits go into the “Scene edits” mod: switch it off on the game\'s page to play the game as it was.')));
+}
+/* a step before or after a line: pictures over the scene or on their own, an optional line of text; Preview draws it */
+function stepEditor(gid, W, when, back) {
+  const step = { pics: [], alone: false, text: '', who: '' };
+  const where = W.file ? `${W.file.split('/').pop()}, line ${W.line}` : 'this line';
+  const picsBox = h('div', { class: 'stack', id: 'st-pics', style: 'gap:6px' });
+  const drawPics = () => picsBox.replaceChildren(...(step.pics.length ? step.pics.map((p, i) => h('div', { class: 'layerrow' }, specThumb(p), h('div', { class: 'stack', style: 'gap:4px;flex:1;min-width:0' }, h('b', {}, specName(p)),
+    h('select', { class: 'text', 'aria-label': 'Where', onchange: e => { p.pos = e.target.value; } }, POSITIONS.map(([v, l]) => h('option', { value: v, selected: p.pos === v }, l)))),
+    h('button', { class: 'iconbtn', 'aria-label': 'Remove this picture', onclick: () => { step.pics.splice(i, 1); drawPics(); } }, icon('trash')))) : [h('p', { class: 'hint', style: 'margin:0' }, 'No pictures yet.')]));
+  const node = h('div', { class: 'stack', id: 'st-sheet' });
+  const reopen = () => openSheet(when === 'before' ? 'A step before this line' : 'A step after this line', node);
+  const addPic = () => pickSceneSource(gid, 'A picture for the step', sp => { step.pics.push({ ...sp, pos: sp.file ? 'full' : 'center' }); reopen(); drawPics(); }, reopen);
+  const alone = h('div', { class: 'seg', role: 'group', id: 'st-alone', 'aria-label': 'Over the scene or on its own' }, [[false, 'Over this scene'], [true, 'On its own']].map(([v, l]) =>
+    h('button', { 'aria-pressed': String(step.alone === v), onclick: e => { step.alone = v; $$('button', alone).forEach(b => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); } }, l)));
+  const who = h('input', { class: 'text', id: 'st-who', placeholder: 'Who says it (empty: nobody)', autocomplete: 'off' });
+  const text = h('textarea', { class: 'text', id: 'st-text', rows: 2, placeholder: 'A line of text (optional). Without one, the step waits for a tap.' });
+  const prevB = h('button', { class: 'btn', id: 'st-preview', onclick: async () => {
+    if (!step.pics.length) return toast('Add a picture first.', 2500);
+    const r = await gameShot(`result = _tkb_step_png(${pyLit(step)})`, 30000);
+    if (!r || !r.png) return toast('The preview could not be drawn.', 3000);
+    closeSheet(); showFixPreview(r.png, 'Preview of the step (nothing is saved yet)', reopen);
+  } }, icon('eye'), 'Preview');
+  const saveB = h('button', { class: 'btn primary', id: 'st-save', onclick: async () => {
+    if (!step.pics.length && !text.value.trim()) return toast('Add a picture or a line of text first.', 2500);
+    const s = { ...step, text: text.value.trim(), who: who.value.trim() };
+    const eid = uid().slice(0, 10), code = `_tkb_add_step(${JSON.stringify(when)}, ${JSON.stringify(W.key)}, ${pyLit(s)}, ${JSON.stringify(eid)})`;
+    await gamePy(`${code}\nresult = True`, 20000);
+    await addEditBlock(gid, eid, `init 2002 python:\n    # step ${when} ${where}: ${s.pics.map(specName).join(', ') || 'text'}\n    ${code}`);
+    closeSheet(); toast(`Step saved. It plays ${when === 'before' ? 'before' : 'after'} this line from now on.`, 3500); back();
+  } }, 'Save the step');
+  node.append(h('p', { class: 'hint', style: 'margin:0' }, `It plays ${when} ${where}, then the game goes on as normal.`),
+    h('div', { class: 'label' }, 'Pictures'), picsBox, h('button', { class: 'btn small', id: 'st-addpic', style: 'justify-self:start', onclick: addPic }, icon('plus'), 'Add a picture'),
+    alone, h('div', { class: 'label' }, 'Text'), who, text,
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, prevB, saveB));
+  drawPics(); reopen();
 }
 /* the blocks of the fixes file of the Fixes mod ({key, block}), and removing some of them */
 async function fixBlocksOf(gid) {
@@ -3630,7 +4055,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
       h('p', { class: 'hint', style: 'margin:0' }, `“${P.name}” is ${valCur} now, and the game has pictures for ${P.name} = ${valGood.join(', ')}. Most likely the game sets it earlier in the story and that did not happen in this playthrough. Choose the value it should have: the fix gives it that value whenever it has one with no pictures.`),
       h('div', { class: 'row', style: 'flex-wrap:wrap;gap:8px' }, btns),
       olds.length ? h('label', { class: 'row', style: 'gap:8px;align-items:flex-start' }, h('input', { type: 'checkbox', id: 'fix-dropold', checked: dropOld, onchange: e => { dropOld = e.target.checked; } }),
-        h('span', {}, `Also remove ${plural(olds.length, 'earlier fix', 'earlier fixes')} made for this, which this one replaces: `, h('code', {}, olds.map(x => x.key.replace(/^(image|picture) /, '')).join(', ')))) : null);
+        h('span', {}, `Also remove ${olds.length === 1 ? 'an earlier fix' : olds.length + ' earlier fixes'} made for this, which this one replaces: `, h('code', {}, olds.map(x => x.key.replace(/^(image|picture) /, '')).join(', ')))) : null);
   };
   const valThumbs = {};
   if (P.kind === 'dynimg') (async () => { try {
@@ -4047,9 +4472,10 @@ async function openGame(id, cont) {
   const drawQuick = async () => { const to = await lastAddTarget(); quickB.hidden = !to; if (to) { quickB.title = `Add the scene to “${to.label}”`; quickB.setAttribute('aria-label', `Add the scene (art only, with its music) to “${to.label}”`); } };
   drawQuick();
   const modsB = (g.game.mods || []).length ? h('button', { class: 'gameexit gamemods', 'aria-label': 'Mods', title: 'Mods', onclick: () => GAME.loaded && liveMods(id) }, icon('layers')) : null;
+  const editB = h('button', { class: 'gameexit gameedit', 'aria-label': 'Edit this scene', title: 'Edit this scene', onclick: () => GAME.loaded && sceneEditor(id) }, icon('brush'));
   const errB = h('button', { class: 'gameexit gameerr', hidden: true, 'aria-label': 'Errors in the game (and fixes)', title: 'Errors in the game', onclick: () => gameErrors(GAME.errors, g.title) }, icon('tools'));
   const savesB = h('button', { class: 'gameexit gamesaves', 'aria-label': 'Saves', title: 'Saves', onclick: async () => { if (!GAME.loaded) return; await gameAutosave(); savePicker(id); } }, icon('list'));
-  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB, errB);
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB, editB, errB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
   document.body.classList.add('gaming'); document.body.append(box);
