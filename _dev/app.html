@@ -2812,6 +2812,9 @@ async function brokenPictures() {
 /* a picture the game chooses with its own code, which chose nothing: show what that code looks at (its variables, with their
    values now, and the values it compares them with), and let a variable be set, to see the picture come back */
 async function fixPickedByCode(gid, err, d) {
+  const nearName = d.near ? (Array.isArray(d.near) ? (d.near[0] === d.near[1] ? d.near[0] : d.near[0]) : String(d.near)) : null;
+  const P0 = parseGameError(err);
+  const sceneOf = async () => P0.file && P0.line ? gamePy(`_f = ${JSON.stringify(P0.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P0.line}] or [(0, None)])[1]`) : null;
   const names = [...new Set([...(d.names || []), ...((d.conds || []).join(' ').match(/[A-Za-z_]\w*/g) || [])])].filter(n => !/^(True|False|None|and|or|not|in|is|renpy|store|persistent|config|len|str|int)$/.test(n));
   const vals = (await gamePy(`_ns = ${JSON.stringify(names)}\nresult = [[n, repr(getattr(renpy.store, n))[:40]] for n in _ns if hasattr(renpy.store, n) and not callable(getattr(renpy.store, n))]`)) || [];
   const nums = [...new Set([...(d.consts || []).filter(c => typeof c === 'number'), ...((d.conds || []).join(' ').match(/[-\d.]+/g) || []).map(Number).filter(x => !isNaN(x))])].sort((a, b) => a - b);
@@ -2835,6 +2838,12 @@ async function fixPickedByCode(gid, err, d) {
       nums.length ? h('p', { class: 'hint', style: 'margin:4px 0 0' }, `Numbers it uses: ${nums.join(', ')}`) : null),
     vals.length ? h('div', { class: 'stack', style: 'gap:6px' }, h('div', { class: 'label' }, 'Try a value'), h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, varSel, valIn, setB), status) : null,
     h('p', { class: 'hint' }, 'Setting a value changes this playthrough only (like the game would have), so you can see which value brings the picture back. If a typo in the game keeps giving the wrong value, fix that typo too (its error is in the list).'),
+    // a sure way out: replace the whole picture with one you choose (or leave it out); it no longer changes with the variables
+    nearName ? h('div', { class: 'panel stack', style: 'gap:8px', id: 'fix-replace' }, h('div', { class: 'label' }, `Or replace the picture “${nearName}”`),
+      h('p', { class: 'hint', style: 'margin:0' }, 'If no value works, show one picture of your choice in its place (it will always be that one), or leave it out.'),
+      h('div', { class: 'row', style: 'flex-wrap:wrap' },
+        h('button', { class: 'btn small primary', id: 'fix-replace-pick', onclick: () => openAssets(gid, { pick: async p0 => { const done = await addFixBlock(gid, 'image ' + nearName, `image ${nearName} = ${JSON.stringify(p0.name)}`); await gameTrial(gid, done, await sceneOf()); }, query: nearName.split(/\s/)[0], title: `Which picture should show for “${nearName}”?` }) }, icon('image'), 'Choose a picture to show instead'),
+        h('button', { class: 'btn small', id: 'fix-replace-none', onclick: async () => { closeSheet(); const done = await addFixBlock(gid, 'image ' + nearName, `image ${nearName} = Null()`); await gameTrial(gid, done, await sceneOf()); } }, 'Leave it out'))) : null,
     h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: () => fixSheet(gid, err, true) }, icon('edit'), 'Edit or write a fix instead')));
 }
 async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {

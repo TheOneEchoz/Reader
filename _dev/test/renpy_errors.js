@@ -166,7 +166,19 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.click('#gameerrors .fixbtn:has-text("Fix this error")'); await p.waitForSelector('#fix-sheet');
   const code6 = await p.$eval('#fix-sheet', e => e.innerText).catch(() => '');
   ok('Fix shows the code that picks the picture, and what it looks at', /tkb_pick/.test(code6) && /tkb_stage = 0/.test(code6) && /Numbers it uses: 1, 2/.test(code6), code6.slice(0, 500));
-  await p.evaluate(() => closeSheet());
+  // a sure way out: replace the whole picture with a chosen one
+  ok('it offers replacing the whole picture', /Or replace the picture “tkbdyn”/i.test(code6), code6.slice(-400));
+  const e6 = await p.evaluate(() => (GAME.errors || []).length);
+  await p.click('#fix-replace-pick'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  await p.fill('#sheetBody input.search', 'club'); await p.waitForTimeout(400);
+  await p.click('#sheetBody .btile.asset'); await p.click('#asset-use');
+  for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);
+  await p.waitForTimeout(3000);
+  fr = p.frames().find(f => f !== p.mainFrame());
+  const r6 = await fr.evaluate(() => window.renpy_exec('result = [renpy.showing("td"), str(renpy.game.context().current)]')).catch(e => String(e));
+  const ne6 = await p.evaluate(n => (GAME.errors || []).slice(n).filter(e => /NoneType/.test(e.short)).length, e6);
+  ok('with the chosen picture in its place, the scene plays with no error', Array.isArray(r6) && r6[0] === true && ne6 === 0, JSON.stringify([r6, ne6]));
+  await p.click('.fixbar button:has-text("Keep the fix")');
   await p.click('#gamebox .gameexit'); await p.waitForTimeout(2500);
   // edit the Fixes mod: the file of small fixes shows each fix, which can be deleted
   await p.evaluate(gid => go('detail', { id: gid }), gid); await p.waitForTimeout(1000);
