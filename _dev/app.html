@@ -553,6 +553,15 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .condrow.now{border-color:var(--accent)}
 .condrow.bad b{color:#e05a47}
 .fixthumb{width:96px;height:60px;object-fit:contain;background:#000;border-radius:6px;flex:none}
+.swthumb{width:110px;height:110px;object-fit:contain;background:repeating-conic-gradient(#2a2a2a 0 25%,#1c1c1c 0 50%) 0 0/16px 16px;border-radius:8px;flex:none}
+.swpick{display:grid;gap:4px;justify-items:center;padding:6px;border-radius:10px;border:2px solid var(--line,#444);background:none;color:inherit;font:inherit;font-size:.85em;cursor:pointer;max-width:130px}
+.swpick.on{border-color:var(--accent,#e8a33d)}
+.swpick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:118px}
+.fixpick{display:flex;align-items:center;gap:10px;padding:4px;border-radius:8px}
+.fixpick .swthumb{width:72px;height:72px}
+#fixprev{position:absolute;inset:0;z-index:6;background:#000;display:flex;align-items:center;justify-content:center}
+#fixprev img{max-width:100%;max-height:100%;object-fit:contain;user-select:none}
+#fixprev .fixprevbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:12px;align-items:center;background:rgba(0,0,0,.75);color:#fff;padding:8px 10px 8px 14px;border-radius:12px;max-width:calc(100% - 32px);flex-wrap:wrap;font-size:.9em}
 .errlog{white-space:pre-wrap;font-size:12px;max-height:40vh;overflow:auto;background:var(--surface2);padding:10px;border-radius:10px;margin:0}
 .savegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .savecard{display:grid;gap:3px;text-align:left;padding:6px;border-radius:12px;background:var(--surface2);color:inherit;border:0;cursor:pointer}
@@ -2712,6 +2721,94 @@ const RPY_HOOKS = [
   '    def _tkb_swinfo(x, name, shown):',
   '        i, dd = _tkb_switch_pick(x)',
   '        return {"name": name, "k": 0, "chosen": i, "shown": shown, "rows": _tkb_switch_rows(x), "key": _tkb_swkey(x.args[0])}',
+  // the game's own context: the newest one with pictures (on Ren'Py's error page the error screen is a context above it;
+  // older ones below are from scenes already played)
+  '    def _tkb_gamectx():',
+  '        for c in reversed(list(renpy.game.contexts)):',
+  '            if any(e.tag for e in c.scene_lists.layers.get("master", [])):',
+  '                return c',
+  '        return renpy.game.context()',
+  '    _tkb_hidden = []',
+  // a picture drawn to PNG (base64), at most maxw wide
+  '    def _tkb_png(d, maxw=0):',
+  '        import base64, pygame_sdl2',
+  '        rv = renpy.render(d, renpy.config.screen_width, renpy.config.screen_height, 0, 0)',
+  '        surf = renpy.display.draw.screenshot(rv)',
+  '        w, h = surf.get_size()',
+  '        if w < 1 or h < 1:',
+  '            return None',
+  '        if maxw and w > maxw:',
+  '            surf = pygame_sdl2.transform.smoothscale(surf, (maxw, max(1, int(h * maxw / w))))',
+  '        pygame_sdl2.image.save(surf, "/tmp/tkbshot.png")',
+  '        with open("/tmp/tkbshot.png", "rb") as fh:',
+  '            data = fh.read()',
+  '        return {"png": base64.b64encode(data).decode("ascii"), "w": w, "h": h}',
+  '    def _tkb_withrule(key, rows, fn):',
+  '        old = _tkb_condrules.get(key)',
+  '        if key:',
+  '            _tkb_condrule(key, rows)',
+  '        try:',
+  '            return fn()',
+  '        finally:',
+  '            if key:',
+  '                if old is None:',
+  '                    _tkb_condrules.pop(key, None)',
+  '                else:',
+  '                    _tkb_condrules[key] = old',
+  '            _tkb_rulecache.clear()',
+  '    def _tkb_tagd(tag):',
+  '        for l, ents in _tkb_gamectx().scene_lists.layers.items():',
+  '            for e in ents:',
+  '                if e.tag == tag:',
+  '                    return e.displayable',
+  '        for hl, hi, hd, ht in _tkb_hidden:',
+  '            if ht == tag:',
+  '                return hd',
+  '        return None',
+  // the whole scene (the art, not the interface) with the change: the picture taken away after its error is put back
+  '    def _tkb_scene(tag):',
+  '        ctx = _tkb_gamectx()',
+  '        f = renpy.display.layout.Fixed()',
+  '        for l in renpy.config.layers:',
+  '            if l in ("screens", "overlay", "transient"):',
+  '                continue',
+  '            ents = [e.displayable for e in ctx.scene_lists.layers.get(l, [])]',
+  '            if tag and not any(e.tag == tag for e in ctx.scene_lists.layers.get(l, [])):',
+  '                for hl, hi, hd, ht in _tkb_hidden:',
+  '                    if hl == l and ht == tag:',
+  '                        ents.insert(min(hi, len(ents)), hd)',
+  '            for e in ents:',
+  '                f.add(e)',
+  '        return f',
+  '    def _tkb_preview(key, rows, tag):',
+  '        try:',
+  '            return _tkb_withrule(key, rows, lambda: _tkb_png(_tkb_scene(tag)))',
+  '        except Exception as e:',
+  '            return {"err": str(e)[:300]}',
+  '    def _tkb_tagshot(tag, key, rows, maxw):',
+  '        d = _tkb_tagd(tag) if tag else None',
+  '        if d is None:',
+  '            return None',
+  '        try:',
+  '            return _tkb_withrule(key, rows, lambda: _tkb_png(d, maxw))',
+  '        except Exception:',
+  '            return None',
+  // small pictures for suggested picture names (pairs: [label, picture name]; an empty name: the picture made from tpl with
+  // the variable "label" in place of var)
+  '    def _tkb_imgshot(pairs, maxw, tpl=None, var=None):',
+  '        out = {}',
+  '        for k, n in pairs:',
+  '            try:',
+  '                if not n:',
+  '                    n = tpl.replace("[" + var + "]", str(getattr(store, k)))',
+  '                if not renpy.has_image(n, exact=True):',
+  '                    continue',
+  '                r = _tkb_png(renpy.displayable(n), maxw)',
+  '                if r:',
+  '                    out[k] = r["png"]',
+  '            except Exception:',
+  '                pass',
+  '        return out',
   '    def _tkb_broken_switches():',
   '        res = []',
   '        seen = set()',
@@ -2722,6 +2819,7 @@ const RPY_HOOKS = [
   '                if isinstance(x, renpy.display.layout.DynamicDisplayable) and getattr(getattr(x, "function", None), "__name__", "") == "condition_switch_show":',
   '                    if getattr(x, "child", 1) is None or _tkb_switch_pick(x)[1] is None:',
   '                        r = _tkb_swinfo(x, tag, True)',
+  '                        r["tag"] = tag',
   '                        if r["key"] not in _seen:',
   '                            _seen.add(r["key"])',
   '                            _res.append(r)',
@@ -2732,18 +2830,17 @@ const RPY_HOOKS = [
   '                for c in kids:',
   '                    walk(c, depth + 1, tag)',
   // every context, newest first: on Ren'Py's error page (or in a menu) the game's own pictures are in the context below
-  '            for ctx in reversed(list(renpy.game.contexts)):',
-  '                sls = ctx.scene_lists',
-  '                for l in list(sls.layers):',
-  '                    for sle in list(sls.layers[l]):',
-  '                        if sle.tag:',
-  '                            walk(sle.displayable, 0, sle.tag)',
+  '            sls = _tkb_gamectx().scene_lists',
+  '            for l in list(sls.layers):',
+  '                for sle in list(sls.layers[l]):',
+  '                    if sle.tag:',
+  '                        walk(sle.displayable, 0, sle.tag)',
   '        except Exception:',
   '            pass',
   '        shown = set()',
   '        try:',
-  '            for l in renpy.config.layers:',
-  '                shown |= set(renpy.get_showing_tags(l))',
+  '            for l, ents in _tkb_gamectx().scene_lists.layers.items():',
+  '                shown |= set(e.tag for e in ents if e.tag)',
   '        except Exception:',
   '            pass',
   '        for nm in list(renpy.display.image.images):',
@@ -2813,11 +2910,12 @@ const RPY_HOOKS = [
   '            try:',
   '                sls = renpy.game.context().scene_lists',
   '                for l in list(sls.layers):',
-  '                    for sle in list(sls.layers[l]):',
+  '                    for si, sle in enumerate(list(sls.layers[l])):',
   '                        i = _tkb_info(sle.displayable, None) if sle.tag else None',
   '                        if i:',
   '                            i["tag"] = sle.tag',
   '                            broken.append(i)',
+  '                            _tkb_hidden[:] = [x for x in _tkb_hidden if x[3] != sle.tag][-10:] + [(l, si, sle.displayable, sle.tag)]',
   '                            renpy.hide(sle.tag, layer=l)',
   '            except Exception:',
   '                pass',
@@ -2963,12 +3061,15 @@ async function brokenPictures() {
     '    for c in kids:',
     '        _tkbself["w"](c, nm, depth + 1)',
     '_tkbself["w"] = _tkbwalk',
-    // every context, newest first (on Ren'Py's error page the game's pictures are in the context below it)
-    'for _ctx in reversed(list(renpy.game.contexts)):',
-    '    _tsl = _ctx.scene_lists',
-    '    for _l in list(_tsl.layers):',
-    '        for _sle in _tsl.layers.get(_l, []):',
-    '            _tkbwalk(_sle.displayable, None, 0)',
+    // the game's own context (on Ren'Py's error page the game's pictures are in the context below it)
+    '_tsl = _tkb_gamectx().scene_lists',
+    'for _l in list(_tsl.layers):',
+    '    for _sle in _tsl.layers.get(_l, []):',
+    '        _n0 = len(_tkbb)',
+    '        _tkbwalk(_sle.displayable, None, 0)',
+    '        for _x in _tkbb[_n0:]:',
+    '            if hasattr(_x, "keys"):',
+    '                _x["tag"] = _sle.tag',
     'result = _tkbb'].join('\n'))) || [];
 }
 /* a picture the game chooses with its own code, which chose nothing: show what that code looks at (its variables, with their
@@ -2979,11 +3080,26 @@ async function brokenPictures() {
    screen), then any on screen or among the game's pictures that choose nothing now */
 async function brokenSwitches(err, first) {
   const out = [], seen = new Set(), add = x => { if (x && x.rows && !seen.has(x.key || JSON.stringify(x.rows))) { seen.add(x.key || JSON.stringify(x.rows)); out.push(x); } };
-  const named = d => d.switch ? { ...d.switch, name: d.switch.name || (d.near ? (d.near[1] || d.near[0]) : d.tag) || 'picture' } : null;
+  const named = d => d.switch ? { ...d.switch, tag: d.tag || d.switch.tag || null, name: d.switch.name || (d.near ? (d.near[1] || d.near[0]) : d.tag) || 'picture' } : null;
   if (first) add(named(first));
   for (const d of (err && err.broken) || []) if (d && d.dyn) add(named(d));
   for (const x of (await gamePy('result = _tkb_broken_switches()', 20000)) || []) add(x);
-  return out;
+  // only the ones that cause the error: on screen now (or taken away after this error), and choosing a row with nothing in it;
+  // switches of pictures from scenes already played are left out (unless nothing else is found)
+  const live = out.filter(x => x.shown !== false && x.chosen >= 0 && x.rows[x.chosen] && x.rows[x.chosen][1] && x.rows[x.chosen][1].t === 'none');
+  return live.length ? live : out.filter(x => x.shown !== false).length ? out.filter(x => x.shown !== false) : out;
+}
+/* a small picture from the game, drawn by Ren'Py (base64 PNG), as an <img> */
+const pngImg = (b64, cls = 'fixthumb') => { const im = h('img', { class: cls, alt: '' }); if (b64) im.src = 'data:image/png;base64,' + b64; else im.style.visibility = 'hidden'; return im; };
+/* the game's scene drawn with a change, on top of the game (no restart): Back returns to the fix */
+function showFixPreview(b64, label, onBack) {
+  const box = $('#gamebox'); if (!box) return;
+  const old = $('#fixprev'); if (old) old.remove();
+  const back = () => { ov.remove(); onBack && onBack(); };
+  const ov = h('div', { id: 'fixprev', class: 'fixprev', role: 'dialog', 'aria-label': 'Preview of the fix' },
+    h('img', { src: 'data:image/png;base64,' + b64, alt: 'The scene with the fix' }),
+    h('div', { class: 'fixprevbar' }, h('span', {}, label), h('button', { class: 'btn small primary', id: 'fixprev-back', onclick: back }, icon('back'), 'Back to the fix')));
+  box.append(ov);
 }
 const strHash = t => { let x = 5381; for (let i = 0; i < t.length; i++) x = (x * 33 + t.charCodeAt(i)) >>> 0; return x.toString(36); };
 async function fixConditions(gid, err, which = 0, list = null, first = null) {
@@ -3023,14 +3139,29 @@ async function fixConditions(gid, err, which = 0, list = null, first = null) {
     const scene = P0.file && P0.line ? await gamePy(`_f = ${JSON.stringify(P0.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P0.line}] or [(0, None)])[1]`) : null;
     closeSheet(); const done = await addFixBlock(gid, key, code()); await gameTrial(gid, done, scene);
   } }, icon('play'), 'Try it');
-  const saveB = h('button', { class: 'btn', onclick: async () => { await addFixBlock(gid, key, code()); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
+  // the preview: the scene drawn with these rows for a moment, shown over the game; nothing restarts
+  const prevB = h('button', { class: 'btn primary', id: 'cond-preview', hidden: !sw.key, onclick: async () => {
+    prevB.disabled = true; prevB.lastChild.textContent = 'Drawing…';
+    const r = await gamePy(`result = _tkb_preview(${JSON.stringify(sw.key)}, ${rowsJ()}, ${sw.tag ? JSON.stringify(sw.tag) : 'None'})`, 30000);
+    prevB.disabled = false; prevB.lastChild.textContent = 'Preview';
+    if (!r || !r.png) return toast(r && r.err ? (/NoneType/.test(r.err) ? 'With these rows the picture still shows nothing. Change the row that is true now.' : 'The preview could not be drawn: ' + r.err) : 'The preview could not be drawn.', 5000);
+    closeSheet(); showFixPreview(r.png, 'Preview: the scene with your change (nothing is saved yet)', reopen);
+  } }, icon('eye'), h('span', {}, 'Preview'));
+  // saving also puts the fix to work in the game that is open now
+  const saveB = h('button', { class: 'btn', id: 'cond-save', onclick: async () => { await addFixBlock(gid, key, code()); if (sw.key) await gamePy(`_tkb_condrule(${JSON.stringify(sw.key)}, ${rowsJ()})\nrenpy.restart_interaction()\nresult = True`); closeSheet(); toast(sw.key ? 'Fix saved in the Fixes mod and already working in this game. On Ren\'Py\'s error page, press Ignore to go on.' : 'Fix saved in the Fixes mod. It works from the next start.', 5000); } }, 'Save the fix');
+  tryB.className = 'btn ghost small'; tryB.lastChild.textContent = 'Replay the scene with it';
   let reopen = () => {};
+  // the picture each switch belongs to, drawn now (the empty part left empty), to tell them apart
+  const nullRows = x => JSON.stringify(x.rows.map(([c, dsc], i) => [c == null ? 'True' : c, dsc && dsc.t === 'none' ? { none: 1 } : { keep: i }]));
+  const shots = fixConditions.shots = fixConditions.shots || new Map();
+  const shotOf = x => { const k = x.key + '|' + x.tag; if (!shots.has(k)) shots.set(k, x.key && x.tag ? gamePy(`result = _tkb_tagshot(${JSON.stringify(x.tag)}, ${JSON.stringify(x.key)}, ${nullRows(x)}, 220)`, 20000).then(r => r && r.png).catch(() => null) : Promise.resolve(null)); return shots.get(k); };
+  const thumbIn = (x, cls) => { const im = pngImg(null, cls); shotOf(x).then(b => { if (b) { im.src = 'data:image/png;base64,' + b; im.style.visibility = ''; } }); return im; };
   const render1 = () => openSheet('Fix the conditions', h('div', { class: 'stack', id: 'cond-sheet' },
     h('div', { class: 'banner' }, `The picture “${sw.name}” (or one of its layers, for a picture made of layers) shows different things depending on conditions, checked from the top; the first true one is shown. Right now ${sw.chosen >= 0 ? `row ${sw.chosen + 1} is true and it shows nothing` : 'none is true'}. Change a condition or a picture so the right row shows something.`),
-    list.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, list.map((x, i) => h('button', { class: 'btn small' + (x === sw ? ' primary' : ''), onclick: () => fixConditions(gid, err, i, list) }, x.name + (x.shown ? ' (on screen)' : '')))) : null,
+    list.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap;gap:8px', id: 'cond-which' }, list.map((x, i) => h('button', { class: 'swpick' + (x === sw ? ' on' : ''), 'aria-pressed': String(x === sw), onclick: () => fixConditions(gid, err, i, list) }, thumbIn(x, 'swthumb'), h('span', {}, x.name)))) : h('div', { class: 'row', style: 'gap:10px' }, thumbIn(sw, 'swthumb'), h('small', { class: 'hint' }, `“${sw.name}” now (the empty part left out)`)),
     box, addB,
     h('div', {}, h('div', { class: 'label' }, 'The variables in these conditions, now'), valsBox),
-    h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, saveB),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, prevB, saveB, tryB),
     h('p', { class: 'hint' }, 'The fix changes these rows when the game starts, only while the Fixes mod is on (the game\'s own files are not changed). You can change it again later from the mod.')));
   reopen = () => { render1(); draw(); };
   reopen(); showVals();
@@ -3117,7 +3248,12 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
   const pickedBox = pickedFile ? h('div', { class: 'row', style: 'gap:10px', id: 'fix-picked' }, h('img', { class: 'contshot', style: 'width:96px;height:auto;max-height:72px;object-fit:contain', alt: '' }), h('span', {}, 'Chosen picture: ', h('code', {}, pickedFile))) : null;
   if (pickedBox) { const f = files.find(x => x.p.toLowerCase() === ('game/' + pickedFile).toLowerCase()); const im = pickedBox.querySelector('img'); (async () => { try { const pics = await rpyPictures(files); const p0 = pics.find(x => x.name === pickedFile); if (p0) im.src = URL.createObjectURL(new Blob([await p0.read()])); } catch (e) { } })(); }
   const custom = h('input', { class: 'text', id: 'fix-custom', autocomplete: 'off', placeholder: 'Or type the right name', oninput: e => { choice = e.target.value.trim(); $$('input[name=fixpick]').forEach(r => r.checked = false); paint(); } });
-  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null)) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
+  // suggested pictures (and, for a picture named after a variable, the picture each variable gives) are shown, not only named
+  const showsPics = P.kind === 'image' || P.kind === 'dynimg';
+  const thumbs = new Map(ranked.map(x => [x, showsPics ? pngImg(null, 'swthumb') : null]));
+  const picks = h('div', { class: 'stack', style: 'gap:4px', id: 'fix-picks' }, ranked.length ? ranked.map((x, i) => h('label', { class: showsPics ? 'fixpick' : 'row', style: showsPics ? '' : 'gap:8px' }, h('input', { type: 'radio', name: 'fixpick', value: x, checked: i === 0, onchange: () => { choice = x; custom.value = ''; paint(); } }), thumbs.get(x), h('span', { style: 'min-width:0' }, h('code', {}, x), works.has(x) ? h('small', { class: 'hint' }, ' ✓ gives a picture the game has') : null))) : h('p', { class: 'hint' }, 'No name in the game looks like it. Type the right one below.'));
+  if (showsPics && ranked.length) gamePy(P.kind === 'image' ? `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, x]))}, 200)` : `result = _tkb_imgshot(${JSON.stringify(ranked.map(x => [x, '']))}, 200, ${JSON.stringify(P.tpl)}, ${JSON.stringify(P.name)})`, 30000)
+    .then(r => { for (const [x, im] of thumbs) { if (r && r[x]) { im.src = 'data:image/png;base64,' + r[x]; im.style.visibility = ''; } else if (im) { im.replaceWith(h('span', { class: 'swthumb', style: 'display:grid;place-items:center;font-size:.75em;color:var(--muted,#888);text-align:center' }, 'no picture')); } } });
   const preview = h('pre', { class: 'errlog', id: 'fix-preview' });
   const others = lines ? lines.reduce((n, l, i) => n + (i !== P.line - 1 ? (l.match(word) || []).length : 0), 0) : 0;
   const evB = others ? h('label', { class: 'row', style: 'gap:8px' }, h('input', { type: 'checkbox', onchange: e => { everywhere = e.target.checked; paint(); } }), `Also the ${plural(others, 'other place')} in this file`) : null;

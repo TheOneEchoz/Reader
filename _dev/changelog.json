@@ -1,5 +1,18 @@
 [
  {
+  "v": 129,
+  "name": "1.23.0-beta.31",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fix the conditions offers only the picture that causes this error. Pictures from scenes already played, which also choose nothing but are not on screen, are no longer listed.",
+   "Each picture it offers is shown, as it looks now (with the empty part left out), so you can tell them apart.",
+   "Preview: shows the scene with your change drawn over the game straight away, without restarting it. Back to the fix returns to the sheet with your changes kept. Replaying the scene is still there as a smaller button.",
+   "Save the fix also puts the fix to work in the game that is open now. On Ren'Py's error page, press Ignore to go on.",
+   "When fixing a picture's name, each suggestion shows its picture (for a picture named after a variable, the picture that variable gives), not only the name."
+  ]
+ },
+ {
   "v": 128,
   "name": "1.23.0-beta.30",
   "date": "2026-11-08",

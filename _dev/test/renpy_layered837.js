@@ -56,6 +56,16 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#cond-rows .condrow');
   const r2 = await p.$eval('#cond-rows .condrow:nth-child(2)', e => e.innerText.replace(/\s+/g, ' '));
   ok('a row\'s picture can be changed', /bg club\.jpg/.test(r2), r2);
+  ok('only the picture of this error is offered (with its picture shown)', !(await p.$('#cond-which')) && await p.$eval('#cond-sheet img.swthumb', im => new Promise(r => { const t = Date.now(); (function w() { if (im.naturalWidth > 0) r(true); else if (Date.now() - t > 15000) r(false); else setTimeout(w, 300); })(); })));
+  // Preview: drawn over the game, no restart
+  const loads0 = await p.evaluate(() => GAME.loadCount || 0);
+  await p.click('#cond-preview'); await p.waitForSelector('#fixprev img', { timeout: 30000 });
+  const pv = await p.$eval('#fixprev img', im => new Promise(r => { const f = () => r([im.naturalWidth, im.naturalHeight]); im.complete ? f() : im.onload = f; }));
+  await p.screenshot({ path: '/tmp/claude-0/shots/layered-preview.png' });
+  const club = await p.evaluate(() => { const im = $('#fixprev img'), c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4 * 97) if (d[i] + d[i + 1] + d[i + 2] > 60) n++; return n; });
+  ok('Preview draws the scene with the change over the game, without restarting it', pv[0] >= 800 && club > 50 && (await p.evaluate(() => GAME.loadCount || 0)) === loads0 && !(await p.$('#cond-sheet')), JSON.stringify([pv, club]));
+  await p.click('#fixprev-back'); await p.waitForSelector('#cond-rows .condrow');
+  ok('Back returns to the fix, with the change still there', /bg club\.jpg/.test(await p.$eval('#cond-rows .condrow:nth-child(2)', e => e.innerText)) && !(await p.$('#fixprev')));
   const e0 = await p.evaluate(() => (GAME.errors || []).length);
   await p.click('#cond-try');
   for (let k = 0; k < 60 && !(await p.$('.fixbar:not(.loading)')); k++) await p.waitForTimeout(500);

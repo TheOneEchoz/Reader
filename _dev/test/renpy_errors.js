@@ -92,6 +92,8 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const dp = await p.$$eval('#fix-picks label', a => a.map(e => e.innerText.replace(/\s+/g, ' ').trim()));
   const dprev = await p.$eval('#fix-preview', e => e.innerText);
   ok('the variable that gives a picture the game has comes first, marked', /^tkb_dawn ✓/.test(dp[0] || ''), JSON.stringify(dp));
+  await p.waitForFunction(() => { const im = document.querySelector('#fix-picks label img.swthumb'); return im && /^data:image\/png/.test(im.src) && im.naturalWidth > 0; }, null, { timeout: 20000 }).catch(() => { });
+  ok('the suggestions show the picture each one gives', await p.$eval('#fix-picks label', l => { const im = l.querySelector('img.swthumb'); return !!(im && im.naturalWidth > 0); }));
   ok('the script lines that name the picture are shown, before and after', /- .*tkbpic \[tkb_dawb\]/.test(dprev) && /\+ .*tkbpic \[tkb_dawn\]/.test(dprev), dprev);
   const e3before = await p.evaluate(() => (GAME.errors || []).length);
   await p.click('#fix-try');
