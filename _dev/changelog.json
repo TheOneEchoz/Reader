@@ -1,5 +1,15 @@
 [
  {
+  "v": 126,
+  "name": "1.23.0-beta.28",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing game errors: “Fix the conditions”, for a picture that switches on conditions (Ren'Py's ConditionSwitch) and now chooses nothing. It finds that picture by itself, shows its rows in order (each condition, editable, and the picture it shows, with Change or Nothing), marks the row that is true now and shows the variables' values; rows can be added (“True” for otherwise) or deleted. Try it plays the scene with the changes; the fix goes into the Fixes mod. Works for games that only include compiled scripts.",
+   "For a picture chosen by the game's code: “Or replace the picture” shows one picture of your choice in its place, or leaves it out."
+  ]
+ },
+ {
   "v": 125,
   "name": "1.23.0-beta.27",
   "date": "2026-11-08",

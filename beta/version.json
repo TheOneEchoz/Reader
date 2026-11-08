@@ -1,6 +1,6 @@
 {
- "version": 125,
- "name": "1.23.0-beta.27",
+ "version": 126,
+ "name": "1.23.0-beta.28",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,7 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Editing a fixes mod: picture fixes show the picture they use, with the name the game looks for; “Change” opens the game's pictures to choose another. After changing, saving or deleting something the file stays open where you were (closing the picture chooser goes back to it too).",
-  "Pictures, tiles and buttons can no longer be selected like text, so they no longer turn blue after a long press or a drag."
+  "Fixing game errors: “Fix the conditions”, for a picture that switches on conditions (Ren'Py's ConditionSwitch) and now chooses nothing. It finds that picture by itself, shows its rows in order (each condition, editable, and the picture it shows, with Change or Nothing), marks the row that is true now and shows the variables' values; rows can be added (“True” for otherwise) or deleted. Try it plays the scene with the changes; the fix goes into the Fixes mod. Works for games that only include compiled scripts.",
+  "For a picture chosen by the game's code: “Or replace the picture” shows one picture of your choice in its place, or leaves it out."
  ]
 }

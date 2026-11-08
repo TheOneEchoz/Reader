@@ -549,6 +549,9 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .codeedit{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:pre;overflow:auto;min-height:120px}
 .fixrow{padding:6px 8px;border-radius:10px;background:var(--surface2)}
 .fixpic{display:flex;align-items:center;gap:10px}
+.condrow{display:grid;gap:6px;padding:8px;border-radius:12px;background:var(--surface2);border:2px solid transparent}
+.condrow.now{border-color:var(--accent)}
+.condrow.bad b{color:#e05a47}
 .fixthumb{width:96px;height:60px;object-fit:contain;background:#000;border-radius:6px;flex:none}
 .errlog{white-space:pre-wrap;font-size:12px;max-height:40vh;overflow:auto;background:var(--surface2);padding:10px;border-radius:10px;margin:0}
 .savegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
@@ -2623,6 +2626,82 @@ async function liveMods(gid) {
 /* the newest save (Ren'Py writes its time inside each save), as a slot name like "1-1" or "auto-1" */
 const RPY_HOOKS = [
   'init 1999 python:',
+  '    def _tkb_switches(name):',
+  '        d = renpy.display.image.images.get(tuple(name.split()))',
+  '        out = []',
+  '        def walk(x, depth=0):',
+  '            if x is None or depth > 40:',
+  '                return',
+  '            if isinstance(x, renpy.display.layout.DynamicDisplayable) and getattr(getattr(x, "function", None), "__name__", "") == "condition_switch_show":',
+  '                out.append(x)',
+  '            try:',
+  '                kids = x.visit() or []',
+  '            except Exception:',
+  '                kids = []',
+  '            for c in kids:',
+  '                walk(c, depth + 1)',
+  '        walk(d)',
+  '        return out',
+  '    def _tkb_desc(dd):',
+  '        if dd is None:',
+  '            return {"t": "none"}',
+  '        fn = getattr(dd, "filename", None)',
+  '        if isinstance(fn, str):',
+  '            return {"t": "file", "v": fn}',
+  '        if isinstance(dd, renpy.display.image.ImageReference):',
+  '            return {"t": "image", "v": " ".join(dd.name)}',
+  '        if isinstance(dd, renpy.display.layout.Null):',
+  '            return {"t": "null"}',
+  '        return {"t": type(dd).__name__}',
+  '    def _tkb_switch_rows(x):',
+  '        return [[(None if c is None else str(c)), _tkb_desc(dd)] for c, dd in x.args[0]]',
+  '    def _tkb_switch_pick(x):',
+  '        for i, (c, dd) in enumerate(x.args[0]):',
+  '            try:',
+  '                ok = (c is None) or renpy.python.py_eval(c)',
+  '            except Exception:',
+  '                ok = False',
+  '            if ok:',
+  '                return i, dd',
+  '        return -1, None',
+  '    def _tkb_broken_switches():',
+  '        res = []',
+  '        shown = set()',
+  '        try:',
+  '            for l in renpy.config.layers:',
+  '                shown |= set(renpy.get_showing_tags(l))',
+  '        except Exception:',
+  '            pass',
+  '        for nm in list(renpy.display.image.images):',
+  '            name = " ".join(nm)',
+  '            try:',
+  '                sws = _tkb_switches(name)',
+  '            except Exception:',
+  '                continue',
+  '            for k, x in enumerate(sws):',
+  '                i, dd = _tkb_switch_pick(x)',
+  '                if dd is None:',
+  '                    res.append({"name": name, "k": k, "chosen": i, "shown": nm[0] in shown, "rows": _tkb_switch_rows(x)})',
+  '        res.sort(key=lambda r: not r["shown"])',
+  '        return res[:30]',
+  '    def _tkb_setswitch(name, k, rows):',
+  '        sws = _tkb_switches(name)',
+  '        if k >= len(sws):',
+  '            return',
+  '        sw = sws[k].args[0]',
+  '        old = list(sw)',
+  '        new = []',
+  '        for cond, spec in rows:',
+  '            if "keep" in spec:',
+  '                dd = old[spec["keep"]][1] if spec["keep"] < len(old) else None',
+  '            elif "file" in spec:',
+  '                dd = renpy.easy.displayable(spec["file"])',
+  '            else:',
+  '                dd = None',
+  '            if dd is None:',
+  '                dd = renpy.display.layout.Null()',
+  '            new.append((cond, dd))',
+  '        sw[:] = new',
   '    import time as _tkb_time',
   '    _tkb_errs = []',
   '    def _tkb_info(d, nm, depth=0):',
@@ -2811,6 +2890,54 @@ async function brokenPictures() {
 }
 /* a picture the game chooses with its own code, which chose nothing: show what that code looks at (its variables, with their
    values now, and the values it compares them with), and let a variable be set, to see the picture come back */
+/* a picture that switches on conditions (Ren'Py's ConditionSwitch) and now chooses nothing: its rows, to change the
+   conditions and pictures; the fix rewrites the rows when the game starts (only while the Fixes mod is on) */
+async function fixConditions(gid, err, which = 0, list = null) {
+  list = list || (await gamePy('result = _tkb_broken_switches()', 20000)) || [];
+  if (!list.length) return toast('No picture with conditions is choosing nothing right now. Play to where the error happens, then try again.', 5000);
+  const sw = list[which] || list[0], g = await S.gal(gid);
+  const pics = await rpyPictures(await gameFileList(g, 'on')).catch(() => []);
+  const thumbOf = (img, file) => { const p0 = pics.find(x => x.name.toLowerCase() === String(file).toLowerCase()); if (p0) p0.read().then(u => { img.src = URL.createObjectURL(new Blob([u])); }).catch(() => { }); };
+  // rows: condition text, and what to show (keep the original, a picture file, or nothing)
+  const rows = sw.rows.map(([c, dsc], i) => ({ cond: c == null ? 'True' : c, spec: { keep: i }, dsc }));
+  const varsIn = () => [...new Set(rows.flatMap(r => (r.cond.match(/[A-Za-z_]\w*/g) || [])).filter(n => !/^(True|False|None|and|or|not|in|is|renpy|store|persistent|len|str|int)$/.test(n)))];
+  const valsBox = h('pre', { class: 'errlog', id: 'cond-vals' });
+  const showVals = async () => { const ns = varsIn(); const r = ns.length ? await gamePy(`_ns = ${JSON.stringify(ns)}\nresult = [[n, repr(getattr(renpy.store, n))[:40]] for n in _ns if hasattr(renpy.store, n)]`) : []; valsBox.textContent = (r && r.length) ? r.map(([n, v]) => `${n} = ${v}`).join('\n') : 'No variables in these conditions.'; };
+  const box = h('div', { class: 'stack', style: 'gap:8px', id: 'cond-rows' });
+  const draw = () => {
+    box.replaceChildren(...rows.map((r, i) => {
+      const img = h('img', { class: 'fixthumb', alt: '' });
+      const what = r.spec.file ? r.spec.file : r.spec.none ? 'nothing' : r.dsc.t === 'none' ? 'NOTHING (this is the problem)' : r.dsc.t === 'file' ? r.dsc.v : r.dsc.t === 'image' ? `the picture “${r.dsc.v}”` : r.dsc.t === 'null' ? 'nothing (on purpose)' : `(${r.dsc.t})`;
+      if (r.spec.file) thumbOf(img, r.spec.file); else if (r.spec.keep != null && r.dsc.t === 'file') thumbOf(img, r.dsc.v); else img.style.visibility = 'hidden';
+      const cond = h('input', { class: 'text', value: r.cond, 'aria-label': `Condition ${i + 1}`, spellcheck: 'false', style: 'font-family:ui-monospace,Menlo,Consolas,monospace', oninput: e => { r.cond = e.target.value; } , onchange: showVals });
+      return h('div', { class: 'condrow' + (i === sw.chosen ? ' now' : '') + (r.spec.keep != null && r.dsc.t === 'none' ? ' bad' : '') },
+        h('div', { class: 'row', style: 'gap:8px' }, h('b', { class: 'num', style: 'flex:none' }, i === 0 ? 'If' : 'Else if'), cond,
+          h('button', { class: 'iconbtn', 'aria-label': `Delete row ${i + 1}`, onclick: () => { rows.splice(i, 1); draw(); } }, icon('trash'))),
+        h('div', { class: 'row', style: 'gap:10px' }, img, h('span', { style: 'flex:1;min-width:0' }, 'show ', h('b', {}, what), i === sw.chosen ? h('small', { class: 'hint' }, ' · true now') : null),
+          h('button', { class: 'btn small', onclick: () => openAssets(gid, { pick: p0 => { r.spec = { file: p0.name }; reopen(); }, onCancel: reopen, query: sw.name.split(/\s/)[0], title: `Picture for “${r.cond}”` }) }, icon('image'), 'Change'),
+          h('button', { class: 'btn ghost small', onclick: () => { r.spec = { none: 1 }; draw(); } }, 'Nothing')));
+    }));
+  };
+  const addB = h('button', { class: 'btn small ghost', onclick: () => { rows.push({ cond: 'True', spec: { none: 1 }, dsc: { t: 'null' } }); draw(); } }, icon('plus'), 'Add a row (“True” = otherwise)');
+  const code = () => `init 2001 python:\n    _tkb_setswitch(${JSON.stringify(sw.name)}, ${sw.k}, ${JSON.stringify(rows.map(r => [r.cond.trim() || 'False', r.spec.file ? { file: r.spec.file } : r.spec.none ? { none: 1 } : { keep: r.spec.keep }]))})`;
+  const key = `conditions ${sw.name} ${sw.k}`;
+  const tryB = h('button', { class: 'btn primary', id: 'cond-try', onclick: async () => {
+    const P0 = parseGameError(err || {});
+    const scene = P0.file && P0.line ? await gamePy(`_f = ${JSON.stringify(P0.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P0.line}] or [(0, None)])[1]`) : null;
+    closeSheet(); const done = await addFixBlock(gid, key, code()); await gameTrial(gid, done, scene);
+  } }, icon('play'), 'Try it');
+  const saveB = h('button', { class: 'btn', onclick: async () => { await addFixBlock(gid, key, code()); closeSheet(); toast('Fix saved in the Fixes mod. It works from the next start.', 3500); } }, 'Save the fix');
+  let reopen = () => {};
+  const render1 = () => openSheet('Fix the conditions', h('div', { class: 'stack', id: 'cond-sheet' },
+    h('div', { class: 'banner' }, `The picture “${sw.name}” shows different things depending on conditions, checked from the top; the first true one is shown. Right now ${sw.chosen >= 0 ? `row ${sw.chosen + 1} is true and it shows nothing` : 'none is true'}. Change a condition or a picture so the right row shows something.`),
+    list.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, list.map((x, i) => h('button', { class: 'btn small' + (x === sw ? ' primary' : ''), onclick: () => fixConditions(gid, err, i, list) }, x.name + (x.shown ? ' (on screen)' : '')))) : null,
+    box, addB,
+    h('div', {}, h('div', { class: 'label' }, 'The variables in these conditions, now'), valsBox),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, tryB, saveB),
+    h('p', { class: 'hint' }, 'The fix changes these rows when the game starts, only while the Fixes mod is on (the game\'s own files are not changed). You can change it again later from the mod.')));
+  reopen = () => { render1(); draw(); };
+  reopen(); showVals();
+}
 async function fixPickedByCode(gid, err, d) {
   const nearName = d.near ? (Array.isArray(d.near) ? (d.near[0] === d.near[1] ? d.near[0] : d.near[0]) : String(d.near)) : null;
   const P0 = parseGameError(err);
@@ -2839,6 +2966,7 @@ async function fixPickedByCode(gid, err, d) {
     vals.length ? h('div', { class: 'stack', style: 'gap:6px' }, h('div', { class: 'label' }, 'Try a value'), h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, varSel, valIn, setB), status) : null,
     h('p', { class: 'hint' }, 'Setting a value changes this playthrough only (like the game would have), so you can see which value brings the picture back. If a typo in the game keeps giving the wrong value, fix that typo too (its error is in the list).'),
     // a sure way out: replace the whole picture with one you choose (or leave it out); it no longer changes with the variables
+    d.conds && d.conds.length ? h('button', { class: 'btn primary', id: 'fix-conditions', onclick: () => fixConditions(gid, err) }, icon('edit'), 'Fix the conditions') : null,
     nearName ? h('div', { class: 'panel stack', style: 'gap:8px', id: 'fix-replace' }, h('div', { class: 'label' }, `Or replace the picture “${nearName}”`),
       h('p', { class: 'hint', style: 'margin:0' }, 'If no value works, show one picture of your choice in its place (it will always be that one), or leave it out.'),
       h('div', { class: 'row', style: 'flex-wrap:wrap' },
@@ -2853,6 +2981,7 @@ async function fixSheet(gid, err, byHand, pickedFile, brokenPick) {
     const all = [...await brokenPictures(), ...(err.broken || [])], bad = all.filter(x => Array.isArray(x)), dyn = all.filter(x => x && x.dyn);
     if (bad.length) { const [raw, ev] = bad[brokenPick || 0]; P.kind = 'image'; P.name = ev; P.raw = raw; P.broken = bad; }
     else if (dyn.length) return fixPickedByCode(gid, err, dyn[0]);
+    else if (/NoneType/.test(err.short || '')) { const sws = (await gamePy('result = _tkb_broken_switches()', 20000)) || []; if (sws.length) return fixConditions(gid, err, 0, sws); }
   }
   if (!P.kind || byHand) return fixByHand(gid, err, P);
   const codes = {
@@ -2997,10 +3126,12 @@ async function fixByHand(gid, err, P) {
     const asImage = { short: `While running game code:\n  ${where}\nException: Image '${nm}' not found.`, full: err.full || err.short };
     openAssets(gid, { pick: p0 => fixSheet(gid, asImage, false, p0.name), query: nm.split(/\s/)[0].replace(/\d+$/, ''), title: `Which picture should “${nm}” be?` });
   } }, icon('search'), 'Choose the picture');
+  const condB = h('button', { class: 'btn small', id: 'fix-condbtn', onclick: () => fixConditions(gid, err) }, icon('edit'), 'Fix a picture\'s conditions');
   const picBox = h('div', { class: 'panel stack', style: 'gap:8px', id: 'fix-picbox' }, h('div', { class: 'label' }, 'Is it a missing picture?'),
     h('p', { class: 'hint', style: 'margin:0' }, missing.length ? `The game could not find ${missing.map(x => `“${x}”`).join(', ')} earlier; errors like this one often come from that. Choose the picture it should be.` : 'If a picture is missing in this scene, type the name the game looks for (it is in its error, like “mox4dawn 0”), then choose the picture it should be.'),
     missing.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, missing.map(x => h('button', { class: 'btn ghost small', onclick: () => { picName.value = x; } }, x))) : null,
-    h('div', { class: 'row', style: 'gap:8px' }, picName, picB));
+    h('div', { class: 'row', style: 'gap:8px' }, picName, picB),
+    h('p', { class: 'hint', style: 'margin:0' }, 'Or a picture that switches on conditions and chooses nothing:'), h('div', {}, condB));
   openSheet('Fix this error', h('div', { class: 'stack', id: 'fix-sheet' },
     h('pre', { class: 'errlog' }, (err.short || '').trim().split('\n').slice(-4).join('\n')),
     picBox,
