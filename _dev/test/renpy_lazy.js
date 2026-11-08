@@ -48,6 +48,10 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   console.log('GOT', got, 'colours', pix, JSON.stringify(bg));
   ok('pictures are asked for and given as the story goes', got >= 2, String(got));
   ok('the background shows (not a blank stand-in)', pix > 300, pix + ' kB screenshot');
+  // pictures that arrived are kept (Ren'Py would free them after a minute and load them again when they come back)
+  await p.waitForTimeout(1000);
+  const keep = await fr.evaluate(() => window.renpy_exec('import os\nresult = [len(renpy.webloader.to_unlink), len(_tkb_keep), all(os.path.exists(x) for x in _tkb_keep), _tkb_keep_budget // 1048576]')).catch(e => String(e));
+  ok('pictures that arrived are kept, not freed a minute later', Array.isArray(keep) && keep[0] === 0 && keep[1] >= 1 && keep[2] === true && keep[3] >= 128, JSON.stringify(keep));
   const err = await fr.evaluate(() => { const t = document.body.innerText; return /Download error|Traceback|Exception/.test(t) ? t.slice(0, 300) : ''; });
   ok('no Ren\'Py errors', !err, err);
   // play on: more lines, more pictures, all fine

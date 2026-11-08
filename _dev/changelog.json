@@ -1,5 +1,14 @@
 [
  {
+  "v": 134,
+  "name": "1.23.0-beta.36",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Big games (pictures loaded when needed): pictures that arrived are now kept instead of freed a minute later, so a character or place that comes back appears straight away instead of being loaded again. They are kept as long as they fit in a share of the device's memory; past that, the oldest go first."
+  ]
+ },
+ {
   "v": 133,
   "name": "1.23.0-beta.35",
   "date": "2026-11-08",
