@@ -175,10 +175,20 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   const mfiles = await p.$$eval('#mod-editor .chrow', a => a.map(e => e.dataset.p));
   ok('a mod\'s files are listed to edit', mfiles.includes('game/zzzz_tankobon_fixes.rpy') && mfiles.includes('game/zz_errtest.rpy'), JSON.stringify(mfiles));
   await p.click('#mod-editor .chrow[data-p="game/zzzz_tankobon_fixes.rpy"]'); await p.waitForSelector('#mod-file');
-  const fixes = await p.$$eval('#mod-file .fixrow code', a => a.map(e => e.innerText));
-  ok('the fixes file shows each fix', fixes.some(x => /image tkbface 7/.test(x)), JSON.stringify(fixes));
+  const fixes = await p.$$eval('#mod-file .fixrow', a => a.map(e => e.innerText.replace(/\s+/g, ' ')));
+  ok('the fixes file shows each fix', fixes.some(x => /tkbface 7/.test(x)), JSON.stringify(fixes));
+  await p.waitForFunction(() => [...document.querySelectorAll('#mod-file .fixpic img')].some(i => i.src && i.complete && i.naturalWidth > 0), null, { timeout: 15000 }).catch(() => { });
+  const rows = await p.$$eval('#mod-file .fixpic', a => a.map(e => [e.innerText.replace(/\s+/g, ' '), !!(e.querySelector('img').naturalWidth)]));
+  ok('picture fixes show the picture they use', rows.some(r => /tkbface 7.*bg club\.jpg/.test(r[0]) && r[1]), JSON.stringify(rows));
+  await p.click('#mod-file button[aria-label="Choose another picture for tkbface 7"]'); await p.waitForSelector('#sheetBody .btile.asset', { timeout: 30000 });
+  await p.fill('#sheetBody input.search', 'lecturehall'); await p.waitForTimeout(400);
+  await p.click('#sheetBody .btile.asset'); await p.click('#asset-use'); await p.waitForSelector('#mod-file'); await p.waitForTimeout(800);
+  const changed = await p.evaluate(async gid => { const g = await S.gal(gid), m = g.game.mods.find(x => x.fixes), l = await rpyGetJSON(m.list), f = l.find(x => /zzzz_tankobon_fixes/.test(x.p)); return new TextDecoder().decode(await rpyRead(f.c, f.s)); }, gid);
+  ok('and another picture can be chosen for it', /image tkbface 7 = "images\/bg lecturehall\.jpg"/.test(changed), changed.slice(0, 300));
+  ok('after changing it, the fixes file stays open (with the new picture)', !!(await p.$('#mod-file')) && /lecturehall/.test(await p.$eval('#mod-file', e => e.innerText)));
   await p.click('#mod-file button[aria-label="Delete the fix image tkbface 7"]'); await p.waitForSelector('.askyes'); await p.click('.askyes button:has-text("Delete")'); await p.waitForTimeout(1200);
   const afterDel = await p.evaluate(async gid => { const g = await S.gal(gid), m = g.game.mods.find(x => x.fixes), l = await rpyGetJSON(m.list), f = l.find(x => /zzzz_tankobon_fixes/.test(x.p)); return new TextDecoder().decode(await rpyRead(f.c, f.s)); }, gid);
+  ok('after deleting a fix, the file stays open', !!(await p.$('#mod-file')));
   ok('a fix can be deleted (for a picture chosen by mistake)', !/tkbface 7/.test(afterDel) && /# Fixes/.test(afterDel), afterDel.slice(0, 200));
   await p.evaluate(() => closeSheet());
   // Show the game's error screen (with the fix switched off, so the error happens again)

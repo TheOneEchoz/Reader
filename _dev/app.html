@@ -225,6 +225,9 @@ body:has(#sheet:not([hidden])) #toast{top:calc(16px + env(safe-area-inset-top,0p
 #sheet .sp.half{max-height:52dvh}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:120;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);pointer-events:none;transition:opacity .2s}
 .hint{font-size:13px;color:var(--muted);margin:0}
+img,svg,.btile,.card,.pcell,.savecard,.chrow,.btn,.iconbtn,.cover,.hero,.bgrid,.seg,.rbar,.gamecover{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+img{-webkit-user-drag:none}
+img::selection,.btile ::selection,.card ::selection,.pcell ::selection{background:transparent}
 #shield{position:fixed;inset:0;z-index:500;background:var(--bg);display:grid;place-items:center}
 .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:16px 10px}
 .btile{display:grid;gap:6px;text-align:left;min-width:0;align-content:start}
@@ -545,6 +548,8 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 .fixbar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px 10px 8px 14px;border-radius:14px;background:rgba(20,20,24,.92);color:#fff;z-index:3;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .codeedit{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:pre;overflow:auto;min-height:120px}
 .fixrow{padding:6px 8px;border-radius:10px;background:var(--surface2)}
+.fixpic{display:flex;align-items:center;gap:10px}
+.fixthumb{width:96px;height:60px;object-fit:contain;background:#000;border-radius:6px;flex:none}
 .errlog{white-space:pre-wrap;font-size:12px;max-height:40vh;overflow:auto;background:var(--surface2);padding:10px;border-radius:10px;margin:0}
 .savegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .savecard{display:grid;gap:3px;text-align:left;padding:6px;border-radius:12px;background:var(--surface2);color:inherit;border:0;cursor:pointer}
@@ -3933,7 +3938,7 @@ async function openAssets(gid, opts = {}) {
   const io = new IntersectionObserver(ents => { for (const e of ents) if (e.isIntersecting) { io.unobserve(e.target); queue.push(e.target._load); pump(); } }, { root: $('#sheetBody'), rootMargin: '300px' });
   // more pictures are added as you scroll down; nothing already shown moves
   const more = new IntersectionObserver(ents => { if (ents.some(e => e.isIntersecting)) addPage(); }, { root: $('#sheetBody'), rootMargin: '600px' });
-  let together = !!opts.compose;
+  let together = !!opts.compose, picked = false;
   // music and sounds playing in the game now: switched on, they go with the picture(s) made here
   const sndOn = new Set((opts.sounds || []).filter(x => x.ch !== 'voice').map(x => x.name));
   const sndBox = opts.sounds && opts.sounds.length ? h('div', { class: 'panel stack', id: 'asset-sounds', style: 'gap:6px' }, h('div', { class: 'label' }, 'Playing now'),
@@ -3992,7 +3997,7 @@ async function openAssets(gid, opts = {}) {
     count.textContent = sel.size ? `${plural(sel.size, 'picture')} selected${together && sel.size > 1 ? ' (as one picture)' : ''}` : 'Tap pictures to select them';
     coverB.disabled = together ? !sel.size : sel.size !== 1; quickB.hidden = !quickTo; quickB.disabled = !sel.size; galB.disabled = !sel.size; addB.disabled = !sel.size; noneB.hidden = !sel.size;
     viewB.disabled = !list.length;
-    if (opts.pick) { const useB = h('button', { class: 'btn primary small', id: 'asset-use', disabled: sel.size !== 1, onclick: () => { const [p0] = sel; closeSheet(); opts.pick(p0); } }, icon('check'), 'Use this picture'); barEl.replaceChildren(h('b', { class: 'num' }, sel.size ? 'Picture chosen' : 'Tap the picture to use'), h('span', { class: 'grow' }), viewB, useB); return; }
+    if (opts.pick) { const useB = h('button', { class: 'btn primary small', id: 'asset-use', disabled: sel.size !== 1, onclick: () => { const [p0] = sel; picked = true; closeSheet(); opts.pick(p0); } }, icon('check'), 'Use this picture'); barEl.replaceChildren(h('b', { class: 'num' }, sel.size ? 'Picture chosen' : 'Tap the picture to use'), h('span', { class: 'grow' }), viewB, useB); return; }
     if (!barEl.querySelector('#asset-name, #asset-where')) barEl.replaceChildren(count, h('span', { class: 'grow' }), viewB, noneB, artB, allB, coverB, addB, galB, quickB);
   };
   const tile = pic => {
@@ -4126,7 +4131,7 @@ async function openAssets(gid, opts = {}) {
   openSheet(opts.title || 'The game\'s pictures', h('div', { class: 'stack' },
     opts.only ? null : h('button', { class: 'btn ghost small', style: 'justify-self:start', onclick: async () => { const g = await S.gal(gid); g.game.coverBy = 'auto'; await saveGallery(g); closeSheet(); toast('The main menu will be the cover after you play next time.', 3500); } }, icon('image'), 'Use the main menu as the cover'),
     opts.only ? null : find, opts.only ? null : sortSeg, togetherSeg, note, grid, sndBox, sentinel, barEl), () => {
-    stopAlone(); cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
+    stopAlone(); if (opts.onCancel && !picked) setTimeout(opts.onCancel, 0); cancel = true; io.disconnect(); more.disconnect(); urls.forEach(u => URL.revokeObjectURL(u)); $('#sheetBody').style.overflowAnchor = ''; });
   $('#sheetBody').style.overflowAnchor = 'none'; // pictures arriving must not move the place you scrolled to
   bar(); more.observe(sentinel);
   try {
@@ -4562,7 +4567,10 @@ async function modEditor(gid, mid) {
   const g = await S.gal(gid), m = (g.game.mods || []).find(x => x.id === mid); if (!m) return;
   const list = (await rpyGetJSON(m.list)) || [];
   const isText = f => /\.(rpy|py|txt|json|rpym|ini|csv)$/i.test(f.p) && f.s < 4e6;
-  const save = async (path, text) => { await setFixFile(gid, path, text, mid); renderDetail(gid); };
+  let picsP = null; const picsOf = () => picsP || (picsP = gameFileList(g, 'on').then(rpyPictures).catch(() => [])); // (the game's pictures, for the picture fixes)
+  const save = async (path, text) => { await setFixFile(gid, path, text, mid); if (CUR.view === 'detail' && CUR.params.id === gid) renderDetail(gid); };
+  // the file again, as saved (the sheet stays where you are)
+  const reopen = async path => { const g2 = await S.gal(gid), m2 = (g2.game.mods || []).find(x => x.id === mid), l2 = m2 ? (await rpyGetJSON(m2.list)) || [] : [], f2 = l2.find(x => x.p === path); if (f2) { const top = ($('#sheetBody') || {}).scrollTop || 0; await openFile(f2); setTimeout(() => { const sb = $('#sheetBody'); if (sb) sb.scrollTop = top; }, 30); } else modEditor(gid, mid); };
   const openFile = async f => {
     const text = new TextDecoder().decode(await rpyRead(f.c, f.s));
     const ta = h('textarea', { class: 'text codeedit', id: 'mod-edit', spellcheck: 'false', rows: '18' }, text);
@@ -4570,13 +4578,23 @@ async function modEditor(gid, mid) {
     const blocks = f.p === FIXES_FILE ? text.split(/\n(?=# fix: )/).slice(1) : [];
     openSheet(f.p.replace(/^game\//, ''), h('div', { class: 'stack', id: 'mod-file' },
       blocks.length ? h('div', { class: 'stack', style: 'gap:6px' }, h('div', { class: 'label' }, 'Fixes in this file'), blocks.map(b => { const key = b.split('\n')[0].slice(7);
+        // a picture fix: the picture it shows, and a way to choose another
+        const pm = b.match(/^image (.+?) = "((?:[^"\\]|\\.)*)"\s*$/m);
+        if (pm) {
+          const img = h('img', { class: 'fixthumb', alt: '' }), [, want, file] = pm;
+          picsOf().then(ps => { const p0 = ps.find(x => x.name.toLowerCase() === file.toLowerCase()); if (p0) p0.read().then(u => { img.src = URL.createObjectURL(new Blob([u])); }).catch(() => { }); else img.alt = 'not found'; });
+          return h('div', { class: 'fixrow fixpic' }, img,
+            h('div', { class: 'stack', style: 'gap:2px;min-width:0;flex:1' }, h('b', {}, `“${want}”`), h('small', { class: 'hint', style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, `shows ${file}`)),
+            h('button', { class: 'btn small', 'aria-label': `Choose another picture for ${want}`, onclick: () => openAssets(gid, { pick: async p0 => { await save(f.p, text.replace(b, b.replace(pm[0], `image ${want} = ${JSON.stringify(p0.name)}`))); toast('Picture changed. It takes effect the next time the game starts (or the next Try it).'); reopen(f.p); }, onCancel: () => reopen(f.p), query: want.split(/\s/)[0].replace(/\d+$/, ''), title: `Which picture should “${want}” be?` }) }, icon('image'), 'Change'),
+            h('button', { class: 'btn ghost small', 'aria-label': `Delete the fix ${key}`, onclick: async () => { if (!(await askYes('Delete this fix?', key, 'Delete'))) return; await save(f.p, text.replace('\n' + b, '')); toast('Fix deleted. It takes effect the next time the game starts.'); reopen(f.p); } }, icon('trash')));
+        }
         return h('div', { class: 'row fixrow', style: 'justify-content:space-between;gap:8px' }, h('code', { style: 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, key),
-          h('button', { class: 'btn ghost small', 'aria-label': `Delete the fix ${key}`, onclick: async () => { if (!(await askYes('Delete this fix?', key, 'Delete'))) return; await save(f.p, text.replace('\n' + b, '')); toast('Fix deleted. It takes effect the next time the game starts.'); modEditor(gid, mid); } }, icon('trash'))); })) : null,
+          h('button', { class: 'btn ghost small', 'aria-label': `Delete the fix ${key}`, onclick: async () => { if (!(await askYes('Delete this fix?', key, 'Delete'))) return; await save(f.p, text.replace('\n' + b, '')); toast('Fix deleted. It takes effect the next time the game starts.'); reopen(f.p); } }, icon('trash'))); })) : null,
       h('div', { class: 'label' }, 'The whole file'), ta,
       h('div', { class: 'row', style: 'flex-wrap:wrap' },
-        h('button', { class: 'btn primary', id: 'mod-save', onclick: async () => { await save(f.p, ta.value); toast('Saved. It takes effect the next time the game starts (or the next Try it).'); modEditor(gid, mid); } }, 'Save'),
+        h('button', { class: 'btn primary', id: 'mod-save', onclick: async () => { await save(f.p, ta.value); toast('Saved. It takes effect the next time the game starts (or the next Try it).'); reopen(f.p); } }, 'Save'),
         h('button', { class: 'btn ghost', onclick: async () => { if (!(await askYes(`Delete ${f.p.replace(/^game\//, '')} from the mod?`, 'The game uses its own file again (if it has one).', 'Delete'))) return; await save(f.p, null); modEditor(gid, mid); } }, icon('trash'), 'Delete this file'),
-        h('button', { class: 'btn ghost', onclick: () => modEditor(gid, mid) }, 'Back'))));
+        h('button', { class: 'btn ghost', onclick: () => modEditor(gid, mid) }, 'Back to the mod\'s files'))));
   };
   openSheet(`The mod “${m.name}”`, h('div', { class: 'stack', id: 'mod-editor' },
     list.length ? h('div', { class: 'chlist' }, list.map(f => h('button', { class: 'chrow', onclick: () => isText(f) ? openFile(f) : toast('Only text files (like .rpy scripts) can be changed here.'), 'data-p': f.p },
