@@ -1,5 +1,14 @@
 [
  {
+  "v": 128,
+  "name": "1.23.0-beta.30",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing game errors: “Fix the conditions” and the other fix tools now find the broken picture while Ren'Py's own error page (“An exception has occurred”) is showing. Before, they looked only at the error page itself, not at the game behind it, and said “No picture with conditions is choosing nothing right now”."
+  ]
+ },
+ {
   "v": 127,
   "name": "1.23.0-beta.29",
   "date": "2026-11-08",
