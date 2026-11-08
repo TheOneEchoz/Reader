@@ -1,5 +1,14 @@
 [
  {
+  "v": 123,
+  "name": "1.23.0-beta.25",
+  "date": "2026-11-08",
+  "beta": true,
+  "items": [
+   "Fixing game errors: every fix sheet can now choose a picture. When the error is not recognised and no broken picture is on screen any more, “Is it a missing picture?” suggests the pictures the game could not find earlier (like “mox4dawn 0”), or lets you type the name; then choose the picture it should be from the game's pictures."
+  ]
+ },
+ {
   "v": 122,
   "name": "1.23.0-beta.24",
   "date": "2026-11-08",

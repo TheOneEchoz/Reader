@@ -68,6 +68,7 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   ok('every error has a Fix button (also kinds it cannot fix by itself)', fixBtns.includes('Fix this error'), JSON.stringify(fixBtns));
   await p.click('#gameerrors .fixbtn:has-text("Fix this error")'); await p.waitForSelector('#fix-edit'); await p.waitForTimeout(400);
   const sel = await p.$eval('#fix-edit', e => e.value.slice(e.selectionStart, e.selectionEnd));
+  ok('the by-hand fix also offers choosing a missing picture', !!(await p.$('#fix-picbox #fix-picsearch')) && !!(await p.$('#fix-picname')));
   ok('it shows the lines around it, with the broken one selected', /"points: " \+ 5/.test(sel), sel);
   await p.$eval('#fix-edit', e => { e.value = e.value.replace('"points: " + 5', '"points: " + str(5)'); });
   await p.click('#fix-try');

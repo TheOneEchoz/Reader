@@ -2898,8 +2898,22 @@ async function fixByHand(gid, err, P) {
     const scene = P.file && P.line ? await gamePy(`_f = ${JSON.stringify(P.file.split('/').pop().replace(/\.rpyc?$/i, ''))}\nresult = max([(n.linenumber, l) for l in renpy.get_all_labels() for n in [renpy.game.script.lookup(l)] if not str(l).startswith("_") and n.filename.replace(chr(92), "/").split("/")[-1].rsplit(".", 1)[0] == _f and n.linenumber <= ${P.line}] or [(0, None)])[1]`) : null;
     const done = await apply(); closeSheet(); await gameTrial(gid, done, scene);
   } }, icon('play'), 'Try it');
+  // pictures the game could not find in this session (from the other errors), to suggest
+  const missing = [...new Set((GAME.errors || []).map(e => { const q = parseGameError(e); return q.kind === 'dynimg' ? ((e.short || '').match(/could not find image\. \('([^']+)'\)/) || [])[1] : q.kind === 'image' ? q.name : null; }).filter(Boolean))];
+  const picName = h('input', { class: 'text', id: 'fix-picname', autocomplete: 'off', placeholder: 'The picture name the game looks for, like “mox4dawn 0”', value: missing[0] || '' });
+  const picB = h('button', { class: 'btn small primary', id: 'fix-picsearch', onclick: () => {
+    const nm = picName.value.trim(); if (!nm) return picName.focus();
+    const where = ((err.short || '').match(/File "[^"]+", line \d+.*$/m) || [''])[0];
+    const asImage = { short: `While running game code:\n  ${where}\nException: Image '${nm}' not found.`, full: err.full || err.short };
+    openAssets(gid, { pick: p0 => fixSheet(gid, asImage, false, p0.name), query: nm.split(/\s/)[0].replace(/\d+$/, ''), title: `Which picture should “${nm}” be?` });
+  } }, icon('search'), 'Choose the picture');
+  const picBox = h('div', { class: 'panel stack', style: 'gap:8px', id: 'fix-picbox' }, h('div', { class: 'label' }, 'Is it a missing picture?'),
+    h('p', { class: 'hint', style: 'margin:0' }, missing.length ? `The game could not find ${missing.map(x => `“${x}”`).join(', ')} earlier; errors like this one often come from that. Choose the picture it should be.` : 'If a picture is missing in this scene, type the name the game looks for (it is in its error, like “mox4dawn 0”), then choose the picture it should be.'),
+    missing.length > 1 ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, missing.map(x => h('button', { class: 'btn ghost small', onclick: () => { picName.value = x; } }, x))) : null,
+    h('div', { class: 'row', style: 'gap:8px' }, picName, picB));
   openSheet('Fix this error', h('div', { class: 'stack', id: 'fix-sheet' },
     h('pre', { class: 'errlog' }, (err.short || '').trim().split('\n').slice(-4).join('\n')),
+    picBox,
     lines ? h('p', { class: 'hint', style: 'margin:0' }, `Lines ${a + 1} to ${z} of ${src.p.slice(5)}; the error is on line ${P.line}. Change what is wrong, then try it. A corrected copy of the file goes into the mod; the game's own file is not changed.`)
       : h('p', { class: 'hint', style: 'margin:0' }, P.file ? `The error is in ${P.file.replace(/^game\//, '')}${P.line ? `, line ${P.line}` : ''}, but the game does not include that script (only its compiled version), so it cannot be edited. You can write a fix in Ren'Py's language instead; it runs when the game starts.` : 'Write a fix in Ren\'Py\'s language; it runs when the game starts.'),
     lines ? null : ctxBox,

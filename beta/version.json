@@ -1,6 +1,6 @@
 {
- "version": 122,
- "name": "1.23.0-beta.24",
+ "version": 123,
+ "name": "1.23.0-beta.25",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Fixing game errors: errors that are not a typo (like “'NoneType' object has no attribute 'style'”) now look for a picture on screen that the game cannot find, and say which one it is; then choose the picture it should be from the game's pictures. Several broken pictures can be chosen between.",
-  "For games that only include their compiled scripts, the fix sheet shows what the game does around the broken line (rebuilt from the compiled script), for context.",
-  "Fixed: the Fix button could open a sheet whose Try it stayed greyed out."
+  "Fixing game errors: every fix sheet can now choose a picture. When the error is not recognised and no broken picture is on screen any more, “Is it a missing picture?” suggests the pictures the game could not find earlier (like “mox4dawn 0”), or lets you type the name; then choose the picture it should be from the game's pictures."
  ]
 }
