@@ -1,6 +1,6 @@
 {
- "version": 136,
- "name": "1.23.0-beta.38",
+ "version": 137,
+ "name": "1.23.0-beta.39",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,11 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: a new Edit this scene button (the brush, top right) changes the scene you are in. Each edit works at once in the game, and is kept in a mod of its own, “Scene edits”: switch it off on the game's page to play the game as it was.",
-  "Pictures made of layers: each part shown now, with its picture. Change a part's picture, remove a part, or add a part. Other pictures: change the picture, or hide it. Choose whether a change applies only at this line or everywhere.",
-  "Add a picture to this line: a file of the game, or any picture the game has a name for (also a layered picture with its parts, like “dawn3a happy”). Put it left, centre, right or over the whole screen, in front of or behind the characters. It shows while this line is on screen.",
-  "Add a step before or after this line: one or more pictures, over the scene or on their own, and a line of text if you like (with who says it). Preview draws it; then the game goes on as normal.",
-  "Skip this line: the story jumps over it from now on, so what it shows or says is left out.",
-  "The edits made at a line are listed there, and each can be taken back."
+  "Games from phones: a Ren'Py game's Android APK can be added like its ZIP. The app takes the game out of the APK (the files Android keeps renamed under assets/x-game) and finds which Ren'Py made it.",
+  "On phones, Add a game asks for the game's ZIP or APK (phones cannot choose folders). On computers there is also “Or choose a game's ZIP or Android APK”. An APK or ZIP shared to the app, opened with it or dropped on it is added the same way.",
+  "Big ZIPs and APKs are read a piece at a time instead of all at once, so a game of several gigabytes can be added on a phone without running out of memory (also ZIPs over 4 GB)."
  ]
 }

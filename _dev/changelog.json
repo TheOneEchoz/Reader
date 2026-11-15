@@ -1,5 +1,16 @@
 [
  {
+  "v": 137,
+  "name": "1.23.0-beta.39",
+  "date": "2026-11-15",
+  "beta": true,
+  "items": [
+   "Games from phones: a Ren'Py game's Android APK can be added like its ZIP. The app takes the game out of the APK (the files Android keeps renamed under assets/x-game) and finds which Ren'Py made it.",
+   "On phones, Add a game asks for the game's ZIP or APK (phones cannot choose folders). On computers there is also “Or choose a game's ZIP or Android APK”. An APK or ZIP shared to the app, opened with it or dropped on it is added the same way.",
+   "Big ZIPs and APKs are read a piece at a time instead of all at once, so a game of several gigabytes can be added on a phone without running out of memory (also ZIPs over 4 GB)."
+  ]
+ },
+ {
   "v": 136,
   "name": "1.23.0-beta.38",
   "date": "2026-11-08",

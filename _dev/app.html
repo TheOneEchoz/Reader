@@ -1555,7 +1555,7 @@ function newGallery(title) {
 /* ---------- files handed to the app: shared or opened from another app, dropped on the window ---------- */
 let RECEIVED = [];
 async function receiveFiles(files) {
-  if (EXP && Crypt.ready && files.some(f => /\.zip$/i.test(f.name))) {
+  if (EXP && Crypt.ready && files.some(f => /\.(zip|apk)$/i.test(f.name))) {
     const { games, rest } = await rpyGamesIn(files).catch(() => ({ games: [], rest: files }));
     if (games.length) { await rpyAddSheet(games); if (!rest.length) return; files = rest; }
   }
@@ -1775,14 +1775,16 @@ function openAddSheet(existing, folder) {
   const status = h('div', { class: 'progress', hidden: true });
   const opts = h('div', { class: 'stack' });
   const folderOK = NATIVE || 'webkitdirectory' in document.createElement('input');
-  const chooseGame = async () => {
-    const files = await pickFiles({ folder: true }); if (!files.length) return;
+  // a game: its folder (where folders can be chosen), or its ZIP, or a Ren'Py game's Android APK (phones cannot choose folders)
+  const GAME_FILES = '.zip,.apk,application/zip,application/vnd.android.package-archive';
+  const chooseGame = async asFile => {
+    const files = folderOK && !asFile ? await pickFiles({ folder: true }) : await pickFiles({ accept: GAME_FILES }); if (!files.length) return;
     const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
-    if (!games.length) return toast('No game was found in that folder. Choose the game\'s own folder (for Ren\'Py, the one with the “game” folder inside; for RPG Maker, the one with index.html or www).', 5000);
+    if (!games.length) return toast(folderOK && !asFile ? 'No game was found in that folder. Choose the game\'s own folder (for Ren\'Py, the one with the “game” folder inside; for RPG Maker, the one with index.html or www).' : 'No game was found in that file. Choose the game\'s ZIP, or the APK of a Ren\'Py game for Android.', 5000);
     closeSheet(); rpyAddSheet(games, existing ? { id: existing.id, folder: folder ? folder.id : null } : null);
   };
   const choose = async kind => {
-    const files = kind === 'folder' ? await pickFiles({ folder: true }) : kind === 'images' ? await pickFiles({ accept: 'image/*' }) : await pickFiles({ accept: '.zip,.cbz,.pdf,application/zip,application/x-cbz,application/pdf' });
+    const files = kind === 'folder' ? await pickFiles({ folder: true }) : kind === 'images' ? await pickFiles({ accept: 'image/*' }) : await pickFiles({ accept: '.zip,.cbz,.pdf,application/zip,application/x-cbz,application/pdf' + (EXP && !existing ? ',.apk,application/vnd.android.package-archive' : '') });
     if (!files.length) return;
     if (EXP && !existing && (kind === 'folder' || kind === 'zip')) { const { games, rest } = await rpyGamesIn(files).catch(() => ({ games: [], rest: files })); if (games.length) { closeSheet(); await rpyAddSheet(games); if (!rest.length) return; } }
     let cancel = false;
@@ -1818,7 +1820,8 @@ function openAddSheet(existing, folder) {
     existing ? null : h('button', { class: 'bigopt', onclick: createEmpty }, icon('plus'), h('div', {}, h('b', {}, 'Create an empty gallery'), h('span', {}, 'Start from nothing. Make your own chapters and add images to each one from anywhere on your phone.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('folder') }, icon('folder'), h('div', {}, h('b', {}, 'Choose a folder'), h('span', {}, folderOK ? 'Images in subfolders become chapters. CBZ/ZIP files inside also count as chapters.' : 'Your browser may not support picking folders. Try the options below.'))),
     h('button', { class: 'bigopt picks', onclick: () => choose('images') }, icon('image'), h('div', {}, h('b', {}, 'Choose images'), h('span', {}, 'Pick several pictures at once. They go into one chapter.'))),
-    EXP ? h('button', { class: 'bigopt picks', id: 'add-game', onclick: chooseGame }, icon('play'), h('div', {}, h('b', {}, 'Add a game'), h('span', {}, 'A Ren\'Py or RPG Maker MV/MZ game: choose the game\'s folder. You can also drop a game folder or its ZIP on the window.'))) : null,
+    EXP ? h('button', { class: 'bigopt picks', id: 'add-game', onclick: () => chooseGame(false) }, icon('play'), h('div', {}, h('b', {}, 'Add a game'), h('span', {}, folderOK ? 'A Ren\'Py or RPG Maker MV/MZ game: choose the game\'s folder. You can also drop a game folder, its ZIP or a Ren\'Py game\'s Android APK on the window.' : 'A Ren\'Py or RPG Maker MV/MZ game: choose its ZIP, or the APK of a Ren\'Py game for Android.'))) : null,
+    EXP && folderOK ? h('button', { class: 'btn ghost small', id: 'add-game-file', style: 'justify-self:start', onclick: () => chooseGame(true) }, 'Or choose a game\'s ZIP or Android APK') : null,
     h('button', { class: 'bigopt picks', onclick: () => choose('zip') }, icon('archive'), h('div', {}, h('b', {}, 'Choose ZIP, CBZ or PDF files'), h('span', {}, 'Each page of a PDF becomes a picture. Folders inside a ZIP become chapters. Picking several files makes one chapter per file.')))
   );
   openSheet(folder ? `Add pages to “${folder.title}”` : existing ? 'Add pages to this gallery' : 'Add a gallery', h('div', { class: 'stack' },
@@ -1939,7 +1942,7 @@ async function htmlImport(found, title, kind, onProg = () => { }, cancelled = ()
 }
 function rpyTitle(root, fallback) {
   let t = (root.replace(/\/$/, '').split('/').pop() || fallback || 'Game').trim();
-  t = t.replace(/([-_ ](v?\d+(\.\d+)*[a-z]?|pc|win|windows|linux|mac|market|all|dists?|web|android))+$/i, '') || t;
+  t = t.replace(/([-_ ](v?\d+(\.\d+)*[a-z]?|pc|win|windows|linux|mac|market|all|dists?|web|android|apk|release|debug|universal|arm64(-v8a)?|armeabi(-v7a)?|x86(_64)?))+$/i, '') || t;
   if (!/\s/.test(t)) t = t.replace(/[_]+/g, ' ');
   return t;
 }
@@ -1949,6 +1952,7 @@ async function rpyVersion(f) {
   const text = async it => { const u = new Uint8Array(await (await it.blob()).slice(0, 2e6).arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return s; };
   const pick = s => { const m = s.match(/(?:^|[^\d.])([678])\.(\d{1,2})\.(\d{1,2})(?:\.\d+)?(?![\d])/); return m ? `${m[1]}.${m[2]}.${m[3]}` : null; };
   for (const it of f.items.filter(it => /^renpy\/(__pycache__\/)?vc_version\b[^/]*$/i.test(rel(it)))) { const v = pick(await text(it)); if (v) return { v, how: 'version' }; }
+  { const it = f.items.find(x => /^game\/script_version\.txt$/i.test(rel(x))); if (it) { const m = (await text(it)).match(/\(\s*([678])\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})/); if (m) return { v: `${m[1]}.${m[2]}.${m[3]}`, how: 'version' }; } }
   for (const n of ['log.txt', 'traceback.txt', 'errors.txt']) {
     const it = f.items.find(x => rel(x).toLowerCase() === n); if (!it) continue;
     const m = (await text(it)).match(/Ren'Py ([678]\.\d+\.\d+)/); if (m) return { v: m[1], how: 'log' };
@@ -2059,10 +2063,88 @@ function rpyAskDownload(v, why) {
 
 /* ---------- adding a game ---------- */
 const fileItem = f => ({ path: (f.relPath || f.webkitRelativePath || f.name).replace(/\\/g, '/'), size: f.size || 0, mtime: f.lastModified || 0, blob: async () => loadPicked(f) });
+/* the files in a ZIP (or an Android APK, which is a ZIP): read from the file a piece at a time, so a game of several gigabytes
+   never has to fit in memory (a phone could not hold it); each file is unpacked only when it is needed */
+async function zipItemsLazy(file) {
+  const u8 = async (a, b) => new Uint8Array(await file.slice(a, b).arrayBuffer());
+  const n = file.size, tailLen = Math.min(n, 65557 + 20), tail = await u8(n - tailLen, n), dv = new DataView(tail.buffer);
+  let e = -1; for (let i = tail.length - 22; i >= 0; i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error('not a ZIP');
+  let count = dv.getUint16(e + 10, true), cdSize = dv.getUint32(e + 12, true), cdOff = dv.getUint32(e + 16, true);
+  if (count === 0xffff || cdSize === 0xffffffff || cdOff === 0xffffffff) { // ZIP64 (over 4 GB, or very many files)
+    const L = e - 20; if (L < 0 || dv.getUint32(L, true) !== 0x07064b50) throw new Error('ZIP64 locator missing');
+    const z64 = Number(dv.getBigUint64(L + 8, true)), h = new DataView((await u8(z64, z64 + 56)).buffer);
+    if (h.getUint32(0, true) !== 0x06064b50) throw new Error('ZIP64 record missing');
+    count = Number(h.getBigUint64(32, true)); cdSize = Number(h.getBigUint64(40, true)); cdOff = Number(h.getBigUint64(48, true));
+  }
+  const cd = await u8(cdOff, cdOff + cdSize), c = new DataView(cd.buffer), utf8 = new TextDecoder('utf-8'), out = [];
+  let p = 0;
+  for (let k = 0; k < count && p + 46 <= cd.length; k++) {
+    if (c.getUint32(p, true) !== 0x02014b50) break;
+    const flags = c.getUint16(p + 8, true), method = c.getUint16(p + 10, true), tm = c.getUint16(p + 12, true), dt = c.getUint16(p + 14, true);
+    let comp = c.getUint32(p + 20, true), size = c.getUint32(p + 24, true), off = c.getUint32(p + 42, true);
+    const nl = c.getUint16(p + 28, true), xl = c.getUint16(p + 30, true), cl = c.getUint16(p + 32, true);
+    const name = utf8.decode(cd.subarray(p + 46, p + 46 + nl));
+    for (let q = p + 46 + nl, end = q + xl; q + 4 <= end;) { // ZIP64 sizes and offset
+      const id = c.getUint16(q, true), len = c.getUint16(q + 2, true);
+      if (id === 1) { let r = q + 4; if (size === 0xffffffff) { size = Number(c.getBigUint64(r, true)); r += 8; } if (comp === 0xffffffff) { comp = Number(c.getBigUint64(r, true)); r += 8; } if (off === 0xffffffff) { off = Number(c.getBigUint64(r, true)); } }
+      q += 4 + len;
+    }
+    p += 46 + nl + xl + cl;
+    if (name.endsWith('/') || hiddenPath(name)) continue;
+    const mtime = new Date(1980 + (dt >> 9), ((dt >> 5) & 15) - 1, dt & 31, tm >> 11, (tm >> 5) & 63, (tm & 31) * 2).getTime();
+    out.push({ path: name.replace(/\\/g, '/'), size, mtime, blob: async () => {
+      if (flags & 1) throw new Error('This ZIP is password-protected.');
+      const lh = new DataView((await u8(off, off + 30)).buffer);
+      if (lh.getUint32(0, true) !== 0x04034b50) throw new Error('Broken ZIP entry: ' + name);
+      const start = off + 30 + lh.getUint16(26, true) + lh.getUint16(28, true), data = file.slice(start, start + comp);
+      if (method === 0) return data;
+      if (method !== 8) throw new Error('Unsupported ZIP packing in ' + name);
+      return new Response(data.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+    } });
+  }
+  return out;
+}
 async function zipItems(file) {
+  if (typeof DecompressionStream !== 'undefined' && file.slice) { try { new DecompressionStream('deflate-raw'); return await zipItemsLazy(file); } catch (e) { } }
   if (typeof JSZip === 'undefined') throw new Error('The ZIP reader could not load.');
   const zip = await JSZip.loadAsync(file);
   return Object.values(zip.files).filter(z => !z.dir && !hiddenPath(z.name)).map(z => ({ path: z.name.replace(/\\/g, '/'), size: (z._data && z._data.uncompressedSize) || 0, mtime: z.date ? z.date.getTime() : 0, blob: () => z.async('blob') }));
+}
+/* a file inside a .tar.gz (read as it unpacks, stopping at the file): {size, blob} or null */
+async function tarFind(blob, re) {
+  const rd = blob.stream().pipeThrough(new DecompressionStream('gzip')).getReader(), td = new TextDecoder();
+  let buf = new Uint8Array(0);
+  const more = async () => { const { value, done } = await rd.read(); if (done) return false; const b = new Uint8Array(buf.length + value.length); b.set(buf); b.set(value, buf.length); buf = b; return true; };
+  const need = async n => { while (buf.length < n) if (!await more()) return false; return true; };
+  try {
+    for (;;) {
+      if (!await need(512)) return null;
+      const h = buf.subarray(0, 512); if (h.every(x => x === 0)) return null;
+      const str = (a, l) => td.decode(h.subarray(a, a + l)).split('\0')[0];
+      let name = str(0, 100); const prefix = str(345, 155); if (prefix) name = prefix + '/' + name;
+      const size = parseInt(str(124, 12).trim() || '0', 8) || 0, padded = Math.ceil(size / 512) * 512;
+      buf = buf.subarray(512);
+      if (re.test(name.replace(/^\.\//, '')) && size < 8e6) { if (!await need(size)) return null; const data = buf.slice(0, size); rd.cancel().catch(() => { }); return { size, blob: new Blob([data]) }; }
+      let left = padded; while (left > 0) { if (!buf.length && !await more()) return null; const k = Math.min(left, buf.length); buf = buf.subarray(k); left -= k; }
+    }
+  } catch (e) { return null; }
+}
+/* a Ren'Py game made for Android (an .apk): its files are in assets/x-game/, every name with "x-" in front (Android cannot
+   keep some of Ren'Py's names as they are). Read as the game folder; the Ren'Py version comes from private.mp3, the
+   package of Ren'Py's own files. Returns the game's files as if from a folder, or null. */
+async function apkGame(file) {
+  const its = await zipItems(file);
+  const strip = p => p.split('/').map(c => c.startsWith('x-') ? c.slice(2) : c).join('/');
+  const root = (baseName(file.name).replace(/[\/]+/g, '_') || 'Game') + '/';
+  const game = its.filter(it => /^assets\/x-game\//.test(it.path)).map(it => ({ ...it, path: root + strip(it.path.slice(7)) }));
+  if (!game.length) return null;
+  const priv = its.find(it => it.path === 'assets/private.mp3');
+  if (priv && typeof DecompressionStream !== 'undefined') {
+    const v = await tarFind(await priv.blob(), /^renpy\/(__pycache__\/)?vc_version\b/);
+    if (v) game.push({ path: root + 'renpy/vc_version.py', size: v.size, mtime: 0, blob: async () => v.blob, extra: true });
+  }
+  return game;
 }
 /* Ren'Py games among dropped/picked files: [{found, title}] and the files that are not part of a game */
 async function rpyGamesIn(files) {
@@ -2071,6 +2153,10 @@ async function rpyGamesIn(files) {
   for (const f of files) { const p = (f.relPath || f.webkitRelativePath || '').replace(/\\/g, '/'); if (p.includes('/')) { const t = p.split('/')[0]; if (!tops.has(t)) tops.set(t, []); tops.get(t).push(f); } else rest.push(f); }
   for (const [t, list] of tops) { const its = list.map(fileItem), found = rpyFind(its); if (found) { games.push({ found, title: rpyTitle(found.root, t) }); continue; } const hf = htmlFind(its); if (hf) games.push({ found: hf, html: hf.kind, title: htmlTitle(hf, t) }); else rest.push(...list); }
   for (const f of rest.slice()) {
+    if (/\.apk$/i.test(f.name)) {
+      try { const its = await apkGame(f), found = its && rpyFind(its); if (found) { games.push({ found, title: rpyTitle(found.root, baseName(f.name)), apk: true }); rest.splice(rest.indexOf(f), 1); } } catch (e) { }
+      continue;
+    }
     if (!/\.zip$/i.test(f.name)) continue;
     try {
       const its = await zipItems(f), found = rpyFind(its);
