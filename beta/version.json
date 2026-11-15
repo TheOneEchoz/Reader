@@ -1,6 +1,6 @@
 {
- "version": 137,
- "name": "1.23.0-beta.39",
+ "version": 138,
+ "name": "1.23.0-beta.40",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Games from phones: a Ren'Py game's Android APK can be added like its ZIP. The app takes the game out of the APK (the files Android keeps renamed under assets/x-game) and finds which Ren'Py made it.",
-  "On phones, Add a game asks for the game's ZIP or APK (phones cannot choose folders). On computers there is also “Or choose a game's ZIP or Android APK”. An APK or ZIP shared to the app, opened with it or dropped on it is added the same way.",
-  "Big ZIPs and APKs are read a piece at a time instead of all at once, so a game of several gigabytes can be added on a phone without running out of memory (also ZIPs over 4 GB)."
+  "Ren'Py games: saves from the same game on another device, with Ren'Py Sync. In the game there (a phone, say), open Save or Load and press “Upload Sync”; it shows a code. Here, in the game's Saves (the list button), open “Saves from another device” and type the code. The saves come into the game and the app's Saves list.",
+  "“Send these saves to another device” does the opposite: the game shows a code to type in the other device's “Download Sync”.",
+  "The game still cannot reach the internet: only Ren'Py's sync server, and only through the app. Ren'Py Sync needs games made with Ren'Py 8.1 or newer."
  ]
 }

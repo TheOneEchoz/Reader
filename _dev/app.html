@@ -2497,6 +2497,18 @@ function rpyBoot(SCRIPTS, LOADER) {
   window.tkbSpin = on => post({ t: 'spin', on: !!on }); // called by Ren'Py (the hooks): a picture on screen is still on its way
   const URLS = {}, waiting = new Map(); let FILES = [], SAVES = [], EXTRACT = {}, MORE = [], LAZY = null, seq = 0;
   const ask = m => new Promise(res => { const q = ++seq; waiting.set(q, res); post(Object.assign({ q }, m)); });
+  // the game cannot reach the internet, except Ren'Py Sync (moving saves between devices with a code): those requests go
+  // through the app, and only to Ren'Py's sync server
+  { const of = window.fetch ? window.fetch.bind(window) : null;
+    window.fetch = async (input, init) => {
+      const url = String(input && input.url || input);
+      if (!/^https:\/\/sync\.renpy\.org\/api\/sync\/v1\//.test(url)) { if (of) return of(input, init); throw new TypeError('offline'); }
+      const body = init && init.body ? (init.body.buffer ? init.body.slice().buffer : init.body) : null;
+      const r = await ask({ t: 'net', url, method: (init && init.method) || 'GET', ctype: init && init.headers && (init.headers['Content-Type'] || init.headers['content-type']) || null, body });
+      if (r.err) throw new TypeError(r.err);
+      return new Response(r.body || null, { status: r.status, statusText: r.statusText || '' });
+    };
+  }
   const mime = n => /\.wasm$/.test(n) ? 'application/wasm' : /\.js$/.test(n) ? 'text/javascript' : 'application/octet-stream';
   const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src)); document.body.appendChild(s); });
   const mkdirs = path => { let cur = ''; for (const p of path.split('/').filter(Boolean)) { cur += '/' + p; try { FS.mkdir(cur); } catch (e) { } } };
@@ -3367,6 +3379,22 @@ const RPY_HOOKS = [
   '                renpy.notify("The game could not be saved here.")',
   '        elif c[0] == "reload":',
   '            renpy.reload_script()',
+  // saves from another device with Ren'Py Sync (the code from Upload Sync there), and saves sent the same way
+  '        elif c[0] in ("syncdown", "syncup"):',
+  '            if not getattr(config, "has_sync", None) or not hasattr(store, "_sync"):',
+  '                renpy.notify("This game cannot use Ren\'Py Sync (it needs Ren\'Py 8.1 or newer).")',
+  '            elif c[0] == "syncup":',
+  '                renpy.invoke_in_new_context(_sync.upload)',
+  '            else:',
+  '                def _tkb_syncdown(sid):',
+  '                    old = renpy.input',
+  '                    renpy.input = lambda *a, **k: sid',
+  '                    try:',
+  '                        return _sync.download()',
+  '                    finally:',
+  '                        renpy.input = old',
+  '                if renpy.invoke_in_new_context(_tkb_syncdown, c[1]):',
+  '                    renpy.notify("The saves from the other device are here.")',
   '        elif c[0] == "jump":',
   '            if renpy.has_label(c[1]):',
   '                renpy.jump(c[1])',
@@ -4379,7 +4407,8 @@ function gameErrors(list, title) {
 async function rpySaveCards(idx) {
   const out = [];
   for (const [p, s] of Object.entries(idx || {})) {
-    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/(tokens|sync)\//.test(p) || /\/_[^/]*$/.test(p)) continue;
+    if (!/^home\/web_user\/\.renpy\/[^/]+\/(sync\/)?[^/]+\.save$/i.test(p) || /\/tokens\//.test(p) || /\/_[^/]*$/.test(p)) continue;
+    if (/\/sync\/[^/]+$/.test(p) && idx[p.replace(/\/sync\/([^/]+)$/, '/$1')]) continue; // (Ren'Py keeps a copy of each save for Sync)
     const c = { p, name: p.split('/').pop(), t: s.t || 0, shot: null, info: '' };
     try {
       const z = await JSZip.loadAsync(await rpyRead(s.c, s.s));
@@ -4409,13 +4438,25 @@ async function savePicker(gid) {
       closeSheet(); await gameAutosave(); send(['load', c.name.replace(/(-LT\d+)?\.save$/i, '')]);
     } }, h('span', { class: 'saveshot' }, img), h('b', {}, saveLabel(c.name)), c.info ? h('small', {}, c.info) : null, h('small', { class: 'num' }, c.t ? new Date(c.t).toLocaleString() : ''));
   }));
+  // Ren'Py Sync: saves moved between this game and the same game elsewhere (on a phone, a computer) with a code
+  const code = h('input', { class: 'text', id: 'sync-code', placeholder: 'ABCDE-FGHIJ', maxlength: 11, autocomplete: 'off', autocapitalize: 'characters', spellcheck: false, style: 'max-width:12em;font-family:var(--mono,monospace)' });
+  const getB = h('button', { class: 'btn small', id: 'sync-get', onclick: () => {
+    const v = code.value.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+    if (v.length !== 10) return toast('The code has 10 letters and numbers, like ABCDE-FGHIJ.', 3500);
+    send(['syncdown', v.slice(0, 5) + '-' + v.slice(5)]); closeSheet(); toast('Getting the saves…', 2500);
+  } }, icon('download'), 'Get the saves');
+  const sendB = h('button', { class: 'btn small ghost', id: 'sync-send', onclick: () => { send(['syncup']); closeSheet(); } }, 'Send these saves to another device');
+  const syncBox = h('details', { class: 'panel', id: 'sync-box' }, h('summary', {}, 'Saves from another device (Ren\'Py Sync)'),
+    h('div', { class: 'stack', style: 'gap:8px;margin-top:8px' },
+      h('p', { class: 'hint', style: 'margin:0' }, 'In the same game on the other device (a phone, say), open Save or Load and press “Upload Sync”. It shows a code: type it here. The game needs Ren\'Py 8.1 or newer, and its save screen must have the Sync buttons.'),
+      h('div', { class: 'row', style: 'flex-wrap:wrap;gap:8px' }, code, getB), sendB));
   openSheet('Saves', h('div', { class: 'stack', id: 'savepick' }, h('div', { class: 'row' }, saveB, h('span', { class: 'hint' }, free ? `In ${saveLabel(free + '-LT1.save')}.` : 'All slots are full.')),
-    cards.length ? grid : h('p', { class: 'hint' }, 'No saves yet.')), () => urls.forEach(u => URL.revokeObjectURL(u)));
+    cards.length ? grid : h('p', { class: 'hint' }, 'No saves yet.'), syncBox), () => urls.forEach(u => URL.revokeObjectURL(u)));
 }
 async function newestSlot(idx) {
   let best = null, bt = -1;
   for (const [p, s] of Object.entries(idx)) {
-    if (!/^home\/web_user\/\.renpy\/[^/]+\/[^/]+\.save$/i.test(p) || /\/tokens\//.test(p) || /\/_[^/]*$/.test(p)) continue; // (not Ren'Py's own error and reload saves)
+    if (!/^home\/web_user\/\.renpy\/[^/]+\/(sync\/)?[^/]+\.save$/i.test(p) || /\/tokens\//.test(p) || /\/_[^/]*$/.test(p)) continue; // (not Ren'Py's own error and reload saves; saves from Ren'Py Sync too)
     let t = s.t || 0;
     try { const z = await JSZip.loadAsync(await rpyRead(s.c, s.s)), j = z.file('json'); if (j) { const o = JSON.parse(await j.async('string')); if (o._ctime) t = o._ctime * 1000; } } catch (e) { }
     if (t > bt) { bt = t; best = p.split('/').pop(); }
@@ -4609,6 +4650,15 @@ async function openGame(id, cont) {
         rt = null; // handed over
       } else if (m.t === 'chunk') {
         const buf = await rpyGet(GAME.list[m.i].c[m.k]); win.postMessage({ q: m.q, buf }, '*', [buf]);
+      } else if (m.t === 'net') {
+        // Ren'Py Sync only: the sync server, its one address shape
+        let res;
+        try {
+          const u = new URL(m.url); if (u.origin !== 'https://sync.renpy.org' || !/^\/api\/sync\/v1\/[0-9a-f]{64}$/.test(u.pathname)) throw new Error('not allowed');
+          const r = await fetch(u.href, { method: m.method === 'PUT' ? 'PUT' : 'GET', body: m.method === 'PUT' ? m.body : undefined, headers: m.ctype ? { 'Content-Type': m.ctype } : undefined, credentials: 'omit', referrerPolicy: 'no-referrer' });
+          const body = await r.arrayBuffer(); res = { q: m.q, status: r.status, statusText: r.statusText, body };
+        } catch (e) { res = { q: m.q, err: String(e && e.message || e) }; }
+        win.postMessage(res, '*', res.body ? [res.body] : []);
       } else if (m.t === 'part') {
         const u = await rpyRange(GAME.list[m.i], m.o, m.l), buf = u.buffer.byteLength === u.length ? u.buffer : u.slice().buffer; win.postMessage({ q: m.q, buf }, '*', [buf]);
       } else if (m.t === 'lazy') {

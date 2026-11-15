@@ -1,5 +1,16 @@
 [
  {
+  "v": 138,
+  "name": "1.23.0-beta.40",
+  "date": "2026-11-15",
+  "beta": true,
+  "items": [
+   "Ren'Py games: saves from the same game on another device, with Ren'Py Sync. In the game there (a phone, say), open Save or Load and press “Upload Sync”; it shows a code. Here, in the game's Saves (the list button), open “Saves from another device” and type the code. The saves come into the game and the app's Saves list.",
+   "“Send these saves to another device” does the opposite: the game shows a code to type in the other device's “Download Sync”.",
+   "The game still cannot reach the internet: only Ren'Py's sync server, and only through the app. Ren'Py Sync needs games made with Ren'Py 8.1 or newer."
+  ]
+ },
+ {
   "v": 137,
   "name": "1.23.0-beta.39",
   "date": "2026-11-15",
