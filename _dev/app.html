@@ -547,6 +547,42 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gameexit[hidden]{display:none}
 #gamebox .gameerr{left:auto;right:48px;color:#ffb648;opacity:.9}
 #gamebox .gameedit{left:auto;right:8px}
+#gamebox .gameflow{left:auto;right:88px}
+#modder{position:fixed;inset:0;z-index:150;background:var(--bg);color:var(--ink);display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+body:has(#modder) #toast{z-index:170;top:calc(64px + env(safe-area-inset-top,0px));bottom:auto}
+#modder .mtop{display:flex;gap:8px;align-items:center;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--surface)}
+#modder .mtitle{flex:1;min-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#modder #mod-find{height:36px;width:200px;flex:0 1 200px}
+#modder .btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+@media(max-width:640px){#modder .mtitle{display:none}#modder #mod-find{flex:1 1 120px;width:auto}#modder .mtop{gap:6px;padding-left:8px;padding-right:8px}#modpanel{max-height:40vh}}
+#modview{position:relative;overflow:hidden;touch-action:none;cursor:grab;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:24px 24px;min-height:0}
+#modcanvas{position:absolute;left:0;top:0;transform-origin:0 0}
+#modedges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#modedges path{fill:none;stroke:var(--muted);stroke-width:1.6;opacity:.55}
+#modedges path.e-call{stroke-dasharray:6 4}
+#modedges path.e-fall{stroke-dasharray:2 4}
+#modedges path.hot{stroke:var(--accent);stroke-width:2.4;opacity:1}
+.mscene{position:absolute;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;font-size:12.5px;box-shadow:var(--shadow)}
+.mscene.sel{border-color:var(--accent)}
+.mscene.new{border-style:dashed}
+.mscene .mh{height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;background:var(--surface2);cursor:pointer}
+.mscene .mh b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mscene .mh small{color:var(--muted);flex:none}
+.mrow{height:26px;display:flex;align-items:center;gap:6px;padding-right:8px;white-space:nowrap;cursor:pointer}
+.mrow .txt{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mrow .tag{font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--muted);flex:none;min-width:22px}
+.mrow:hover{background:var(--tone)}
+.mrow.sel{background:var(--accent-soft)}
+.mrow.edited{box-shadow:inset 3px 0 var(--accent)}
+.mrow.k-jump,.mrow.k-call{color:var(--accent);font-weight:600}
+.mrow.k-choice{font-weight:600}
+.mrow.k-stage,.mrow.k-python,.mrow.k-branch{color:var(--muted)}
+.mrow.off{text-decoration:line-through;opacity:.55}
+.mrow.more{color:var(--muted);font-style:italic;padding-left:10px}
+#modpanel{max-height:46vh;overflow:auto;background:var(--surface);border-top:1px solid var(--line);padding:12px 14px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+#modmodal{position:absolute;inset:0;z-index:5;background:rgba(5,6,8,.55);display:grid;place-items:center;padding:16px}
+#modmodal .box{background:var(--surface);border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:88vh;overflow:auto}
+#modder .mload{position:absolute;inset:0;z-index:6;background:color-mix(in srgb,var(--bg) 75%,transparent);display:grid;place-items:center;font-weight:700}
 .layerrow.off{opacity:.55}
 #gamebox .gameerr::after{content:attr(data-n);position:absolute;top:2px;right:2px;font-size:10px;font-weight:700;background:#c0392b;color:#fff;border-radius:8px;padding:0 4px;line-height:14px}
 .pcell.game .gamebadge{position:absolute;left:6px;top:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center}
@@ -747,7 +783,8 @@ const ICONS = {
   pick: '<path d="M14.5 5.5l4 4M3 21l1.5-4.5L14 7l3 3-9.5 9.5z"/><path d="M13 4l2-2 7 7-2 2"/>',
   split: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1L20 20M8.1 15.9L20 4"/>',
   hand: '<path d="M8 13V5.5a1.5 1.5 0 013 0V11M11 10.5v-6a1.5 1.5 0 013 0V11M14 6.5a1.5 1.5 0 013 0V12M17 9.5a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-1.5a6 6 0 01-4.6-2.2L4.4 15a1.5 1.5 0 012.3-1.9L8 14.5"/>',
-  merge: '<path d="M6 3v4c0 4 6 5 6 9v5M18 3v4c0 4-6 5-6 9"/><path d="M9 18l3 3 3-3"/>'
+  merge: '<path d="M6 3v4c0 4 6 5 6 9v5M18 3v4c0 4-6 5-6 9"/><path d="M9 18l3 3 3-3"/>',
+  flow: '<rect x="3" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="15" width="8" height="6" rx="1.5"/><path d="M7 9v3a3 3 0 003 3h3"/>'
 };
 const icon = (n, label) => h('span', { class: 'ic', 'aria-hidden': 'true', html: `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>` });
 const MODE_LABEL = { single: 'One page', double: 'Two pages', vertical: 'Vertical', horizontal: 'Horizontal' };
@@ -4363,6 +4400,557 @@ async function fastReload(gid, files) {
   }
   return false;
 }
+/* ===== Modding mode: the story of a Ren'Py game as a flowchart that can be changed =====
+   The game itself tells the story's structure (its compiled script: scenes = labels, lines, choices, jumps and calls). An edit
+   is a small patch ({op, key, ...}) kept in the game's "Story edits" mod: the mod's file holds the patches, the scenes and
+   choices they need (plain Ren'Py), and a few lines of Python that put the patches to work when the game starts. The game's own
+   files are never changed: switch the mod off on the game's page to play the game as it was. */
+const FLOW_FILE = 'game/zzzz_tankobon_flow.rpy';
+const FLOW_PY = String.raw`def _tkbflow(mode, P=None):
+    import re
+    S = renpy.game.script
+    taken = {}
+    km = {}
+    kid = {}
+    def kind(n):
+        names = [c.__name__ for c in type(n).__mro__]
+        if "Say" in names: return "say"
+        if "Menu" in names: return "menu"
+        if "Jump" in names: return "jump"
+        if "Call" in names: return "call"
+        if "Return" in names: return "return"
+        if "If" in names: return "if"
+        if "While" in names: return "while"
+        if "Label" in names:
+            if str(n.name).startswith("_tkbflow_g"): return None
+            return "label"
+        if "Python" in names: return "python"
+        if "Scene" in names or "Show" in names or "Hide" in names or "With" in names or "UserStatement" in names: return "stage"
+        return None
+    def fname(n):
+        return str(n.filename).replace(chr(92), "/")
+    def mine(n):
+        f = fname(n)
+        if f.startswith("renpy/") or "renpy/common/" in f: return False
+        if "zzzz_tankobon_" in f and "zzzz_tankobon_flow" not in f: return False
+        return True
+    def relfile(n):
+        f = fname(n)
+        i = f.rfind("game/")
+        if i >= 0: return f[i + 5:]
+        return f.lstrip("/")
+    def index():
+        taken.clear(); km.clear(); kid.clear()
+        for n in list(S.namemap.values()):
+            try:
+                k = kind(n)
+                if k is None or not mine(n): continue
+                base = "%s:%d:%s" % (relfile(n), n.linenumber, k)
+                c = taken.get(base, 0)
+                taken[base] = c + 1
+                key = base if c == 0 else "%s#%d" % (base, c)
+                km[key] = n
+                kid[id(n)] = key
+            except Exception:
+                pass
+    def stage(n):
+        try:
+            names = [c.__name__ for c in type(n).__mro__]
+            if "UserStatement" in names: return str(n.line)
+            if "With" in names: return "with " + str(n.expr)
+            im = getattr(n, "imspec", None)
+            nm = " ".join(im[0]) if im else ""
+            if "Scene" in names: return ("scene " + nm).strip()
+            if "Show" in names: return "show " + nm
+            if "Hide" in names: return "hide " + (" ".join(n.imspec[0]) if n.imspec else "")
+        except Exception:
+            pass
+        return type(n).__name__.lower()
+    def build():
+        index()
+        scenes = []
+        labs = []
+        seen = set()
+        for n in list(S.namemap.values()):
+            if id(n) in seen: continue
+            seen.add(id(n))
+            if kind(n) == "label" and mine(n) and not str(n.name).startswith("_"):
+                labs.append((str(n.name), n))
+        labs.sort(key=lambda kn: (relfile(kn[1]), kn[1].linenumber))
+        for name, lab in labs:
+            sc = {"n": str(name), "f": relfile(lab), "l": lab.linenumber, "r": [], "fall": None, "new": "zzzz_tankobon_flow" in fname(lab)}
+            rows = sc["r"]
+            visited = set()
+            def add(n, k, d):
+                r = {"k": k, "key": kid.get(id(n), ""), "d": d, "l": n.linenumber}
+                if k == "say":
+                    r["t"] = n.what
+                    r["w"] = n.who
+                elif k == "jump" or k == "call":
+                    ex = bool(getattr(n, "expression", False))
+                    tg = n.target if k == "jump" else n.label
+                    r["g"] = None if ex else tg
+                    r["t"] = str(tg) if ex else ""
+                elif k == "return":
+                    r["t"] = str(n.expression) if getattr(n, "expression", None) else ""
+                elif k == "python":
+                    try:
+                        r["t"] = str(n.code.source).strip().split("\n")[0][:120]
+                    except Exception:
+                        r["t"] = ""
+                elif k == "stage":
+                    r["t"] = stage(n)
+                elif k == "if":
+                    r["t"] = ""
+                rows.append(r)
+                return r
+            def walk(n, d, stop):
+                steps = 0
+                while n is not None and steps < 200000:
+                    steps += 1
+                    if n is stop or id(n) in visited: return
+                    k = kind(n)
+                    if k == "label":
+                        sc["fall"] = str(n.name)
+                        return
+                    visited.add(id(n))
+                    if k is None:
+                        n = getattr(n, "next", None)
+                        continue
+                    add(n, k, d)
+                    if k == "menu":
+                        join = n.next
+                        mkey = kid.get(id(n), "")
+                        for i, it in enumerate(n.items):
+                            rows.append({"k": "choice", "key": "%s|c%d" % (mkey, i), "d": d + 1, "l": n.linenumber, "t": it[0], "c": it[1], "h": str(it[1]) == "False"})
+                            blk = it[2]
+                            if blk: walk(blk[0], d + 2, join)
+                        n = join
+                        continue
+                    if k == "if":
+                        join = n.next
+                        mkey = kid.get(id(n), "")
+                        for i, ent in enumerate(n.entries):
+                            rows.append({"k": "branch", "key": "%s|b%d" % (mkey, i), "d": d + 1, "l": n.linenumber, "t": str(ent[0])})
+                            blk = ent[1]
+                            if blk: walk(blk[0], d + 2, join)
+                        n = join
+                        continue
+                    if k == "while":
+                        rows[-1]["t"] = str(n.condition)
+                        blk = n.block
+                        if blk: walk(blk[0], d + 1, n)
+                        n = n.next
+                        continue
+                    if k == "jump" or k == "return": return
+                    n = getattr(n, "next", None)
+            walk(lab.next, 0, None)
+            scenes.append(sc)
+        chars = []
+        try:
+            for nm, v in list(renpy.store.__dict__.items()):
+                if nm.startswith("_"): continue
+                if isinstance(v, renpy.character.ADVCharacter):
+                    try:
+                        label = "%s" % (v.name,) if v.name else nm
+                    except Exception:
+                        label = nm
+                    chars.append([nm, label])
+        except Exception:
+            pass
+        chars.sort()
+        return {"scenes": scenes, "chars": chars, "labels": [s["n"] for s in scenes]}
+    def apply(P):
+        index()
+        bad = []
+        for p in P:
+            try:
+                op = p.get("op")
+                if op == "say":
+                    n = km[p["key"]]
+                    n.what = p["text"]
+                    if "who" in p:
+                        w = p["who"] or None
+                        n.who = w
+                        n.who_fast = bool(w and re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", w))
+                elif op == "go":
+                    n = km[p["key"]]
+                    if hasattr(n, "target"): n.target = p["to"]
+                    else: n.label = p["to"]
+                    n.expression = False
+                elif op == "addchoice":
+                    m = km[p["key"]]
+                    ids = getattr(m, "_tkbf_ids", [])
+                    if p["id"] in ids: continue
+                    m.items = list(m.items) + [(p["text"], p.get("cond") or "True", [S.namemap[p["lab"]]])]
+                    ia = getattr(m, "item_arguments", None)
+                    if ia is not None: m.item_arguments = list(ia) + [None]
+                    m._tkbf_ids = ids + [p["id"]]
+                elif op == "choice":
+                    mk, i = p["key"].split("|c")
+                    m = km[mk]
+                    i = int(i)
+                    it = list(m.items[i])
+                    if "text" in p: it[0] = p["text"]
+                    if "hide" in p: it[1] = "False" if p["hide"] else (p.get("cond0") or "True")
+                    if p.get("lab"): it[2] = [S.namemap[p["lab"]]]
+                    m.items = list(m.items[:i]) + [tuple(it)] + list(m.items[i + 1:])
+            except Exception as e:
+                bad.append("%s: %s" % (p.get("key") or p.get("name"), e))
+        return bad
+    if mode == "graph": return build()
+    return apply(P or [])`;
+async function flowModOf(gid) { const g = await S.gal(gid); return { g, mod: (g.game.mods || []).find(m => m.flow) }; }
+async function flowText(gid) {
+  const { mod } = await flowModOf(gid); if (!mod) return '';
+  const list = (await rpyGetJSON(mod.list)) || [], f = list.find(x => x.p === FLOW_FILE);
+  return f ? new TextDecoder().decode(await rpyRead(f.c, f.s)) : '';
+}
+async function flowPatches(gid) {
+  const m = (await flowText(gid)).match(/^# tkbflow-data: (.*)$/m);
+  try { const v = m ? JSON.parse(m[1]) : []; return Array.isArray(v) ? v : []; } catch (e) { return []; }
+}
+const rpyStr = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, '\\n') + '"';
+/* the mod's file: the data (to read the edits again), the scenes and stand-in labels they need, and the Python that applies them */
+function flowRpy(P) {
+  const out = ['# Story edits made with the flowchart in Tankobon. Switch this mod off on the game\'s page to play the game as it was.', '# tkbflow-data: ' + JSON.stringify(P), ''];
+  for (const p of P) {
+    if ((p.op === 'addchoice' || p.op === 'choice') && p.lab) out.push(`label ${p.lab}:`, `    jump ${p.to}`, '');
+    if (p.op === 'scene') {
+      out.push(`label ${p.name}:`);
+      for (const l of p.lines) out.push('    ' + (l.who ? l.who + ' ' : '') + rpyStr(l.text));
+      if (!p.lines.length) out.push('    pass');
+      out.push(p.to ? `    jump ${p.to}` : '    return', '');
+    }
+  }
+  out.push('init 1999 python:');
+  for (const l of FLOW_PY.split('\n')) out.push(l ? '    ' + l : '');
+  out.push(`    _tkbflow("apply", ${pyLit(P.filter(p => p.op !== 'scene'))})`, '');
+  return out.join('\n');
+}
+async function flowSave(gid, P) {
+  const text = flowRpy(P), { g, mod: m0 } = await flowModOf(gid); let mod = m0;
+  const list = mod ? ((await rpyGetJSON(mod.list)) || []) : [];
+  const i = list.findIndex(f => f.p === FLOW_FILE);
+  if (i >= 0) { await ST.delMany('images', list[i].c).catch(() => { }); list.splice(i, 1); }
+  const buf = Crypt.te.encode(text).buffer, id = await rpyPut(buf); list.push({ p: FLOW_FILE, s: buf.byteLength, c: [id], t: Date.now() });
+  if (!mod) { mod = { id: uid(), name: 'Story edits', flow: true, on: true, list: await rpyPutJSON(list), files: 0, size: 0, addedAt: Date.now() }; g.game.mods = [...(g.game.mods || []), mod]; }
+  else await rpyPutJSON(list, mod.list);
+  mod.files = list.length; mod.size = list.reduce((n, f) => n + f.s, 0); mod.on = true;
+  await saveGallery(g); return text;
+}
+const flowStructural = p => !!p.lab || p.op === 'addchoice' || p.op === 'scene' || (p.op === 'go' && p.was && p.was.g == null);
+/* the patch that puts a simple edit back as it was (no restart of the story needed) */
+function flowInverse(p) {
+  if (p.op === 'say') return { op: 'say', key: p.key, text: p.was.t, who: p.was.w || '' };
+  if (p.op === 'go') return { op: 'go', key: p.key, to: p.was.g };
+  if (p.op === 'choice') return { op: 'choice', key: p.key, text: p.was.t, hide: !!p.was.h, cond0: p.was.c };
+  return null;
+}
+const FLOW = { SW: 270, GX: 90, GY: 22, HH: 34, RH: 26, LIM: 8 };
+async function openModder(gid) {
+  if (!GAME.loaded || $('#modder')) return;
+  try { document.activeElement && document.activeElement.blur(); } catch (e) { }
+  const root = h('div', { id: 'modder', role: 'dialog', 'aria-label': 'Modding mode' }, h('div', { class: 'mload' }, 'Reading the story…'));
+  document.body.append(root);
+  const read = () => gamePy(FLOW_PY + '\nresult = _tkbflow("graph")', 120000);
+  let D = await read();
+  if (!D || !D.scenes || !D.scenes.length) { root.remove(); return toast(D ? 'No story scenes were found in this game.' : 'The story could not be read from this game.', 4000); }
+  const g0 = await S.gal(gid);
+  let P = await flowPatches(gid), nid = P.reduce((m, p) => Math.max(m, p.id || 0), 0);
+  const st = { sel: null, open: new Set(), stage: false, k: 1, x: 24, y: 24 };
+  const { SW, GX, GY, HH, RH, LIM } = FLOW;
+  let lay = null, suppress = false;
+  const labelSet = () => new Set([...D.labels, ...P.filter(p => p.op === 'scene').map(p => p.name)]);
+  const charName = v => { const c = D.chars.find(x => x[0] === v); return c ? c[1] : v; };
+  const trunc = (t, n = 48) => { t = String(t == null ? '' : t).replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  const rowByKey = key => { for (const s of D.scenes) for (const r of s.r) if (r.key === key) return r; return null; };
+  const patchFor = (op, key) => P.find(p => p.op === op && p.key === key);
+  const busy = msg => { let b = root.querySelector('.mload'); if (!msg) { b && b.remove(); return; } if (!b) { b = h('div', { class: 'mload' }); root.append(b); } b.textContent = msg; };
+
+  /* ---- the picture ---- */
+  const vrows = s => st.stage ? s.r : s.r.filter(r => r.k !== 'stage');
+  const layout = () => {
+    const sc = D.scenes, by = new Map(sc.map(s => [s.n, s])), pos = new Map();
+    const out = new Map(sc.map(s => { const t = new Set(); for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g && by.has(r.g) && r.g !== s.n) t.add(r.g); if (s.fall && by.has(s.fall) && s.fall !== s.n) t.add(s.fall); return [s.n, [...t]]; }));
+    const layer = new Map(), par = new Map();
+    const bfs = r0 => { if (layer.has(r0)) return; layer.set(r0, 0); const q = [r0]; for (let i = 0; i < q.length; i++) { const a = q[i]; for (const b of out.get(a)) { (par.get(b) || par.set(b, []).get(b)).push(a); if (!layer.has(b)) { layer.set(b, layer.get(a) + 1); q.push(b); } } } };
+    if (by.has('start')) bfs('start');
+    for (const s of sc) bfs(s.n);
+    const cols = []; for (const s of sc) { const L = layer.get(s.n); (cols[L] = cols[L] || []).push(s); }
+    let W = 0, H = 0;
+    cols.forEach((col, L) => {
+      if (!col) return;
+      if (L > 0) { const key = new Map(col.map(s => { const ps = (par.get(s.n) || []).map(n => pos.get(n)).filter(Boolean); return [s, ps.length ? ps.reduce((a, p) => a + p.y, 0) / ps.length : 1e12]; })); col.sort((a, b) => key.get(a) - key.get(b)); }
+      let y = 0;
+      for (const s of col) {
+        const all = vrows(s), open = st.open.has(s.n), shown = open ? all : all.slice(0, LIM), more = all.length - shown.length, extra = more > 0 || (open && all.length > LIM) ? 1 : 0;
+        const hh = HH + (shown.length + extra) * RH + 4;
+        pos.set(s.n, { x: L * (SW + GX), y, h: hh, rows: shown, more, extra, idx: new Map(shown.map((r, i) => [r, i])) });
+        y += hh + GY;
+      }
+      W = Math.max(W, (L + 1) * (SW + GX)); H = Math.max(H, y);
+    });
+    return { pos, W, H };
+  };
+  const TAGS = { choice: '›', branch: 'if', jump: 'jump', call: 'call', return: 'end', python: '$', stage: '·', menu: 'menu', if: '', while: 'while' };
+  const rowEl = (s, r, edited) => {
+    const pad = 8 + Math.min(r.d, 6) * 10;
+    let body;
+    if (r.k === 'say') body = [r.w ? h('b', {}, charName(r.w) + ': ') : null, r.t];
+    else if (r.k === 'jump' || r.k === 'call') body = r.g ? r.g : '(computed) ' + r.t;
+    else if (r.k === 'choice') body = r.t;
+    else if (r.k === 'branch') body = r.t === 'True' ? 'else' : r.t;
+    else if (r.k === 'if') body = 'branch';
+    else body = r.t || '';
+    const full = r.k === 'say' ? (r.w ? charName(r.w) + ': ' : '') + r.t : r.k === 'jump' || r.k === 'call' ? r.k + ' ' + (r.g || r.t) : r.t;
+    return h('div', { class: `mrow k-${r.k}${r.h ? ' off' : ''}${edited.has(r.key) ? ' edited' : ''}${st.sel && st.sel.key === r.key && st.sel.s === s.n ? ' sel' : ''}`, 'data-key': r.key, style: `padding-left:${pad}px`, title: trunc(full, 300),
+      onclick: () => { if (suppress) return; st.sel = { s: s.n, key: r.key }; select(); } }, TAGS[r.k] ? h('span', { class: 'tag' }, TAGS[r.k]) : null, h('span', { class: 'txt' }, body));
+  };
+  const sceneEl = (s, q, edited) => {
+    const nl = s.r.filter(r => r.k === 'say').length;
+    const head = h('div', { class: 'mh', onclick: () => { if (suppress) return; st.sel = { s: s.n, key: null }; select(); } }, h('b', {}, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}`));
+    const open = st.open.has(s.n);
+    const tail = q.more ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; st.open.add(s.n); draw(); } }, `+ ${q.more} more…`)
+      : open && q.extra ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; st.open.delete(s.n); draw(); } }, 'Show fewer') : null;
+    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px` }, head, q.rows.map(r => rowEl(s, r, edited)), tail);
+  };
+  const NS = 'http://www.w3.org/2000/svg';
+  const edges = document.createElementNS(NS, 'svg'); edges.id = 'modedges';
+  const canvas = h('div', { id: 'modcanvas' }, edges);
+  const view = h('div', { id: 'modview' }, canvas);
+  const drawEdges = () => {
+    edges.replaceChildren();
+    edges.setAttribute('width', lay.W); edges.setAttribute('height', lay.H);
+    const defs = document.createElementNS(NS, 'defs'); defs.innerHTML = '<marker id="modarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="context-stroke" stroke="context-stroke"/></marker>'; edges.append(defs);
+    for (const s of D.scenes) {
+      const a = lay.pos.get(s.n); if (!a) continue;
+      const list = []; for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g) list.push([r.g, r.k, r]); if (s.fall) list.push([s.fall, 'fall', null]);
+      for (const [tg, kd, r] of list) {
+        const b = lay.pos.get(tg); if (!b || tg === s.n) continue;
+        const sx = a.x + SW, sy = r ? a.y + HH + (a.idx.has(r) ? a.idx.get(r) : a.rows.length) * RH + RH / 2 : a.y + a.h - 8, tx = b.x, ty = b.y + HH / 2;
+        const p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', `M${sx} ${sy} C${sx + 60} ${sy} ${tx - 60} ${ty} ${tx} ${ty}`);
+        p.setAttribute('class', 'e-' + kd + (st.sel && (st.sel.s === s.n || st.sel.s === tg) ? ' hot' : ''));
+        p.setAttribute('marker-end', 'url(#modarrow)'); edges.append(p);
+      }
+    }
+  };
+  const dl = h('datalist', { id: 'modlabels' });
+  const draw = () => {
+    lay = layout();
+    [...canvas.children].forEach(c => { if (c !== edges) c.remove(); });
+    dl.replaceChildren(...[...labelSet()].map(n => h('option', { value: n })));
+    const edited = new Set(P.map(p => p.key));
+    for (const s of D.scenes) canvas.append(sceneEl(s, lay.pos.get(s.n), edited));
+    drawEdges(); drawPanel(); drawBar();
+  };
+  const select = () => {
+    $$('.mscene.sel, .mrow.sel', canvas).forEach(e => e.classList.remove('sel'));
+    if (st.sel) { const se = [...canvas.querySelectorAll('.mscene')].find(e => e.dataset.scene === st.sel.s); if (se) { se.classList.add('sel'); if (st.sel.key) { const re = [...se.querySelectorAll('.mrow')].find(e => e.dataset.key === st.sel.key); re && re.classList.add('sel'); } } }
+    drawEdges(); drawPanel();
+  };
+  const applyView = () => { canvas.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.k})`; };
+  const zoomAt = (f, cx, cy) => { const k = Math.min(2.5, Math.max(0.08, st.k * f)), r = k / st.k; st.x = cx - (cx - st.x) * r; st.y = cy - (cy - st.y) * r; st.k = k; applyView(); };
+  const fit = () => { const b = view.getBoundingClientRect(); st.k = Math.max(0.08, Math.min(1, (b.width - 40) / lay.W, (b.height - 40) / lay.H)); st.x = 20; st.y = 20; applyView(); };
+  const focusOn = name => { const q = lay.pos.get(name); if (!q) return; const b = view.getBoundingClientRect(); st.k = Math.max(st.k, 0.8); st.x = b.width / 2 - (q.x + SW / 2) * st.k; st.y = Math.max(10, b.height / 3 - (q.y + 20) * st.k); applyView(); };
+  // move around: drag, wheel, pinch
+  const pts = new Map(); let drag = null, pinch = null;
+  view.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]); suppress = false;
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1 }; drag = null; }
+    else drag = { x: e.clientX, y: e.clientY, ox: st.x, oy: st.y };
+  });
+  const onMove = e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, r = view.getBoundingClientRect(); zoomAt(d / pinch.d, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top); pinch.d = d; suppress = true; }
+    else if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (suppress || Math.hypot(dx, dy) > 5) { suppress = true; st.x = drag.ox + dx; st.y = drag.oy + dy; applyView(); } }
+  };
+  const onUp = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { drag = null; setTimeout(() => { suppress = false; }, 0); } };
+  window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp);
+  view.addEventListener('wheel', e => { e.preventDefault(); const r = view.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+
+  /* ---- changes: kept in the mod, put to work in the running game ---- */
+  const localApply = p => {
+    const r = rowByKey(p.key); if (!r) return;
+    if (p.op === 'say') { r.t = p.text; if ('who' in p) r.w = p.who || null; }
+    else if (p.op === 'go') r.g = p.to;
+    else if (p.op === 'choice') { if ('text' in p) r.t = p.text; if ('hide' in p) { r.h = !!p.hide; r.c = p.hide ? 'False' : (p.cond0 || 'True'); } }
+  };
+  /* structural: the game's script is read again (new scenes and stand-in labels); live: the patches go straight into the running story */
+  const commit = async (structural, live = []) => {
+    busy('Saving…');
+    try {
+      const text = await flowSave(gid, P);
+      if (structural) {
+        busy('Applying to the game…');
+        const ok = await fastReload(gid, [{ p: FLOW_FILE, text }]);
+        if (!ok) toast('Saved in the “Story edits” mod. It shows from the next start of the game.', 5000);
+        const d = await read(); if (d && d.scenes) D = d;
+      } else {
+        const bad = await gamePy(FLOW_PY + `\nresult = _tkbflow("apply", ${pyLit(live)})`, 20000);
+        if (bad === null) toast('Saved in the “Story edits” mod. It shows from the next start of the game.', 4000);
+        else if (bad.length) toast('Some of it could not be applied: ' + bad[0], 5000);
+        live.forEach(localApply);
+      }
+    } catch (e) { toast('That change could not be saved: ' + (e.message || e), 5000); }
+    busy(null); draw();
+  };
+  const upsert = p => {
+    const i = p.op === 'addchoice' || p.op === 'scene' ? -1 : P.findIndex(x => x.op === p.op && x.key === p.key);
+    if (i >= 0) { p.id = P[i].id; P[i] = p; } else { p.id = ++nid; P.push(p); }
+    return p;
+  };
+  const takeBack = async p => {
+    const inv = flowInverse(p), structural = flowStructural(p) || !inv;
+    P = P.filter(x => x !== p && !(p.op === 'scene' && x.to === p.name));
+    await commit(structural, structural ? [] : [inv]);
+  };
+  const sayEdit = (r, text, who) => { const old = patchFor('say', r.key); const q = upsert({ op: 'say', key: r.key, text, who: who || '', was: old ? old.was : { t: r.t, w: r.w } }); return commit(false, [q]); };
+  const goEdit = (r, to) => {
+    if (!labelSet().has(to)) return toast(`There is no scene called “${to}”.`, 3500);
+    const old = patchFor('go', r.key); const q = upsert({ op: 'go', key: r.key, to, was: old ? old.was : { g: r.g } }); return commit(false, [q]);
+  };
+  const choiceEdit = async (r, fields) => {
+    const old = patchFor('choice', r.key), base = old ? { ...old } : { op: 'choice', key: r.key, was: { t: r.t, h: r.h, c: r.c } };
+    Object.assign(base, fields); if ('hide' in fields) base.cond0 = base.was.c;
+    const q = upsert(base); if (q.to) q.lab = '_tkbflow_g' + q.id;
+    return commit(flowStructural(q), [q]);
+  };
+  /* the jump that ends a choice's lines (rewire that), if it has one */
+  const choiceJump = (s, c) => { let last = null; for (let i = s.r.indexOf(c) + 1; i < s.r.length && s.r[i].d > c.d; i++) if (s.r[i].d === c.d + 1) last = s.r[i]; return last && last.k === 'jump' && last.g ? last : null; };
+  const nameOk = n => /^[A-Za-z_][A-Za-z0-9_]*$/.test(n) && !n.startsWith('_') && !labelSet().has(n);
+
+  /* ---- dialogs ---- */
+  const modal = (title, ...kids) => {
+    $('#modmodal') && $('#modmodal').remove();
+    const m = h('div', { id: 'modmodal', onclick: e => { if (e.target === m) m.remove(); } }, h('div', { class: 'box stack' }, h('div', { class: 'row', style: 'justify-content:space-between;flex-wrap:nowrap' }, h('b', {}, title), h('button', { class: 'btn small ghost', 'aria-label': 'Close', onclick: () => m.remove() }, icon('x'))), ...kids));
+    root.append(m); return m;
+  };
+  const labelInput = (v, ph) => h('input', { class: 'text', list: 'modlabels', autocomplete: 'off', spellcheck: 'false', placeholder: ph || 'Scene name', value: v || '', 'aria-label': ph || 'Scene name' });
+  const whoSelect = v => { const sel = h('select', { class: 'text', 'aria-label': 'Who speaks' }, h('option', { value: '' }, 'Narrator (no name)'), D.chars.map(c => h('option', { value: c[0] }, `${c[1]} (${c[0]})`))); if (v && !D.chars.some(c => c[0] === v)) sel.append(h('option', { value: v }, v)); sel.value = v || ''; return sel; };
+  const area = (v, ph) => h('textarea', { class: 'text', rows: '3', style: 'height:auto;padding:10px;resize:vertical', spellcheck: 'true', placeholder: ph || '', value: v || '' });
+  const newScene = (name0, back, done) => {
+    const name = h('input', { class: 'text', id: 'ns-name', autocomplete: 'off', spellcheck: 'false', placeholder: 'Name (letters, numbers, _)', value: name0 || '', 'aria-label': 'Scene name' });
+    const lines = h('div', { class: 'stack' }), to = labelInput(back || '', 'Then go on to… (empty: the story ends)');
+    const addLine = (who, text) => { const w = whoSelect(who), t = area(text, 'What is said'); const row = h('div', { class: 'stack mline', style: 'gap:6px' }, w, t, h('button', { class: 'btn small ghost', style: 'justify-self:start', onclick: () => row.remove() }, icon('trash'), 'Remove this line')); row._get = () => ({ who: w.value, text: t.value }); lines.append(row); };
+    addLine('', 'New scene.');
+    const save = h('button', { class: 'btn primary', id: 'ns-save', onclick: () => {
+      const n = name.value.trim(); if (!nameOk(n)) return toast(labelSet().has(n) ? `There is already a scene called “${n}”.` : 'Use letters, numbers and _ for the name (it cannot start with _).', 4000);
+      const tg = to.value.trim(); if (tg && !labelSet().has(tg)) return toast(`There is no scene called “${tg}” to go on to.`, 3500);
+      const ls = [...lines.children].map(x => x._get()).filter(l => l.text.trim()); const p = { op: 'scene', name: n, lines: ls, to: tg };
+      p.id = ++nid; P.push(p); $('#modmodal') && $('#modmodal').remove(); if (done) done(p); else commit(true).then(() => { st.sel = { s: n, key: null }; draw(); focusOn(n); select(); });
+    } }, 'Make the scene');
+    modal('New scene', h('p', { class: 'hint', style: 'margin:0' }, 'A scene is a part of the story with its own lines. Add choices or jumps that lead to it afterwards.'), name, lines,
+      h('button', { class: 'btn small', onclick: () => addLine('', '') }, icon('plus'), 'Add a line'), h('label', { class: 'hint' }, 'When it ends'), to, save);
+  };
+  const addChoice = (s, mr) => {
+    const text = h('input', { class: 'text', id: 'ac-text', autocomplete: 'off', placeholder: 'What the player reads', 'aria-label': 'Choice text' });
+    const to = labelInput('', 'Where it leads (a scene name)'), note = h('p', { class: 'hint', style: 'margin:0' });
+    to.addEventListener('input', () => { const v = to.value.trim(); note.textContent = !v || labelSet().has(v) ? '' : nameOk(v) ? `“${v}” does not exist yet: a new scene with that name is made, and it comes back to “${s.n}” when it ends.` : 'A scene name uses letters, numbers and _ only.'; });
+    const save = h('button', { class: 'btn primary', id: 'ac-save', onclick: async () => {
+      const t = text.value.trim(), v = to.value.trim(); if (!t) return toast('Write what the choice says.', 3000); if (!v) return toast('Choose where it leads.', 3000);
+      const make = !labelSet().has(v); if (make && !nameOk(v)) return toast('Use letters, numbers and _ for a new scene\'s name.', 3500);
+      if (make) P.push({ op: 'scene', id: ++nid, name: v, lines: [{ who: '', text: 'New scene.' }], to: s.n });
+      const p = { op: 'addchoice', key: mr.key, text: t, to: v, cond: '' }; p.id = ++nid; p.lab = '_tkbflow_g' + p.id; P.push(p);
+      $('#modmodal') && $('#modmodal').remove(); await commit(true); st.sel = { s: s.n, key: mr.key }; draw(); select();
+    } }, 'Add the choice');
+    modal('Add a choice', text, to, note, save);
+  };
+  const editsList = () => {
+    const rows = P.map(p => {
+      const r = p.key ? rowByKey(p.key) : null;
+      const d = p.op === 'say' ? `Dialogue changed: “${trunc(p.text, 40)}”` : p.op === 'go' ? `Arrow changed: ${p.was && p.was.g ? p.was.g : '?'} → ${p.to}`
+        : p.op === 'choice' ? `Choice “${trunc(r ? r.t : p.text || '', 30)}”${p.hide ? ' hidden' : ''}${p.text != null && p.was && p.text !== p.was.t ? ` renamed “${trunc(p.text, 30)}”` : ''}${p.to ? ' → ' + p.to : ''}`
+        : p.op === 'addchoice' ? `Choice added: “${trunc(p.text, 30)}” → ${p.to}` : `New scene: ${p.name}`;
+      return h('div', { class: 'row', style: 'flex-wrap:nowrap;justify-content:space-between;gap:8px' }, h('span', { style: 'min-width:0' }, d), h('button', { class: 'btn small ghost', onclick: async () => { $('#modmodal') && $('#modmodal').remove(); await takeBack(p); } }, icon('undo'), 'Take back'));
+    });
+    modal(`Your changes (${P.length})`, P.length ? h('div', { class: 'stack', id: 'mod-edits' }, rows) : h('p', { class: 'hint' }, 'No changes yet.'),
+      P.length ? h('button', { class: 'btn danger', onclick: async () => { if (!confirm('Take back every change?')) return; P = []; $('#modmodal') && $('#modmodal').remove(); await commit(true); } }, icon('trash'), 'Take back all') : null,
+      h('p', { class: 'hint', style: 'margin:0' }, 'All of this is in the “Story edits” mod on the game\'s page. Switch it off there to play the game as it was.'));
+  };
+
+  /* ---- the panel under the picture ---- */
+  const scenesLeadingTo = n => D.scenes.filter(s => s.n !== n && (s.fall === n || s.r.some(r => (r.k === 'jump' || r.k === 'call') && r.g === n))).map(s => s.n);
+  const undoBtn = p => p ? h('button', { class: 'btn small ghost', onclick: () => takeBack(p) }, icon('undo'), 'Take back') : null;
+  const gotoBtn = n => h('button', { class: 'btn small', onclick: () => { st.sel = { s: n, key: null }; draw(); focusOn(n); select(); } }, icon('move'), `Show ${n}`);
+  function drawPanel() {
+    panel.replaceChildren();
+    const sel = st.sel;
+    if (!sel) return panel.append(h('p', { class: 'hint' }, 'Tap a scene or a line to see it here and change it. Drag to move around; pinch or scroll to zoom. Arrows show where the story goes next. Everything you change is kept in the “Story edits” mod.'));
+    const s = D.scenes.find(x => x.n === sel.s); if (!s) return;
+    const r = sel.key ? s.r.find(x => x.key === sel.key) : null;
+    if (!r) {
+      const from = scenesLeadingTo(s.n), nl = s.r.filter(x => x.k === 'say').length;
+      return panel.append(h('div', { class: 'stack' }, h('b', {}, `Scene “${s.n}”`), h('p', { class: 'hint' }, `${nl} line${nl === 1 ? '' : 's'}, in ${s.f}${s.new ? ' (made here)' : ''}. ${from.length ? 'Reached from: ' + from.slice(0, 6).join(', ') + (from.length > 6 ? '…' : '') + '.' : 'Nothing leads here yet.'}`),
+        h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => newScene('', s.n) }, icon('plus'), 'New scene…'), st.open.has(s.n) || s.r.length <= LIM ? null : h('button', { class: 'btn small', onclick: () => { st.open.add(s.n); draw(); } }, 'Show all lines'))));
+    }
+    const pre = h('p', { class: 'hint', style: 'margin:0' }, `${s.n} · ${s.f} line ${r.l}`);
+    if (r.k === 'say') {
+      const old = patchFor('say', r.key), who = whoSelect(r.w), text = area(r.t, 'What is said');
+      return panel.append(h('div', { class: 'stack', id: 'mp-say' }, pre, h('div', { class: 'row', style: 'flex-wrap:nowrap' }, h('div', { style: 'flex:1;min-width:0' }, who)), text,
+        h('p', { class: 'hint', style: 'margin:0' }, 'Text works as in the game\'s script: {i}…{/i}, [name] and so on.'),
+        old ? h('p', { class: 'hint', style: 'margin:0' }, `Was: ${old.was.w ? charName(old.was.w) + ': ' : ''}“${trunc(old.was.t, 90)}”`) : null,
+        h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'mp-save', onclick: () => sayEdit(r, text.value, who.value) }, 'Save the line'), undoBtn(old))));
+    }
+    if (r.k === 'jump' || r.k === 'call') {
+      const old = patchFor('go', r.key), to = labelInput(r.g || '', 'Scene it goes to');
+      return panel.append(h('div', { class: 'stack', id: 'mp-go' }, pre, h('b', {}, r.k === 'jump' ? 'Goes to' : 'Plays, then comes back from'),
+        r.g ? to : h('p', { class: 'hint' }, `It goes to a scene worked out while playing (${r.t}). Choose one to replace that.`), r.g ? null : to,
+        h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'mp-go-save', onclick: () => goEdit(r, to.value.trim()) }, 'Change where it goes'), r.g && labelSet().has(r.g) ? gotoBtn(r.g) : null, undoBtn(old))));
+    }
+    if (r.k === 'choice') {
+      const old = patchFor('choice', r.key), cj = choiceJump(s, r), text = h('input', { class: 'text', id: 'mp-ctext', value: r.t, autocomplete: 'off', 'aria-label': 'Choice text' });
+      const to = labelInput(cj ? cj.g : '', cj ? 'Where it leads' : 'Make it lead to… (replaces its own lines)');
+      return panel.append(h('div', { class: 'stack', id: 'mp-choice' }, pre, h('b', {}, 'Choice'), text, h('b', {}, 'Leads to'), to,
+        cj ? null : h('p', { class: 'hint', style: 'margin:0' }, 'This choice has no jump of its own: it carries on with the lines after the menu. Choosing a scene here makes it go there instead, and skips the choice\'s own lines.'),
+        r.c && r.c !== 'True' && r.c !== 'False' ? h('p', { class: 'hint', style: 'margin:0' }, `Shown only if: ${r.c}`) : null,
+        h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'mp-csave', onclick: async () => {
+          const t = text.value.trim() || r.t, v = to.value.trim(), f = {};
+          if (t !== r.t) f.text = t;
+          if (v && v !== (cj ? cj.g : '')) { if (!labelSet().has(v)) return toast(`There is no scene called “${v}”.`, 3500); if (cj) { if (Object.keys(f).length) await choiceEdit(r, f); return goEdit(cj, v); } f.to = v; }
+          if (!Object.keys(f).length) return toast('Nothing changed.');
+          return choiceEdit(r, f);
+        } }, 'Save the choice'), h('button', { class: 'btn', id: 'mp-chide', onclick: () => choiceEdit(r, { hide: !r.h }) }, r.h ? 'Show this choice again' : 'Hide this choice'), undoBtn(old))));
+    }
+    if (r.k === 'menu') {
+      const mine = s.r.filter(x => x.k === 'choice' && x.key.startsWith(r.key + '|'));
+      return panel.append(h('div', { class: 'stack', id: 'mp-menu' }, pre, h('b', {}, 'Choice menu'), h('p', { class: 'hint', style: 'margin:0' }, mine.map(c => (c.h ? '(hidden) ' : '') + c.t).join(' · ')),
+        h('div', { class: 'row' }, h('button', { class: 'btn primary', id: 'mp-addchoice', onclick: () => addChoice(s, r) }, icon('plus'), 'Add a choice'))));
+    }
+    const info = r.k === 'branch' ? `Only if: ${r.t}` : r.k === 'python' ? `Code: ${r.t}` : r.k === 'stage' ? r.t : r.k === 'return' ? 'The story (or the scene that was called) ends here.' : r.k === 'if' ? 'A branch: the story goes one way or another.' : r.t;
+    panel.append(h('div', { class: 'stack' }, pre, h('p', { style: 'margin:0;word-break:break-word' }, info), h('p', { class: 'hint', style: 'margin:0' }, 'This kind of line cannot be changed here.')));
+  }
+  const panel = h('div', { id: 'modpanel' });
+  const find = h('input', { class: 'text', id: 'mod-find', type: 'search', list: 'modlabels', placeholder: 'Find a scene or a line', autocomplete: 'off', 'aria-label': 'Find a scene or a line' });
+  let fi = 0, fq = '';
+  find.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return; const q = find.value.trim().toLowerCase(); if (!q) return;
+    const hits = []; for (const s of D.scenes) { if (s.n.toLowerCase().includes(q)) hits.push({ s: s.n, key: null }); for (const r of s.r) if ((st.stage || r.k !== 'stage') && ((r.t || '') + ' ' + (r.g || '')).toLowerCase().includes(q)) hits.push({ s: s.n, key: r.key }); }
+    if (!hits.length) return toast('Nothing found.', 2000);
+    fi = q === fq ? (fi + 1) % hits.length : 0; fq = q; const x = hits[fi]; if (x.key) st.open.add(x.s);
+    st.sel = x; draw(); focusOn(x.s); select();
+  });
+  const stageB = h('button', { class: 'btn small ghost', id: 'mod-stage', 'aria-pressed': 'false', onclick: () => { st.stage = !st.stage; draw(); } }, 'Pictures & sounds');
+  const editsB = h('button', { class: 'btn small ghost', id: 'mod-edits-btn', onclick: editsList }, icon('list'), 'Changes');
+  const drawBar = () => { stageB.setAttribute('aria-pressed', String(st.stage)); editsB.lastChild.textContent = P.length ? `Changes (${P.length})` : 'Changes'; };
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); document.removeEventListener('keydown', onKey, true); root.remove(); try { GAME.frame && GAME.frame.focus(); } catch (e) { } };
+  const onKey = e => { if (e.key !== 'Escape' || !$('#modder')) return; e.preventDefault(); e.stopPropagation(); if ($('#modmodal')) $('#modmodal').remove(); else close(); };
+  document.addEventListener('keydown', onKey, true);
+  const bar = h('div', { class: 'mtop' }, h('button', { class: 'btn small', id: 'mod-close', 'aria-label': 'Back to the game', onclick: close }, icon('back'), 'Game'), h('b', { class: 'mtitle' }, `Modding: ${g0.title}`),
+    find, stageB, h('button', { class: 'btn small ghost', id: 'mod-new', onclick: () => newScene('', 'start') }, icon('plus'), 'New scene'), editsB,
+    h('button', { class: 'btn small ghost', 'aria-label': 'Zoom out', onclick: () => { const r = view.getBoundingClientRect(); zoomAt(0.8, r.width / 2, r.height / 2); } }, icon('zoomout')),
+    h('button', { class: 'btn small ghost', 'aria-label': 'Zoom in', onclick: () => { const r = view.getBoundingClientRect(); zoomAt(1.25, r.width / 2, r.height / 2); } }, icon('zoomin')),
+    h('button', { class: 'btn small ghost', id: 'mod-fit', 'aria-label': 'Show everything', onclick: fit }, icon('full')));
+  root.replaceChildren(bar, view, panel, dl);
+  draw();
+  if (D.scenes.length <= 12) fit(); else focusOn(lay.pos.has('start') ? 'start' : D.scenes[0].n);
+  const first = D.scenes.find(x => x.n === 'start') || D.scenes[0]; st.sel = { s: first.n, key: null }; select();
+  busy(null);
+}
+
 async function gameTrial(gid, done, scene) {
   const bar = () => h('div', { class: 'fixbar', role: 'status' }, h('span', {}, scene ? 'Playing the scene again with the fix.' : 'The game is running with the fix.'),
     h('button', { class: 'btn small primary', onclick: async e => { e.currentTarget.parentNode.remove(); await gameWrite([{ p: TRIAL_FILE, text: null }]); toast('The fix is kept in the Fixes mod.'); } }, 'Keep the fix'),
@@ -4602,7 +5190,8 @@ async function openGame(id, cont) {
   const editB = h('button', { class: 'gameexit gameedit', 'aria-label': 'Edit this scene', title: 'Edit this scene', onclick: () => GAME.loaded && sceneEditor(id) }, icon('brush'));
   const errB = h('button', { class: 'gameexit gameerr', hidden: true, 'aria-label': 'Errors in the game (and fixes)', title: 'Errors in the game', onclick: () => gameErrors(GAME.errors, g.title) }, icon('tools'));
   const savesB = h('button', { class: 'gameexit gamesaves', 'aria-label': 'Saves', title: 'Saves', onclick: async () => { if (!GAME.loaded) return; await gameAutosave(); savePicker(id); } }, icon('list'));
-  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB, editB, errB);
+  const flowB = EXP ? h('button', { class: 'gameexit gameflow', id: 'game-flow', 'aria-label': 'Modding mode: the story as a flowchart', title: 'Modding mode (the story as a flowchart)', onclick: () => GAME.loaded && openModder(id) }, icon('flow')) : null;
+  const box = h('div', { id: 'gamebox' }, load, exit, lockB, savesB, picsB, quickB, modsB, editB, flowB, errB);
   Object.assign(GAME, { box, frame, g, loaded: false, loads: 0 });
   clearInterval(GAME.focusT); GAME.focusT = setInterval(() => { if (!GAME.box) return clearInterval(GAME.focusT); if (UI.shield === false) return; const away = !document.hasFocus() || document.hidden; if (away) shield.hidden = false; else if (!shield.hidden && document.activeElement === GAME.frame) shield.hidden = true; }, 400);
   document.body.classList.add('gaming'); document.body.append(box);
