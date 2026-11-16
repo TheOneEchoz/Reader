@@ -1,6 +1,6 @@
 {
- "version": 138,
- "name": "1.23.0-beta.40",
+ "version": 139,
+ "name": "1.23.0-beta.41",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: saves from the same game on another device, with Ren'Py Sync. In the game there (a phone, say), open Save or Load and press “Upload Sync”; it shows a code. Here, in the game's Saves (the list button), open “Saves from another device” and type the code. The saves come into the game and the app's Saves list.",
-  "“Send these saves to another device” does the opposite: the game shows a code to type in the other device's “Download Sync”.",
-  "The game still cannot reach the internet: only Ren'Py's sync server, and only through the app. Ren'Py Sync needs games made with Ren'Py 8.1 or newer."
+  "Ren'Py games: Modding mode. In a game, the new flowchart button (next to the pencil) opens the game's story as a flowchart: one box per scene with its lines, and arrows for every jump and call. Tap a line to change what is said and who says it, tap a jump to make it go to another scene, tap a choice to rename it, hide it or make it lead somewhere else, add a choice to a menu, or make a whole new scene. Drag to move around, pinch or scroll to zoom, and search for a scene or a line. The changes are kept in a “Story edits” mod (switch it off on the game's page to play the game as it was) and work in the running game at once."
  ]
 }

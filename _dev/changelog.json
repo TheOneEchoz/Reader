@@ -1,5 +1,14 @@
 [
  {
+  "v": 139,
+  "name": "1.23.0-beta.41",
+  "date": "2026-11-16",
+  "beta": true,
+  "items": [
+   "Ren'Py games: Modding mode. In a game, the new flowchart button (next to the pencil) opens the game's story as a flowchart: one box per scene with its lines, and arrows for every jump and call. Tap a line to change what is said and who says it, tap a jump to make it go to another scene, tap a choice to rename it, hide it or make it lead somewhere else, add a choice to a menu, or make a whole new scene. Drag to move around, pinch or scroll to zoom, and search for a scene or a line. The changes are kept in a “Story edits” mod (switch it off on the game's page to play the game as it was) and work in the running game at once."
+  ]
+ },
+ {
   "v": 138,
   "name": "1.23.0-beta.40",
   "date": "2026-11-15",
