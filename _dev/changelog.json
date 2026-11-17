@@ -1,5 +1,16 @@
 [
  {
+  "v": 143,
+  "name": "1.23.0-beta.45",
+  "date": "2026-11-17",
+  "beta": true,
+  "items": [
+   "Modding mode: shared scenes. A scene that five or more scenes lead to (a world map, a helper, a shared ending) is now a shared scene, like a function in Unreal Engine: it sits in a block of its own at the top, marked with ƒ and “used by N”, and no arrows are drawn to it. Each scene that uses it shows ƒ and a small ↗ link in the line that calls it; tap the link to go there. Select the shared scene to see which scenes use it, outlined, and to list them. You can also choose Show the arrows for a moment.",
+   "In the panel of any scene you can choose Make it a shared scene, or Draw it as a normal scene for one that was made shared automatically. This is remembered for each game.",
+   "With the shared scenes out of the way, the rest of the story is a lot tidier: on a 700-scene story the crossings went from about 3,100 to about 2,100."
+  ]
+ },
+ {
   "v": 142,
   "name": "1.23.0-beta.44",
   "date": "2026-11-17",
