@@ -1,5 +1,16 @@
 [
  {
+  "v": 141,
+  "name": "1.23.0-beta.43",
+  "date": "2026-11-17",
+  "beta": true,
+  "items": [
+   "Modding mode: select several boxes and move them together. Shift-click or Ctrl-click a box to add or remove it, drag a rectangle with Shift held over empty space to select what it touches, or turn on the new Select button (for touch screens) and just tap. Esc clears the selection.",
+   "Modding mode: a new layout that follows the story. Scenes go from left to right in the order the story reaches them, scenes that lead to the same scene sit one above the other in the column before it, and the order is chosen so as few arrows as possible cross. The solid jump arrows decide the layout; the dashed and dotted ones (calls and fall-through) only matter for scenes no jump leads to. On a 700-scene story, crossings went from about 16,500 to about 3,100 and no jump points backward any more.",
+   "Long arrows now run in lanes between the columns instead of behind boxes. Tidy puts everything back in this layout."
+  ]
+ },
+ {
   "v": 140,
   "name": "1.23.0-beta.42",
   "date": "2026-11-17",

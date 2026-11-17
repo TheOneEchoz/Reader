@@ -1,6 +1,6 @@
 {
- "version": 140,
- "name": "1.23.0-beta.42",
+ "version": 141,
+ "name": "1.23.0-beta.43",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Modding mode is much smoother with big stories: only the boxes in view are drawn, the arrows are drawn on a canvas, and zoomed far out the boxes are drawn simply (tap one to zoom in on it). On a story with 700 scenes, moving around went from about 4 frames a second to a smooth 60.",
-  "Modding mode: a better layout. Scenes that lead to each other are grouped, long columns wrap instead of going on for hundreds of boxes, and scenes nothing leads to sit in a tidy grid below. A scene that many others lead to (a shared helper) no longer ties everything together, and its arrows only show while it, or a scene that leads to it, is selected.",
-  "Modding mode: move a box by dragging its title. Where you put it is remembered with the game. “Tidy” puts every box back in its place. Opening a box (“+ N more”) makes room for it."
+  "Modding mode: select several boxes and move them together. Shift-click or Ctrl-click a box to add or remove it, drag a rectangle with Shift held over empty space to select what it touches, or turn on the new Select button (for touch screens) and just tap. Esc clears the selection.",
+  "Modding mode: a new layout that follows the story. Scenes go from left to right in the order the story reaches them, scenes that lead to the same scene sit one above the other in the column before it, and the order is chosen so as few arrows as possible cross. The solid jump arrows decide the layout; the dashed and dotted ones (calls and fall-through) only matter for scenes no jump leads to. On a 700-scene story, crossings went from about 16,500 to about 3,100 and no jump points backward any more.",
+  "Long arrows now run in lanes between the columns instead of behind boxes. Tidy puts everything back in this layout."
  ]
 }

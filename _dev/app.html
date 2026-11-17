@@ -563,6 +563,9 @@ body:has(#modder) #toast{z-index:170;top:calc(64px + env(safe-area-inset-top,0px
 .mscene.new{border-style:dashed}
 .mscene .mh{height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;background:var(--surface2);cursor:grab;touch-action:none;user-select:none}
 .mscene.lod{box-shadow:none}
+.mscene.multi{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.mmarq{position:absolute;border:1.5px dashed var(--accent);background:var(--accent-soft);pointer-events:none;z-index:3}
+#modview.selecting{cursor:crosshair}
 .mscene .mh b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mscene .mh small{color:var(--muted);flex:none}
 .mrow{height:26px;display:flex;align-items:center;gap:6px;padding-right:8px;white-space:nowrap;cursor:pointer}
@@ -4656,7 +4659,7 @@ async function openModder(gid) {
   if (!D || !D.scenes || !D.scenes.length) { root.remove(); return toast(D ? 'No story scenes were found in this game.' : 'The story could not be read from this game.', 4000); }
   const g0 = await S.gal(gid);
   let P = await flowPatches(gid), nid = P.reduce((m, p) => Math.max(m, p.id || 0), 0);
-  const st = { sel: null, open: new Set(), stage: false, k: 1, x: 24, y: 24 };
+  const st = { sel: null, multi: new Set(), selMode: false, open: new Set(), stage: false, k: 1, x: 24, y: 24 };
   const { SW, GX, GY, HH, RH, LIM } = FLOW;
   let suppress = false;
   const labelSet = () => new Set([...D.labels, ...P.filter(p => p.op === 'scene').map(p => p.name)]);
@@ -4672,53 +4675,142 @@ async function openModder(gid) {
   const dl = h('datalist', { id: 'modlabels' });
   const vrows = s => st.stage ? s.r : s.r.filter(r => r.k !== 'stage');
   const manual = new Map(Object.entries(g0.game.flowpos || {}).filter(([, v]) => Array.isArray(v) && v.length === 2)); // boxes moved by hand: name -> [x, y]
-  let auto = new Map(), POS = new Map(), EDG = [], edited = new Set(), dlKey = '';   // auto: tidy places; POS: name -> {x, y, h, rows, more, extra, idx}
+  let auto = new Map(), POS = new Map(), EDG = [], WP = new Map(), edited = new Set(), dlKey = '';   // auto: tidy places; POS: name -> {x, y, h, rows, more, extra, idx}
   const sizeOf = s => {
     const all = vrows(s), open = st.open.has(s.n), shown = open ? all : all.slice(0, LIM), more = all.length - shown.length, extra = more > 0 || (open && all.length > LIM) ? 1 : 0;
     return { x: 0, y: 0, rows: shown, more, extra, h: HH + (shown.length + extra) * RH + 4, idx: new Map(shown.map((r, i) => [r, i])) };
   };
   const linksOf = s => { const t = new Set(); for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g && r.g !== s.n) t.add(r.g); if (s.fall && s.fall !== s.n) t.add(s.fall); return t; };
-  /* the tidy places: scenes that lead to each other are a group; a group is laid out in columns by how far it is from its first
-     scene, a long column wraps into several, and the groups are packed side by side in rows */
+  /* the tidy places. Scenes that lead to each other form a group. In a group the scenes are in layers from left to right: a scene is
+     always to the right of the scenes whose jumps lead to it, so the story reads from left to right and the scenes that lead to the
+     same scene are in the column before it, one above the other. The order in each column is chosen to keep arrows from crossing,
+     a long arrow gets a lane of its own (so it does not run behind boxes), and each box is lined up with the arrows that come in.
+     Jumps (the solid arrows) decide all this; calls and fall-through (dashed, dotted) only count for a scene no jump leads to. */
   const tidy = () => {
     const sc = D.scenes, by = new Map(sc.map(s => [s.n, s])), sz = new Map(sc.map(s => [s.n, sizeOf(s)]));
+    const links = new Map();   // every link between two scenes once: {a, b, k, oy (where on the box a it starts)}
+    for (const s of sc) {
+      const q = sz.get(s.n);
+      const add = (b, k, row) => {
+        if (!by.has(b) || b === s.n) return;
+        const key = s.n + '\n' + b, old = links.get(key), oy = row ? HH + (q.idx.has(row) ? q.idx.get(row) : q.rows.length) * RH + RH / 2 : q.h - 8;
+        if (!old) links.set(key, { a: s.n, b, k, oy }); else if (k === 'jump' && old.k !== 'jump') { old.k = 'jump'; old.oy = oy; }
+      };
+      for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g) add(r.g, r.k, r);
+      if (s.fall) add(s.fall, 'fall', null);
+    }
     // a scene that many others lead to (a shared helper, a menu) would tie everything into one tangle: its arrows are still drawn,
     // but it does not take part in grouping and columns
-    const all = new Map(sc.map(s => [s.n, [...linksOf(s)].filter(n => by.has(n))])), fan = new Map(sc.map(s => [s.n, 0]));
-    for (const t of all.values()) t.forEach(n => fan.set(n, fan.get(n) + 1));
-    const out = new Map(), indeg = new Map(sc.map(s => [s.n, 0]));
-    for (const s of sc) { const t = all.get(s.n).filter(n => fan.get(n) < 10); out.set(s.n, t); t.forEach(n => indeg.set(n, indeg.get(n) + 1)); }
+    const fan = new Map(sc.map(s => [s.n, 0])); for (const l of links.values()) fan.set(l.b, fan.get(l.b) + 1);
+    const jumped = new Set(); for (const l of links.values()) if (l.k === 'jump' && fan.get(l.b) < 10) jumped.add(l.b);
+    const E = [...links.values()].filter(l => fan.get(l.b) < 10 && (l.k === 'jump' || !jumped.has(l.b)));
+    const outE = new Map(sc.map(s => [s.n, []])), inE = new Map(sc.map(s => [s.n, []]));
+    for (const e of E) { outE.get(e.a).push(e); inE.get(e.b).push(e); }
     const uf = new Map(sc.map(s => [s.n, s.n])), root = x => { while (uf.get(x) !== x) { uf.set(x, uf.get(uf.get(x))); x = uf.get(x); } return x; };
-    for (const [a, list] of out) for (const b of list) { const ra = root(a), rb = root(b); if (ra !== rb) uf.set(ra, rb); }
+    for (const e of E) { const ra = root(e.a), rb = root(e.b); if (ra !== rb) uf.set(ra, rb); }
     const groups = new Map(); for (const s of sc) { const r = root(s.n); (groups.get(r) || groups.set(r, []).get(r)).push(s); }
     let total = 0; for (const s of sc) total += (SW + GX) * (sz.get(s.n).h + GY);
-    const colMax = Math.max(1400, Math.min(4200, Math.sqrt(total) * 0.7));
-    const placed = [];
-    for (const list of groups.values()) {
-      const layer = new Map(), par = new Map();
-      const bfs = r0 => { if (layer.has(r0)) return; layer.set(r0, 0); const q = [r0]; for (let i = 0; i < q.length; i++) { const a = q[i]; for (const b of out.get(a)) { (par.get(b) || par.set(b, []).get(b)).push(a); if (!layer.has(b)) { layer.set(b, layer.get(a) + 1); q.push(b); } } } };
-      for (const s of [...list.filter(s => s.n === 'start'), ...list.filter(s => s.n !== 'start' && indeg.get(s.n) === 0), ...list]) bfs(s.n);
-      const cols = []; for (const s of list) (cols[layer.get(s.n)] = cols[layer.get(s.n)] || []).push(s);
-      const local = new Map(); let x = 0, H = 0;
-      for (const col of cols) {
-        if (!col) continue;
-        const ky = new Map(col.map(s => { const ps = (par.get(s.n) || []).map(n => local.get(n)).filter(Boolean); return [s, ps.length ? ps.reduce((a, p) => a + p[1], 0) / ps.length : 1e12]; }));
-        col.sort((a, b) => ky.get(a) - ky.get(b));
-        let y = 0;
-        for (const s of col) { const hh = sz.get(s.n).h; if (y > 0 && y + hh > colMax) { x += SW + GX; y = 0; } local.set(s.n, [x, y]); y += hh + GY; H = Math.max(H, y); }
-        x += SW + GX;
+    const DUMMY = 8, GYD = 10, cw = SW + GX;
+    const layoutGroup = list => {
+      const names = list.map(s => s.n);
+      if (names.length === 1) return { local: new Map([[names[0], [0, 0]]]), wp: new Map(), W: SW, H: sz.get(names[0]).h };
+      // 1. leave out the arrows that go back (they would make a loop): depth first from the start, then from scenes nothing leads to
+      const state = new Map(), disc = new Map(), back = new Set(), post = [];
+      const roots = [...names.filter(n => n === 'start'), ...names.filter(n => n !== 'start' && inE.get(n).length === 0), ...names];
+      for (const r0 of roots) {
+        if (state.has(r0)) continue;
+        const stack = [[r0, 0]]; state.set(r0, 1); disc.set(r0, disc.size);
+        while (stack.length) {
+          const top = stack[stack.length - 1], es = outE.get(top[0]);
+          if (top[1] < es.length) { const e = es[top[1]++], s2 = state.get(e.b); if (s2 === 1) back.add(e); else if (!s2) { state.set(e.b, 1); disc.set(e.b, disc.size); stack.push([e.b, 0]); } }
+          else { state.set(top[0], 2); post.push(top[0]); stack.pop(); }
+        }
       }
-      placed.push({ first: list.some(s => s.n === 'start') ? 1 : 0, n: list.length, local, W: Math.max(SW, x - GX), H: Math.max(0, H - GY) });
-    }
+      const topo = post.reverse();
+      // 2. layers: a scene is right of every scene that leads to it; a scene nothing leads to moves up to just before its first scene
+      const layer = new Map(names.map(n => [n, 0])), indag = new Map(names.map(n => [n, 0]));
+      for (const n of topo) for (const e of outE.get(n)) if (!back.has(e)) { layer.set(e.b, Math.max(layer.get(e.b), layer.get(n) + 1)); indag.set(e.b, indag.get(e.b) + 1); }
+      for (let i = topo.length - 1; i >= 0; i--) {
+        const n = topo[i]; if (n === 'start' || indag.get(n) > 0) continue;
+        const outs = outE.get(n).filter(e => !back.has(e)); if (!outs.length) continue;
+        layer.set(n, Math.max(layer.get(n), Math.min(...outs.map(e => layer.get(e.b))) - 1));
+      }
+      // 3. the boxes, and a stand-in in each layer a long arrow passes
+      const Ls = [], nodes = new Map(); let count = 0;
+      const mk = (name, l, hh, dummy, o0) => { const nd = { name, l, h: hh, dummy, up: [], dn: [], pos: 0, y: 0, o0 }; (Ls[l] = Ls[l] || []).push(nd); count++; return nd; };
+      const link = (u, v, ou) => { const ov = v.dummy ? DUMMY / 2 : HH / 2; u.dn.push({ n: v, ou, ov }); v.up.push({ n: u, ou, ov }); };
+      for (const s of list) nodes.set(s.n, mk(s.n, layer.get(s.n), sz.get(s.n).h, false, disc.get(s.n)));
+      const chains = new Map();
+      for (const n of topo) for (const e of outE.get(n)) {
+        if (back.has(e)) continue;
+        const A = nodes.get(e.a), B = nodes.get(e.b); let prev = A, ou = e.oy; const ch = [];
+        for (let l = A.l + 1; l < B.l; l++) { const d = mk(null, l, DUMMY, true, A.o0 + 0.5); ch.push(d); link(prev, d, ou); prev = d; ou = DUMMY / 2; }
+        link(prev, B, ou); if (ch.length) chains.set(e.a + '\n' + e.b, ch);
+      }
+      const maxL = Ls.length - 1;
+      for (const L of Ls) { L.sort((a, b) => a.o0 - b.o0); L.forEach((nd, i) => { nd.pos = i; }); }
+      // 4. the order in each column: sweeps by the average place of the neighbours, then swaps of neighbours that remove crossings
+      const reorder = (L, down) => {
+        const key = new Map();
+        for (const nd of L) {
+          const ns = down ? nd.up : nd.dn; if (!ns.length) { key.set(nd, nd.pos); continue; }
+          let t = 0; for (const e of ns) t += e.n.pos + (down ? (e.n.dummy ? 0.5 : Math.min(0.95, e.ou / e.n.h)) : 0.5);
+          key.set(nd, t / ns.length);
+        }
+        L.sort((a, b) => key.get(a) - key.get(b) || a.pos - b.pos); L.forEach((nd, i) => { nd.pos = i; });
+      };
+      const cross = (u, v) => { let c = 0; for (const [a, b] of [[u.up, v.up], [u.dn, v.dn]]) for (const x of a) for (const y of b) if (x.n.pos > y.n.pos) c++; return c; };
+      const rounds = count > 15000 ? 2 : 6;
+      for (let it = 0; it < rounds; it++) {
+        for (let l = 1; l <= maxL; l++) reorder(Ls[l], true);
+        for (let l = maxL - 1; l >= 0; l--) reorder(Ls[l], false);
+        if (count > 12000) continue;
+        for (let pass = 0; pass < 4; pass++) {
+          let changed = false;
+          for (const L of Ls) for (let i = 0; i + 1 < L.length; i++) { const u = L[i], v = L[i + 1]; if (cross(v, u) < cross(u, v)) { L[i] = v; L[i + 1] = u; v.pos = i; u.pos = i + 1; changed = true; } }
+          if (!changed) break;
+        }
+      }
+      // 5. heights: stack each column, then line boxes up with their arrows (keeping the order and a gap between boxes)
+      const sep = (u, v) => u.dummy || v.dummy ? GYD : GY;
+      for (const L of Ls) { let y = 0; L.forEach((nd, i) => { nd.y = y; y += nd.h + (i + 1 < L.length ? sep(nd, L[i + 1]) : 0); }); }
+      const place = (L, want) => {
+        const n = L.length, off = new Array(n); let o = 0;
+        for (let i = 0; i < n; i++) { off[i] = o; o += L[i].h + (i + 1 < n ? sep(L[i], L[i + 1]) : 0); }
+        const bl = [];
+        for (let i = 0; i < n; i++) {
+          const w0 = want.get(L[i]), w = w0 ? w0.w : 1e-4, t = (w0 ? w0.y : L[i].y) - off[i];
+          bl.push({ s: t * w, w, c: 1 });
+          while (bl.length > 1 && bl[bl.length - 2].s / bl[bl.length - 2].w > bl[bl.length - 1].s / bl[bl.length - 1].w) { const b = bl.pop(), a = bl[bl.length - 1]; a.s += b.s; a.w += b.w; a.c += b.c; }
+        }
+        let i = 0; for (const b of bl) { const q = b.s / b.w; for (let k = 0; k < b.c; k++, i++) L[i].y = q + off[i]; }
+      };
+      for (let it = 0; it < 4; it++) {
+        for (let l = 1; l <= maxL; l++) { const want = new Map(); for (const nd of Ls[l]) if (nd.up.length) { let t = 0, w = 0; for (const e of nd.up) { const k = e.n.dummy || nd.dummy ? 2 : 1; t += k * (e.n.y + e.ou - e.ov); w += k; } want.set(nd, { y: t / w, w }); } place(Ls[l], want); }
+        for (let l = maxL - 1; l >= 0; l--) { const want = new Map(); for (const nd of Ls[l]) if (nd.dn.length) { let t = 0, w = 0; for (const e of nd.dn) { const k = e.n.dummy || nd.dummy ? 2 : 1; t += k * (e.n.y + e.ov - e.ou); w += k; } want.set(nd, { y: t / w, w }); } place(Ls[l], want); }
+      }
+      let top = 1e12; for (const nd of nodes.values()) top = Math.min(top, nd.y);
+      const local = new Map(), wp = new Map(); let H = 0;
+      for (const [n, nd] of nodes) { local.set(n, [nd.l * cw, nd.y - top]); H = Math.max(H, nd.y - top + nd.h); }
+      for (const [k, ch] of chains) wp.set(k, ch.map(d => [d.l * cw + SW / 2, d.y - top + DUMMY / 2]));
+      return { local, wp, W: (maxL + 1) * cw - GX, H };
+    };
+    const placed = [];
+    for (const list of groups.values()) { const g = layoutGroup(list); placed.push({ first: list.some(s => s.n === 'start') ? 1 : 0, n: list.length, ...g }); }
     placed.sort((a, b) => b.first - a.first || b.n - a.n);
-    const rowW = Math.max(...placed.map(g => g.W), Math.sqrt(total) * 1.8);
-    let px = 0, py = 0, rh = 0; const A = new Map();
-    for (const g of placed) { if (px > 0 && px + g.W > rowW) { px = 0; py += rh + 90; rh = 0; } for (const [n, [lx, ly]] of g.local) A.set(n, [px + lx, py + ly]); px += g.W + 80; rh = Math.max(rh, g.H); }
-    return A;
+    const rowW = Math.max(Math.min(Math.max(...placed.map(g => g.W)), 30000), Math.sqrt(total) * 1.8, 4000);
+    let px = 0, py = 0, rh = 0; const A = new Map(), wp = new Map();
+    for (const g of placed) {
+      if (px > 0 && px + g.W > rowW) { px = 0; py += rh + 90; rh = 0; }
+      for (const [n, [lx, ly]] of g.local) A.set(n, [px + lx, py + ly]);
+      for (const [k, pts] of g.wp) wp.set(k, pts.map(([x, y]) => [px + x, py + y]));
+      px += g.W + 80; rh = Math.max(rh, g.H);
+    }
+    return { A, wp };
   };
   /* full: every scene gets its tidy place again; otherwise the places stay and a new scene goes next to the scene that leads to it */
   const relayout = full => {
-    if (full || !auto.size) auto = tidy();
+    if (full || !auto.size) { const r = tidy(); auto = r.A; WP = r.wp; }
     POS = new Map(); EDG = [];
     for (const s of D.scenes) { const q = sizeOf(s), m = manual.get(s.n) || auto.get(s.n); if (m) { q.x = m[0]; q.y = m[1]; } POS.set(s.n, q); }
     for (const s of D.scenes) {
@@ -4751,15 +4843,15 @@ async function openModder(gid) {
     else body = r.t || '';
     const full = r.k === 'say' ? (r.w ? charName(r.w) + ': ' : '') + r.t : r.k === 'jump' || r.k === 'call' ? r.k + ' ' + (r.g || r.t) : r.t;
     return h('div', { class: `mrow k-${r.k}${r.h ? ' off' : ''}${edited.has(r.key) ? ' edited' : ''}${st.sel && st.sel.key === r.key && st.sel.s === s.n ? ' sel' : ''}`, 'data-key': r.key, style: `padding-left:${pad}px`, title: trunc(full, 300),
-      onclick: () => { if (suppress) return; st.sel = { s: s.n, key: r.key }; select(); } }, TAGS[r.k] ? h('span', { class: 'tag' }, TAGS[r.k]) : null, h('span', { class: 'txt' }, body));
+      onclick: e => clickScene(e, s, r.key) }, TAGS[r.k] ? h('span', { class: 'tag' }, TAGS[r.k]) : null, h('span', { class: 'txt' }, body));
   };
   const sceneEl = (s, q, lod) => {
     const nl = s.r.filter(r => r.k === 'say').length;
-    const head = h('div', { class: 'mh', onpointerdown: e => beginBox(e, s), onclick: () => { if (suppress) return; st.sel = { s: s.n, key: null }; select(); } }, h('b', {}, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}`));
+    const head = h('div', { class: 'mh', onpointerdown: e => beginBox(e, s), onclick: e => clickScene(e, s, null) }, h('b', {}, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}`));
     const open = st.open.has(s.n);
     const tail = lod ? null : q.more ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; toggleOpen(s.n, true); } }, `+ ${q.more} more…`)
       : open && q.extra ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; toggleOpen(s.n, false); } }, 'Show fewer') : null;
-    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : '') + (lod ? ' lod' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px;height:${q.h}px` }, head, lod ? null : q.rows.map(r => rowEl(s, r)), tail);
+    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : '') + (lod ? ' lod' : '') + (st.multi.has(s.n) ? ' multi' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px;height:${q.h}px` }, head, lod ? null : q.rows.map(r => rowEl(s, r)), tail);
   };
   const cv = h('canvas', { id: 'modedges' });
   const cx2 = cv.getContext('2d');
@@ -4767,6 +4859,15 @@ async function openModder(gid) {
   const view = h('div', { id: 'modview' }, cv, canvas);
   const els = new Map(); let curLod = 0, raf = 0, cols = null;
   const colors = () => { if (cols && Date.now() - cols.t < 800) return cols; const cs = getComputedStyle(root), v = n => cs.getPropertyValue(n).trim(); return (cols = { t: Date.now(), muted: v('--muted') || '#888', accent: v('--accent') || '#d0382a', surface: v('--surface2') || '#ddd', line: v('--line') || '#bbb' }); };
+  /* where an arrow goes: from its line in the box to the title of the other box, through the lane that was kept for it (a lane is only
+     used while both boxes are where the tidy layout put them) */
+  const edgePts = e => {
+    const a = POS.get(e.a), b = POS.get(e.b);
+    const sx = a.x + SW, sy = e.row ? a.y + HH + (a.idx.has(e.row) ? a.idx.get(e.row) : a.rows.length) * RH + RH / 2 : a.y + a.h - 8, tx = b.x, ty = b.y + HH / 2;
+    const mv = boxDrag && boxDrag.moved ? boxDrag.names : null;
+    const w = !manual.has(e.a) && !manual.has(e.b) && !(mv && (mv.has(e.a) || mv.has(e.b))) ? WP.get(e.a + '\n' + e.b) : null;
+    return w ? [[sx, sy], ...w, [tx, ty]] : [[sx, sy], [tx, ty]];
+  };
   /* the arrows (and, far out, the boxes) of what is in view */
   const drawEdges = () => {
     const W = view.clientWidth, Hh = view.clientHeight, dpr = window.devicePixelRatio || 1, k = st.k;
@@ -4776,21 +4877,22 @@ async function openModder(gid) {
     c.setTransform(dpr * k, 0, 0, dpr * k, dpr * st.x, dpr * st.y);
     const vx0 = -st.x / k, vy0 = -st.y / k, vx1 = vx0 + W / k, vy1 = vy0 + Hh / k;
     if (curLod === 2) {
-      c.fillStyle = col.surface; c.strokeStyle = col.line; c.lineWidth = 1 / k;
-      for (const [n, q] of POS) { if (q.x > vx1 || q.x + SW < vx0 || q.y > vy1 || q.y + q.h < vy0) continue; const sel = st.sel && st.sel.s === n; c.fillStyle = sel ? col.accent : col.surface; c.fillRect(q.x, q.y, SW, q.h); c.strokeRect(q.x, q.y, SW, q.h); }
+      c.strokeStyle = col.line; c.lineWidth = 1 / k;
+      for (const [n, q] of POS) { if (q.x > vx1 || q.x + SW < vx0 || q.y > vy1 || q.y + q.h < vy0) continue; c.fillStyle = (st.sel && st.sel.s === n) || st.multi.has(n) ? col.accent : col.surface; c.fillRect(q.x, q.y, SW, q.h); c.strokeRect(q.x, q.y, SW, q.h); }
     }
     const hot = [];
     const one = (e, isHot) => {
-      const a = POS.get(e.a), b = POS.get(e.b);
-      const sx = a.x + SW, sy = e.row ? a.y + HH + (a.idx.has(e.row) ? a.idx.get(e.row) : a.rows.length) * RH + RH / 2 : a.y + a.h - 8, tx = b.x, ty = b.y + HH / 2;
-      if (Math.max(sx + 60, tx) < vx0 || Math.min(sx, tx - 60) > vx1 || Math.max(sy, ty) < vy0 || Math.min(sy, ty) > vy1) return;
+      const pts = edgePts(e); let x0 = 1e12, x1 = -1e12, y0 = 1e12, y1 = -1e12;
+      for (const p of pts) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+      if (x1 + 60 < vx0 || x0 - 60 > vx1 || y1 < vy0 || y0 > vy1) return;
       const isSel = st.sel && (st.sel.s === e.a || st.sel.s === e.b);
       if (e.hub && !isSel) return;
       if (!isHot && isSel) { hot.push(e); return; }
-      c.beginPath(); c.moveTo(sx, sy); c.bezierCurveTo(sx + 60, sy, tx - 60, ty, tx, ty);
-      c.strokeStyle = isHot ? col.accent : col.muted; c.globalAlpha = isHot ? 1 : curLod === 2 ? 0.16 : 0.55; c.lineWidth = (isHot ? 2.4 : 1.6) / Math.min(k, 1) ;
+      c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) { const A = pts[i - 1], B = pts[i], dx = B[0] > A[0] + 80 ? (B[0] - A[0]) / 2 : 60; c.bezierCurveTo(A[0] + dx, A[1], B[0] - dx, B[1], B[0], B[1]); }
+      c.strokeStyle = isHot ? col.accent : col.muted; c.globalAlpha = isHot ? 1 : curLod === 2 ? 0.16 : e.kind === 'jump' ? 0.6 : 0.4; c.lineWidth = (isHot ? 2.4 : 1.6) / Math.min(k, 1);
       c.setLineDash(e.kind === 'call' ? [8 / k, 5 / k] : e.kind === 'fall' ? [2 / k, 5 / k] : []); c.stroke(); c.setLineDash([]);
-      const ah = 9 / Math.max(k, 0.3); c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx - ah, ty - ah * 0.45); c.lineTo(tx - ah, ty + ah * 0.45); c.closePath(); c.fillStyle = c.strokeStyle; c.fill();
+      const [tx, ty] = pts[pts.length - 1], ah = 9 / Math.max(k, 0.3); c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx - ah, ty - ah * 0.45); c.lineTo(tx - ah, ty + ah * 0.45); c.closePath(); c.fillStyle = c.strokeStyle; c.fill();
     };
     for (const e of EDG) one(e, false);
     for (const e of hot) one(e, true);
@@ -4815,15 +4917,14 @@ async function openModder(gid) {
     relayout(!!full); edited = new Set(P.map(p => p.key));
     renderView(true); drawPanel(); drawBar();
   };
-  /* "+ N more" / "Show fewer": only this box changes size; the boxes under it in its column move out of the way */
+  /* "+ N more" / "Show fewer": the boxes are laid out again, and the box you pressed stays where it is on the screen */
   const toggleOpen = (n, on) => {
-    const s = D.scenes.find(x => x.n === n), q0 = POS.get(n); if (!s || !q0) return;
+    const q0 = POS.get(n); if (!q0) return;
+    const sx = q0.x * st.k + st.x, sy = q0.y * st.k + st.y;
     on ? st.open.add(n) : st.open.delete(n);
-    const q = sizeOf(s); q.x = q0.x; q.y = q0.y; POS.set(n, q);
-    const dh = q.h - q0.h;
-    if (dh) for (const [m, o] of POS) if (m !== n && !manual.has(m) && Math.abs(o.x - q0.x) < 5 && o.y > q0.y) { o.y += dh; const a = auto.get(m); if (a) a[1] += dh; }
-    const el = els.get(n); if (el) { el.remove(); els.delete(n); }
-    renderView(true); drawBar();
+    relayout(true);
+    const q = POS.get(n); st.x = sx - q.x * st.k; st.y = sy - q.y * st.k;
+    canvas.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.k})`; renderView(true); drawBar();
   };
   const select = () => {
     $$('.mscene.sel, .mrow.sel', canvas).forEach(e => e.classList.remove('sel'));
@@ -4836,38 +4937,73 @@ async function openModder(gid) {
   const bounds = () => { let x0 = 1e12, y0 = 1e12, x1 = -1e12, y1 = -1e12; for (const q of POS.values()) { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x + SW); y1 = Math.max(y1, q.y + q.h); } return { x0, y0, x1, y1 }; };
   const fit = () => { const b = view.getBoundingClientRect(), r = bounds(); st.k = Math.max(0.02, Math.min(1, (b.width - 40) / (r.x1 - r.x0), (b.height - 40) / (r.y1 - r.y0))); st.x = 20 - r.x0 * st.k; st.y = 20 - r.y0 * st.k; applyView(); };
   const focusOn = name => { const q = POS.get(name); if (!q) return; const b = view.getBoundingClientRect(); st.k = Math.max(st.k, 0.8); st.x = b.width / 2 - (q.x + SW / 2) * st.k; st.y = Math.max(10, b.height / 3 - (q.y + 20) * st.k); applyView(); renderView(); };
-  // move around: drag, wheel, pinch; a box is moved by dragging its title
-  const pts = new Map(); let drag = null, pinch = null, boxDrag = null, saveT = 0;
+  // move around: drag, wheel, pinch. A box is moved by dragging its title (all selected boxes move together). A rectangle drawn with
+  // Shift held (or in Select mode) selects the boxes it touches; Shift/Ctrl-click on a box adds it to or takes it out of the selection.
+  const pts = new Map(); let drag = null, pinch = null, boxDrag = null, marq = null, saveT = 0;
   const saveFlowPos = () => { clearTimeout(saveT); saveT = setTimeout(async () => { try { const g = await S.gal(gid); g.game.flowpos = Object.fromEntries(manual); await saveGallery(g); } catch (e) { } }, 500); };
-  function beginBox(e, s) { if (e.button > 0) return; e.stopPropagation(); const q = POS.get(s.n); boxDrag = { n: s.n, x: e.clientX, y: e.clientY, ox: q.x, oy: q.y, moved: false }; suppress = false; }
+  const paintMulti = () => { els.forEach((el, n) => el.classList.toggle('multi', st.multi.has(n))); drawEdges(); drawPanel(); drawBar(); };
+  const toggleMulti = n => { if (st.multi.has(n)) st.multi.delete(n); else st.multi.add(n); paintMulti(); };
+  const withKey = e => e.shiftKey || e.ctrlKey || e.metaKey || st.selMode;
+  const clickScene = (e, s, key) => {
+    if (suppress) return;
+    if (withKey(e)) { if (!st.multi.size && st.sel && !st.sel.auto && st.sel.s !== s.n) st.multi.add(st.sel.s); toggleMulti(s.n); return; }
+    if (st.multi.size) { st.multi.clear(); els.forEach(el => el.classList.remove('multi')); }
+    st.sel = { s: s.n, key }; select();
+  };
+  function beginBox(e, s) {
+    if (e.button > 0) return; e.stopPropagation();
+    const names = st.multi.has(s.n) && st.multi.size > 1 ? [...st.multi] : [s.n];
+    boxDrag = { x: e.clientX, y: e.clientY, moved: false, names: new Set(names), from: names.map(n => { const q = POS.get(n); return [n, q.x, q.y]; }) }; suppress = false;
+  }
   view.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
     pts.set(e.pointerId, [e.clientX, e.clientY]); suppress = false;
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1 }; drag = null; }
-    else drag = { x: e.clientX, y: e.clientY, ox: st.x, oy: st.y };
+    if (pts.size === 2) { if (marq) { marq.el && marq.el.remove(); marq = null; } const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1 }; drag = null; return; }
+    if ((e.shiftKey || st.selMode) && !e.target.closest('.mscene')) { const r = view.getBoundingClientRect(); marq = { x: e.clientX - r.left, y: e.clientY - r.top, add: e.shiftKey || e.ctrlKey || e.metaKey, moved: false, el: null }; return; }
+    drag = { x: e.clientX, y: e.clientY, ox: st.x, oy: st.y };
   });
   const onMove = e => {
     if (boxDrag) {
       const dx = e.clientX - boxDrag.x, dy = e.clientY - boxDrag.y;
       if (!boxDrag.moved && Math.hypot(dx, dy) > 5) { boxDrag.moved = true; suppress = true; }
-      if (boxDrag.moved) { const q = POS.get(boxDrag.n), el = els.get(boxDrag.n); q.x = Math.round(boxDrag.ox + dx / st.k); q.y = Math.round(boxDrag.oy + dy / st.k); if (el) { el.style.left = q.x + 'px'; el.style.top = q.y + 'px'; } queueEdges(); }
+      if (boxDrag.moved) { for (const [n, ox, oy] of boxDrag.from) { const q = POS.get(n), el = els.get(n); q.x = Math.round(ox + dx / st.k); q.y = Math.round(oy + dy / st.k); if (el) { el.style.left = q.x + 'px'; el.style.top = q.y + 'px'; } } queueEdges(); }
       return;
     }
     if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (marq) {
+      const r = view.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+      if (!marq.moved && Math.hypot(mx - marq.x, my - marq.y) > 5) { marq.moved = true; suppress = true; marq.el = h('div', { class: 'mmarq' }); view.append(marq.el); }
+      if (marq.el) { marq.el.style.left = Math.min(mx, marq.x) + 'px'; marq.el.style.top = Math.min(my, marq.y) + 'px'; marq.el.style.width = Math.abs(mx - marq.x) + 'px'; marq.el.style.height = Math.abs(my - marq.y) + 'px'; marq.mx = mx; marq.my = my; }
+      return;
+    }
     if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, r = view.getBoundingClientRect(); zoomAt(d / pinch.d, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top); pinch.d = d; suppress = true; }
     else if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (suppress || Math.hypot(dx, dy) > 5) { suppress = true; st.x = drag.ox + dx; st.y = drag.oy + dy; applyView(); } }
   };
   const onUp = e => {
-    if (boxDrag) { if (boxDrag.moved) { const q = POS.get(boxDrag.n); manual.set(boxDrag.n, [q.x, q.y]); saveFlowPos(); } boxDrag = null; setTimeout(() => { suppress = false; }, 0); return; }
+    if (boxDrag) {
+      if (boxDrag.moved) { for (const [n] of boxDrag.from) { const q = POS.get(n); manual.set(n, [q.x, q.y]); } saveFlowPos(); queueEdges(); }
+      boxDrag = null; setTimeout(() => { suppress = false; }, 0); return;
+    }
+    if (marq && pts.has(e.pointerId)) {
+      if (marq.moved && marq.mx != null) {
+        const x0 = (Math.min(marq.x, marq.mx) - st.x) / st.k, x1 = (Math.max(marq.x, marq.mx) - st.x) / st.k, y0 = (Math.min(marq.y, marq.my) - st.y) / st.k, y1 = (Math.max(marq.y, marq.my) - st.y) / st.k;
+        if (!marq.add) st.multi.clear();
+        for (const [n, q] of POS) if (q.x < x1 && q.x + SW > x0 && q.y < y1 && q.y + q.h > y0) st.multi.add(n);
+      } else if (!marq.add && st.multi.size) st.multi.clear();
+      marq.el && marq.el.remove(); marq = null; paintMulti();
+    }
     pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { drag = null; setTimeout(() => { suppress = false; }, 0); }
   };
   window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp);
   view.addEventListener('wheel', e => { e.preventDefault(); const r = view.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-  // far out the boxes are only drawn: a tap on one zooms in on it
+  // far out the boxes are only drawn: a tap on one zooms in on it (with Shift, or in Select mode, it selects it)
   view.addEventListener('click', e => {
     if (suppress || curLod !== 2) return;
     const r = view.getBoundingClientRect(), wx = (e.clientX - r.left - st.x) / st.k, wy = (e.clientY - r.top - st.y) / st.k;
-    for (const [n, q] of POS) if (wx >= q.x && wx <= q.x + SW && wy >= q.y && wy <= q.y + q.h) { st.sel = { s: n, key: null }; st.k = 0.8; focusOn(n); select(); return; }
+    for (const [n, q] of POS) if (wx >= q.x && wx <= q.x + SW && wy >= q.y && wy <= q.y + q.h) {
+      if (withKey(e)) { toggleMulti(n); return; }
+      st.multi.clear(); st.sel = { s: n, key: null }; st.k = 0.8; focusOn(n); select(); return;
+    }
   });
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => queueRender()) : null; ro && ro.observe(view);
 
@@ -4977,6 +5113,12 @@ async function openModder(gid) {
   const gotoBtn = n => h('button', { class: 'btn small', onclick: () => { st.sel = { s: n, key: null }; focusOn(n); select(); } }, icon('move'), `Show ${n}`);
   function drawPanel() {
     panel.replaceChildren();
+    if (st.multi.size > 1) {
+      return panel.append(h('div', { class: 'stack', id: 'mp-multi' }, h('b', {}, `${st.multi.size} scenes selected`),
+        h('p', { class: 'hint', style: 'margin:0' }, 'Drag the title of any selected box to move them all together. Shift-click a box (or use Select) to add or take out one; Esc clears the selection.'),
+        h('div', { class: 'row' }, h('button', { class: 'btn small', id: 'mp-multi-clear', onclick: () => { st.multi.clear(); paintMulti(); } }, 'Clear selection'),
+          h('button', { class: 'btn small', id: 'mp-multi-tidy', onclick: () => { for (const n of st.multi) { manual.delete(n); const a = auto.get(n), q = POS.get(n), el = els.get(n); if (a && q) { q.x = a[0]; q.y = a[1]; if (el) { el.style.left = q.x + 'px'; el.style.top = q.y + 'px'; } } } saveFlowPos(); drawEdges(); } }, 'Put them back in their tidy places'))));
+    }
     const sel = st.sel;
     if (!sel) return panel.append(h('p', { class: 'hint' }, 'Tap a scene or a line to see it here and change it. Drag to move around; pinch or scroll to zoom. Arrows show where the story goes next. Everything you change is kept in the “Story edits” mod.'));
     const s = D.scenes.find(x => x.n === sel.s); if (!s) return;
@@ -5034,22 +5176,23 @@ async function openModder(gid) {
     st.sel = x; focusOn(x.s); select();
   });
   const stageB = h('button', { class: 'btn small ghost', id: 'mod-stage', 'aria-pressed': 'false', onclick: () => { st.stage = !st.stage; draw(true); } }, 'Pictures & sounds');
+  const selB = h('button', { class: 'btn small ghost', id: 'mod-select', 'aria-pressed': 'false', title: 'Select several boxes: drag a rectangle round them, or tap them', onclick: () => { st.selMode = !st.selMode; view.classList.toggle('selecting', st.selMode); drawBar(); } }, icon('check'), 'Select');
   const editsB = h('button', { class: 'btn small ghost', id: 'mod-edits-btn', onclick: editsList }, icon('list'), 'Changes');
-  const drawBar = () => { stageB.setAttribute('aria-pressed', String(st.stage)); editsB.lastChild.textContent = P.length ? `Changes (${P.length})` : 'Changes'; };
+  const drawBar = () => { stageB.setAttribute('aria-pressed', String(st.stage)); selB.setAttribute('aria-pressed', String(st.selMode)); editsB.lastChild.textContent = P.length ? `Changes (${P.length})` : 'Changes'; };
   let closed = false;
   const close = () => { if (closed) return; closed = true; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); document.removeEventListener('keydown', onKey, true); ro && ro.disconnect(); cancelAnimationFrame(raf); root.remove(); try { GAME.frame && GAME.frame.focus(); } catch (e) { } };
-  const onKey = e => { if (e.key !== 'Escape' || !$('#modder')) return; e.preventDefault(); e.stopPropagation(); if ($('#modmodal')) $('#modmodal').remove(); else close(); };
+  const onKey = e => { if (e.key !== 'Escape' || !$('#modder')) return; e.preventDefault(); e.stopPropagation(); if ($('#modmodal')) $('#modmodal').remove(); else if (st.multi.size) { st.multi.clear(); paintMulti(); } else close(); };
   document.addEventListener('keydown', onKey, true);
   const bar = h('div', { class: 'mtop' }, h('button', { class: 'btn small', id: 'mod-close', 'aria-label': 'Back to the game', onclick: close }, icon('back'), 'Game'), h('b', { class: 'mtitle' }, `Modding: ${g0.title}`),
-    find, stageB, h('button', { class: 'btn small ghost', id: 'mod-tidy', title: 'Put every box back in its tidy place', onclick: () => { manual.clear(); saveFlowPos(); draw(true); fit(); } }, icon('sort'), 'Tidy'), h('button', { class: 'btn small ghost', id: 'mod-new', onclick: () => newScene('', 'start') }, icon('plus'), 'New scene'), editsB,
+    find, stageB, selB, h('button', { class: 'btn small ghost', id: 'mod-tidy', title: 'Put every box back in its tidy place', onclick: () => { manual.clear(); saveFlowPos(); draw(true); fit(); } }, icon('sort'), 'Tidy'), h('button', { class: 'btn small ghost', id: 'mod-new', onclick: () => newScene('', 'start') }, icon('plus'), 'New scene'), editsB,
     h('button', { class: 'btn small ghost', 'aria-label': 'Zoom out', onclick: () => { const r = view.getBoundingClientRect(); zoomAt(0.8, r.width / 2, r.height / 2); } }, icon('zoomout')),
     h('button', { class: 'btn small ghost', 'aria-label': 'Zoom in', onclick: () => { const r = view.getBoundingClientRect(); zoomAt(1.25, r.width / 2, r.height / 2); } }, icon('zoomin')),
     h('button', { class: 'btn small ghost', id: 'mod-fit', 'aria-label': 'Show everything', onclick: fit }, icon('full')));
   root.replaceChildren(bar, view, panel, dl);
   draw(true);
   if (D.scenes.length <= 12) fit(); else focusOn(POS.has('start') ? 'start' : D.scenes[0].n);
-  if (window.TKB_DEBUG) window.TKB_FLOW = { pos: () => POS, st, manual, els: () => els, edges: () => EDG };
-  const first = D.scenes.find(x => x.n === 'start') || D.scenes[0]; st.sel = { s: first.n, key: null }; select();
+  if (window.TKB_DEBUG) window.TKB_FLOW = { pos: () => POS, st, manual, els: () => els, edges: () => EDG, wp: () => WP, paths: () => EDG.filter(e => !e.hub).map(e => ({ k: e.kind, a: e.a, b: e.b, p: edgePts(e) })) };
+  const first = D.scenes.find(x => x.n === 'start') || D.scenes[0]; st.sel = { s: first.n, key: null, auto: true }; select();
   busy(null);
 }
 
