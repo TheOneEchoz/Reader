@@ -1,6 +1,6 @@
 {
- "version": 141,
- "name": "1.23.0-beta.43",
+ "version": 142,
+ "name": "1.23.0-beta.44",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Modding mode: select several boxes and move them together. Shift-click or Ctrl-click a box to add or remove it, drag a rectangle with Shift held over empty space to select what it touches, or turn on the new Select button (for touch screens) and just tap. Esc clears the selection.",
-  "Modding mode: a new layout that follows the story. Scenes go from left to right in the order the story reaches them, scenes that lead to the same scene sit one above the other in the column before it, and the order is chosen so as few arrows as possible cross. The solid jump arrows decide the layout; the dashed and dotted ones (calls and fall-through) only matter for scenes no jump leads to. On a 700-scene story, crossings went from about 16,500 to about 3,100 and no jump points backward any more.",
-  "Long arrows now run in lanes between the columns instead of behind boxes. Tidy puts everything back in this layout."
+  "Save ZIP on a gallery now includes the Ren'Py games kept in it: each game goes in a folder of its own, with its files (and the mods that are switched on) and a small tankobon.json that says which Ren'Py it needs. Games over about 1.5 GB ask first, since a ZIP that big may not fit in memory.",
+  "A game's own page has a Save ZIP button too, for a game that is not in a gallery.",
+  "Adding a ZIP (or a folder) that holds several games now adds all of them, each with its own name, instead of mixing them into one. A ZIP made by the app also tells the app which Ren'Py version to use."
  ]
 }

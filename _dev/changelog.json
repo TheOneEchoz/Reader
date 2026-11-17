@@ -1,5 +1,16 @@
 [
  {
+  "v": 142,
+  "name": "1.23.0-beta.44",
+  "date": "2026-11-17",
+  "beta": true,
+  "items": [
+   "Save ZIP on a gallery now includes the Ren'Py games kept in it: each game goes in a folder of its own, with its files (and the mods that are switched on) and a small tankobon.json that says which Ren'Py it needs. Games over about 1.5 GB ask first, since a ZIP that big may not fit in memory.",
+   "A game's own page has a Save ZIP button too, for a game that is not in a gallery.",
+   "Adding a ZIP (or a folder) that holds several games now adds all of them, each with its own name, instead of mixing them into one. A ZIP made by the app also tells the app which Ren'Py version to use."
+  ]
+ },
+ {
   "v": 141,
   "name": "1.23.0-beta.43",
   "date": "2026-11-17",
