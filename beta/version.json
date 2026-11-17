@@ -1,6 +1,6 @@
 {
- "version": 139,
- "name": "1.23.0-beta.41",
+ "version": 140,
+ "name": "1.23.0-beta.42",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Ren'Py games: Modding mode. In a game, the new flowchart button (next to the pencil) opens the game's story as a flowchart: one box per scene with its lines, and arrows for every jump and call. Tap a line to change what is said and who says it, tap a jump to make it go to another scene, tap a choice to rename it, hide it or make it lead somewhere else, add a choice to a menu, or make a whole new scene. Drag to move around, pinch or scroll to zoom, and search for a scene or a line. The changes are kept in a “Story edits” mod (switch it off on the game's page to play the game as it was) and work in the running game at once."
+  "Modding mode is much smoother with big stories: only the boxes in view are drawn, the arrows are drawn on a canvas, and zoomed far out the boxes are drawn simply (tap one to zoom in on it). On a story with 700 scenes, moving around went from about 4 frames a second to a smooth 60.",
+  "Modding mode: a better layout. Scenes that lead to each other are grouped, long columns wrap instead of going on for hundreds of boxes, and scenes nothing leads to sit in a tidy grid below. A scene that many others lead to (a shared helper) no longer ties everything together, and its arrows only show while it, or a scene that leads to it, is selected.",
+  "Modding mode: move a box by dragging its title. Where you put it is remembered with the game. “Tidy” puts every box back in its place. Opening a box (“+ N more”) makes room for it."
  ]
 }

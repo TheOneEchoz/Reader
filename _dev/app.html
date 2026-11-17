@@ -557,15 +557,12 @@ body:has(#modder) #toast{z-index:170;top:calc(64px + env(safe-area-inset-top,0px
 @media(max-width:640px){#modder .mtitle{display:none}#modder #mod-find{flex:1 1 120px;width:auto}#modder .mtop{gap:6px;padding-left:8px;padding-right:8px}#modpanel{max-height:40vh}}
 #modview{position:relative;overflow:hidden;touch-action:none;cursor:grab;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:24px 24px;min-height:0}
 #modcanvas{position:absolute;left:0;top:0;transform-origin:0 0}
-#modedges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
-#modedges path{fill:none;stroke:var(--muted);stroke-width:1.6;opacity:.55}
-#modedges path.e-call{stroke-dasharray:6 4}
-#modedges path.e-fall{stroke-dasharray:2 4}
-#modedges path.hot{stroke:var(--accent);stroke-width:2.4;opacity:1}
+#modedges{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
 .mscene{position:absolute;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;font-size:12.5px;box-shadow:var(--shadow)}
 .mscene.sel{border-color:var(--accent)}
 .mscene.new{border-style:dashed}
-.mscene .mh{height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;background:var(--surface2);cursor:pointer}
+.mscene .mh{height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;background:var(--surface2);cursor:grab;touch-action:none;user-select:none}
+.mscene.lod{box-shadow:none}
 .mscene .mh b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mscene .mh small{color:var(--muted);flex:none}
 .mrow{height:26px;display:flex;align-items:center;gap:6px;padding-right:8px;white-space:nowrap;cursor:pointer}
@@ -4561,6 +4558,7 @@ const FLOW_PY = String.raw`def _tkbflow(mode, P=None):
         chars.sort()
         return {"scenes": scenes, "chars": chars, "labels": [s["n"] for s in scenes]}
     def apply(P):
+        if not P: return []
         index()
         bad = []
         for p in P:
@@ -4660,7 +4658,7 @@ async function openModder(gid) {
   let P = await flowPatches(gid), nid = P.reduce((m, p) => Math.max(m, p.id || 0), 0);
   const st = { sel: null, open: new Set(), stage: false, k: 1, x: 24, y: 24 };
   const { SW, GX, GY, HH, RH, LIM } = FLOW;
-  let lay = null, suppress = false;
+  let suppress = false;
   const labelSet = () => new Set([...D.labels, ...P.filter(p => p.op === 'scene').map(p => p.name)]);
   const charName = v => { const c = D.chars.find(x => x[0] === v); return c ? c[1] : v; };
   const trunc = (t, n = 48) => { t = String(t == null ? '' : t).replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
@@ -4668,33 +4666,81 @@ async function openModder(gid) {
   const patchFor = (op, key) => P.find(p => p.op === op && p.key === key);
   const busy = msg => { let b = root.querySelector('.mload'); if (!msg) { b && b.remove(); return; } if (!b) { b = h('div', { class: 'mload' }); root.append(b); } b.textContent = msg; };
 
-  /* ---- the picture ---- */
+  /* ---- the picture ----
+     Only the scenes in (or near) the view are made of page elements, and the arrows are drawn on a canvas, so a story with
+     hundreds of scenes stays smooth. Zoomed out, boxes lose their lines, and further out they are drawn on the canvas too. */
+  const dl = h('datalist', { id: 'modlabels' });
   const vrows = s => st.stage ? s.r : s.r.filter(r => r.k !== 'stage');
-  const layout = () => {
-    const sc = D.scenes, by = new Map(sc.map(s => [s.n, s])), pos = new Map();
-    const out = new Map(sc.map(s => { const t = new Set(); for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g && by.has(r.g) && r.g !== s.n) t.add(r.g); if (s.fall && by.has(s.fall) && s.fall !== s.n) t.add(s.fall); return [s.n, [...t]]; }));
-    const layer = new Map(), par = new Map();
-    const bfs = r0 => { if (layer.has(r0)) return; layer.set(r0, 0); const q = [r0]; for (let i = 0; i < q.length; i++) { const a = q[i]; for (const b of out.get(a)) { (par.get(b) || par.set(b, []).get(b)).push(a); if (!layer.has(b)) { layer.set(b, layer.get(a) + 1); q.push(b); } } } };
-    if (by.has('start')) bfs('start');
-    for (const s of sc) bfs(s.n);
-    const cols = []; for (const s of sc) { const L = layer.get(s.n); (cols[L] = cols[L] || []).push(s); }
-    let W = 0, H = 0;
-    cols.forEach((col, L) => {
-      if (!col) return;
-      if (L > 0) { const key = new Map(col.map(s => { const ps = (par.get(s.n) || []).map(n => pos.get(n)).filter(Boolean); return [s, ps.length ? ps.reduce((a, p) => a + p.y, 0) / ps.length : 1e12]; })); col.sort((a, b) => key.get(a) - key.get(b)); }
-      let y = 0;
-      for (const s of col) {
-        const all = vrows(s), open = st.open.has(s.n), shown = open ? all : all.slice(0, LIM), more = all.length - shown.length, extra = more > 0 || (open && all.length > LIM) ? 1 : 0;
-        const hh = HH + (shown.length + extra) * RH + 4;
-        pos.set(s.n, { x: L * (SW + GX), y, h: hh, rows: shown, more, extra, idx: new Map(shown.map((r, i) => [r, i])) });
-        y += hh + GY;
+  const manual = new Map(Object.entries(g0.game.flowpos || {}).filter(([, v]) => Array.isArray(v) && v.length === 2)); // boxes moved by hand: name -> [x, y]
+  let auto = new Map(), POS = new Map(), EDG = [], edited = new Set(), dlKey = '';   // auto: tidy places; POS: name -> {x, y, h, rows, more, extra, idx}
+  const sizeOf = s => {
+    const all = vrows(s), open = st.open.has(s.n), shown = open ? all : all.slice(0, LIM), more = all.length - shown.length, extra = more > 0 || (open && all.length > LIM) ? 1 : 0;
+    return { x: 0, y: 0, rows: shown, more, extra, h: HH + (shown.length + extra) * RH + 4, idx: new Map(shown.map((r, i) => [r, i])) };
+  };
+  const linksOf = s => { const t = new Set(); for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g && r.g !== s.n) t.add(r.g); if (s.fall && s.fall !== s.n) t.add(s.fall); return t; };
+  /* the tidy places: scenes that lead to each other are a group; a group is laid out in columns by how far it is from its first
+     scene, a long column wraps into several, and the groups are packed side by side in rows */
+  const tidy = () => {
+    const sc = D.scenes, by = new Map(sc.map(s => [s.n, s])), sz = new Map(sc.map(s => [s.n, sizeOf(s)]));
+    // a scene that many others lead to (a shared helper, a menu) would tie everything into one tangle: its arrows are still drawn,
+    // but it does not take part in grouping and columns
+    const all = new Map(sc.map(s => [s.n, [...linksOf(s)].filter(n => by.has(n))])), fan = new Map(sc.map(s => [s.n, 0]));
+    for (const t of all.values()) t.forEach(n => fan.set(n, fan.get(n) + 1));
+    const out = new Map(), indeg = new Map(sc.map(s => [s.n, 0]));
+    for (const s of sc) { const t = all.get(s.n).filter(n => fan.get(n) < 10); out.set(s.n, t); t.forEach(n => indeg.set(n, indeg.get(n) + 1)); }
+    const uf = new Map(sc.map(s => [s.n, s.n])), root = x => { while (uf.get(x) !== x) { uf.set(x, uf.get(uf.get(x))); x = uf.get(x); } return x; };
+    for (const [a, list] of out) for (const b of list) { const ra = root(a), rb = root(b); if (ra !== rb) uf.set(ra, rb); }
+    const groups = new Map(); for (const s of sc) { const r = root(s.n); (groups.get(r) || groups.set(r, []).get(r)).push(s); }
+    let total = 0; for (const s of sc) total += (SW + GX) * (sz.get(s.n).h + GY);
+    const colMax = Math.max(1400, Math.min(4200, Math.sqrt(total) * 0.7));
+    const placed = [];
+    for (const list of groups.values()) {
+      const layer = new Map(), par = new Map();
+      const bfs = r0 => { if (layer.has(r0)) return; layer.set(r0, 0); const q = [r0]; for (let i = 0; i < q.length; i++) { const a = q[i]; for (const b of out.get(a)) { (par.get(b) || par.set(b, []).get(b)).push(a); if (!layer.has(b)) { layer.set(b, layer.get(a) + 1); q.push(b); } } } };
+      for (const s of [...list.filter(s => s.n === 'start'), ...list.filter(s => s.n !== 'start' && indeg.get(s.n) === 0), ...list]) bfs(s.n);
+      const cols = []; for (const s of list) (cols[layer.get(s.n)] = cols[layer.get(s.n)] || []).push(s);
+      const local = new Map(); let x = 0, H = 0;
+      for (const col of cols) {
+        if (!col) continue;
+        const ky = new Map(col.map(s => { const ps = (par.get(s.n) || []).map(n => local.get(n)).filter(Boolean); return [s, ps.length ? ps.reduce((a, p) => a + p[1], 0) / ps.length : 1e12]; }));
+        col.sort((a, b) => ky.get(a) - ky.get(b));
+        let y = 0;
+        for (const s of col) { const hh = sz.get(s.n).h; if (y > 0 && y + hh > colMax) { x += SW + GX; y = 0; } local.set(s.n, [x, y]); y += hh + GY; H = Math.max(H, y); }
+        x += SW + GX;
       }
-      W = Math.max(W, (L + 1) * (SW + GX)); H = Math.max(H, y);
-    });
-    return { pos, W, H };
+      placed.push({ first: list.some(s => s.n === 'start') ? 1 : 0, n: list.length, local, W: Math.max(SW, x - GX), H: Math.max(0, H - GY) });
+    }
+    placed.sort((a, b) => b.first - a.first || b.n - a.n);
+    const rowW = Math.max(...placed.map(g => g.W), Math.sqrt(total) * 1.8);
+    let px = 0, py = 0, rh = 0; const A = new Map();
+    for (const g of placed) { if (px > 0 && px + g.W > rowW) { px = 0; py += rh + 90; rh = 0; } for (const [n, [lx, ly]] of g.local) A.set(n, [px + lx, py + ly]); px += g.W + 80; rh = Math.max(rh, g.H); }
+    return A;
+  };
+  /* full: every scene gets its tidy place again; otherwise the places stay and a new scene goes next to the scene that leads to it */
+  const relayout = full => {
+    if (full || !auto.size) auto = tidy();
+    POS = new Map(); EDG = [];
+    for (const s of D.scenes) { const q = sizeOf(s), m = manual.get(s.n) || auto.get(s.n); if (m) { q.x = m[0]; q.y = m[1]; } POS.set(s.n, q); }
+    for (const s of D.scenes) {
+      for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g && r.g !== s.n && POS.has(r.g)) EDG.push({ a: s.n, b: r.g, kind: r.k, row: r });
+      if (s.fall && s.fall !== s.n && POS.has(s.fall)) EDG.push({ a: s.n, b: s.fall, kind: 'fall', row: null });
+    }
+    const seen = new Set(), fan = new Map();
+    for (const e of EDG) { const k = e.a + '\n' + e.b; if (!seen.has(k)) { seen.add(k); fan.set(e.b, (fan.get(e.b) || 0) + 1); } }
+    for (const e of EDG) e.hub = fan.get(e.b) >= 10;   // many scenes lead here: its arrows only show while one end is selected
+    for (const s of D.scenes) {
+      if (manual.has(s.n) || auto.has(s.n)) continue;
+      const q = POS.get(s.n), e = EDG.find(x => x.b === s.n), src = e && POS.get(e.a);
+      let x = src ? src.x + SW + GX : 0, y = src ? src.y : 0;
+      if (!src) for (const o of POS.values()) y = Math.max(y, o.y + o.h + 60);
+      const clash = () => { for (const [n, o] of POS) if (n !== s.n && (auto.has(n) || manual.has(n)) && x < o.x + SW + 20 && x + SW + 20 > o.x && y < o.y + o.h + 20 && y + q.h + 20 > o.y) return true; return false; };
+      for (let i = 0; i < 400 && clash(); i++) y += 60;
+      q.x = x; q.y = y; auto.set(s.n, [x, y]);
+    }
+    const key = [...labelSet()].join('\n'); if (key !== dlKey) { dlKey = key; dl.replaceChildren(...[...labelSet()].map(n => h('option', { value: n }))); }
   };
   const TAGS = { choice: '›', branch: 'if', jump: 'jump', call: 'call', return: 'end', python: '$', stage: '·', menu: 'menu', if: '', while: 'while' };
-  const rowEl = (s, r, edited) => {
+  const rowEl = (s, r) => {
     const pad = 8 + Math.min(r.d, 6) * 10;
     let body;
     if (r.k === 'say') body = [r.w ? h('b', {}, charName(r.w) + ': ') : null, r.t];
@@ -4707,55 +4753,93 @@ async function openModder(gid) {
     return h('div', { class: `mrow k-${r.k}${r.h ? ' off' : ''}${edited.has(r.key) ? ' edited' : ''}${st.sel && st.sel.key === r.key && st.sel.s === s.n ? ' sel' : ''}`, 'data-key': r.key, style: `padding-left:${pad}px`, title: trunc(full, 300),
       onclick: () => { if (suppress) return; st.sel = { s: s.n, key: r.key }; select(); } }, TAGS[r.k] ? h('span', { class: 'tag' }, TAGS[r.k]) : null, h('span', { class: 'txt' }, body));
   };
-  const sceneEl = (s, q, edited) => {
+  const sceneEl = (s, q, lod) => {
     const nl = s.r.filter(r => r.k === 'say').length;
-    const head = h('div', { class: 'mh', onclick: () => { if (suppress) return; st.sel = { s: s.n, key: null }; select(); } }, h('b', {}, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}`));
+    const head = h('div', { class: 'mh', onpointerdown: e => beginBox(e, s), onclick: () => { if (suppress) return; st.sel = { s: s.n, key: null }; select(); } }, h('b', {}, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}`));
     const open = st.open.has(s.n);
-    const tail = q.more ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; st.open.add(s.n); draw(); } }, `+ ${q.more} more…`)
-      : open && q.extra ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; st.open.delete(s.n); draw(); } }, 'Show fewer') : null;
-    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px` }, head, q.rows.map(r => rowEl(s, r, edited)), tail);
+    const tail = lod ? null : q.more ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; toggleOpen(s.n, true); } }, `+ ${q.more} more…`)
+      : open && q.extra ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; toggleOpen(s.n, false); } }, 'Show fewer') : null;
+    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : '') + (lod ? ' lod' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px;height:${q.h}px` }, head, lod ? null : q.rows.map(r => rowEl(s, r)), tail);
   };
-  const NS = 'http://www.w3.org/2000/svg';
-  const edges = document.createElementNS(NS, 'svg'); edges.id = 'modedges';
-  const canvas = h('div', { id: 'modcanvas' }, edges);
-  const view = h('div', { id: 'modview' }, canvas);
+  const cv = h('canvas', { id: 'modedges' });
+  const cx2 = cv.getContext('2d');
+  const canvas = h('div', { id: 'modcanvas' });
+  const view = h('div', { id: 'modview' }, cv, canvas);
+  const els = new Map(); let curLod = 0, raf = 0, cols = null;
+  const colors = () => { if (cols && Date.now() - cols.t < 800) return cols; const cs = getComputedStyle(root), v = n => cs.getPropertyValue(n).trim(); return (cols = { t: Date.now(), muted: v('--muted') || '#888', accent: v('--accent') || '#d0382a', surface: v('--surface2') || '#ddd', line: v('--line') || '#bbb' }); };
+  /* the arrows (and, far out, the boxes) of what is in view */
   const drawEdges = () => {
-    edges.replaceChildren();
-    edges.setAttribute('width', lay.W); edges.setAttribute('height', lay.H);
-    const defs = document.createElementNS(NS, 'defs'); defs.innerHTML = '<marker id="modarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="context-stroke" stroke="context-stroke"/></marker>'; edges.append(defs);
-    for (const s of D.scenes) {
-      const a = lay.pos.get(s.n); if (!a) continue;
-      const list = []; for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g) list.push([r.g, r.k, r]); if (s.fall) list.push([s.fall, 'fall', null]);
-      for (const [tg, kd, r] of list) {
-        const b = lay.pos.get(tg); if (!b || tg === s.n) continue;
-        const sx = a.x + SW, sy = r ? a.y + HH + (a.idx.has(r) ? a.idx.get(r) : a.rows.length) * RH + RH / 2 : a.y + a.h - 8, tx = b.x, ty = b.y + HH / 2;
-        const p = document.createElementNS(NS, 'path');
-        p.setAttribute('d', `M${sx} ${sy} C${sx + 60} ${sy} ${tx - 60} ${ty} ${tx} ${ty}`);
-        p.setAttribute('class', 'e-' + kd + (st.sel && (st.sel.s === s.n || st.sel.s === tg) ? ' hot' : ''));
-        p.setAttribute('marker-end', 'url(#modarrow)'); edges.append(p);
+    const W = view.clientWidth, Hh = view.clientHeight, dpr = window.devicePixelRatio || 1, k = st.k;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(Hh * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(Hh * dpr); }
+    const c = cx2, col = colors();
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cv.width, cv.height);
+    c.setTransform(dpr * k, 0, 0, dpr * k, dpr * st.x, dpr * st.y);
+    const vx0 = -st.x / k, vy0 = -st.y / k, vx1 = vx0 + W / k, vy1 = vy0 + Hh / k;
+    if (curLod === 2) {
+      c.fillStyle = col.surface; c.strokeStyle = col.line; c.lineWidth = 1 / k;
+      for (const [n, q] of POS) { if (q.x > vx1 || q.x + SW < vx0 || q.y > vy1 || q.y + q.h < vy0) continue; const sel = st.sel && st.sel.s === n; c.fillStyle = sel ? col.accent : col.surface; c.fillRect(q.x, q.y, SW, q.h); c.strokeRect(q.x, q.y, SW, q.h); }
+    }
+    const hot = [];
+    const one = (e, isHot) => {
+      const a = POS.get(e.a), b = POS.get(e.b);
+      const sx = a.x + SW, sy = e.row ? a.y + HH + (a.idx.has(e.row) ? a.idx.get(e.row) : a.rows.length) * RH + RH / 2 : a.y + a.h - 8, tx = b.x, ty = b.y + HH / 2;
+      if (Math.max(sx + 60, tx) < vx0 || Math.min(sx, tx - 60) > vx1 || Math.max(sy, ty) < vy0 || Math.min(sy, ty) > vy1) return;
+      const isSel = st.sel && (st.sel.s === e.a || st.sel.s === e.b);
+      if (e.hub && !isSel) return;
+      if (!isHot && isSel) { hot.push(e); return; }
+      c.beginPath(); c.moveTo(sx, sy); c.bezierCurveTo(sx + 60, sy, tx - 60, ty, tx, ty);
+      c.strokeStyle = isHot ? col.accent : col.muted; c.globalAlpha = isHot ? 1 : curLod === 2 ? 0.16 : 0.55; c.lineWidth = (isHot ? 2.4 : 1.6) / Math.min(k, 1) ;
+      c.setLineDash(e.kind === 'call' ? [8 / k, 5 / k] : e.kind === 'fall' ? [2 / k, 5 / k] : []); c.stroke(); c.setLineDash([]);
+      const ah = 9 / Math.max(k, 0.3); c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx - ah, ty - ah * 0.45); c.lineTo(tx - ah, ty + ah * 0.45); c.closePath(); c.fillStyle = c.strokeStyle; c.fill();
+    };
+    for (const e of EDG) one(e, false);
+    for (const e of hot) one(e, true);
+    c.globalAlpha = 1;
+  };
+  /* make (and drop) the page elements of the scenes near the view, then draw the arrows */
+  const renderView = force => {
+    const W = view.clientWidth, Hh = view.clientHeight, k = st.k, lod = k < 0.1 ? 2 : k < 0.28 ? 1 : 0;
+    if (force || lod !== curLod) { els.forEach(e => e.remove()); els.clear(); curLod = lod; }
+    if (lod < 2) {
+      const M = 300 / k, x0 = -st.x / k - M, y0 = -st.y / k - M, x1 = (W - st.x) / k + M, y1 = (Hh - st.y) / k + M;
+      for (const s of D.scenes) {
+        const q = POS.get(s.n), vis = q.x < x1 && q.x + SW > x0 && q.y < y1 && q.y + q.h > y0, have = els.get(s.n);
+        if (vis && !have) { const el = sceneEl(s, q, lod); els.set(s.n, el); canvas.append(el); } else if (!vis && have) { have.remove(); els.delete(s.n); }
       }
     }
+    drawEdges();
   };
-  const dl = h('datalist', { id: 'modlabels' });
-  const draw = () => {
-    lay = layout();
-    [...canvas.children].forEach(c => { if (c !== edges) c.remove(); });
-    dl.replaceChildren(...[...labelSet()].map(n => h('option', { value: n })));
-    const edited = new Set(P.map(p => p.key));
-    for (const s of D.scenes) canvas.append(sceneEl(s, lay.pos.get(s.n), edited));
-    drawEdges(); drawPanel(); drawBar();
+  const queueRender = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderView(); }); };
+  const queueEdges = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawEdges(); }); };
+  const draw = full => {
+    relayout(!!full); edited = new Set(P.map(p => p.key));
+    renderView(true); drawPanel(); drawBar();
+  };
+  /* "+ N more" / "Show fewer": only this box changes size; the boxes under it in its column move out of the way */
+  const toggleOpen = (n, on) => {
+    const s = D.scenes.find(x => x.n === n), q0 = POS.get(n); if (!s || !q0) return;
+    on ? st.open.add(n) : st.open.delete(n);
+    const q = sizeOf(s); q.x = q0.x; q.y = q0.y; POS.set(n, q);
+    const dh = q.h - q0.h;
+    if (dh) for (const [m, o] of POS) if (m !== n && !manual.has(m) && Math.abs(o.x - q0.x) < 5 && o.y > q0.y) { o.y += dh; const a = auto.get(m); if (a) a[1] += dh; }
+    const el = els.get(n); if (el) { el.remove(); els.delete(n); }
+    renderView(true); drawBar();
   };
   const select = () => {
     $$('.mscene.sel, .mrow.sel', canvas).forEach(e => e.classList.remove('sel'));
-    if (st.sel) { const se = [...canvas.querySelectorAll('.mscene')].find(e => e.dataset.scene === st.sel.s); if (se) { se.classList.add('sel'); if (st.sel.key) { const re = [...se.querySelectorAll('.mrow')].find(e => e.dataset.key === st.sel.key); re && re.classList.add('sel'); } } }
+    const se = st.sel && els.get(st.sel.s);
+    if (se) { se.classList.add('sel'); if (st.sel.key) { const re = [...se.querySelectorAll('.mrow')].find(e => e.dataset.key === st.sel.key); re && re.classList.add('sel'); } }
     drawEdges(); drawPanel();
   };
-  const applyView = () => { canvas.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.k})`; };
-  const zoomAt = (f, cx, cy) => { const k = Math.min(2.5, Math.max(0.08, st.k * f)), r = k / st.k; st.x = cx - (cx - st.x) * r; st.y = cy - (cy - st.y) * r; st.k = k; applyView(); };
-  const fit = () => { const b = view.getBoundingClientRect(); st.k = Math.max(0.08, Math.min(1, (b.width - 40) / lay.W, (b.height - 40) / lay.H)); st.x = 20; st.y = 20; applyView(); };
-  const focusOn = name => { const q = lay.pos.get(name); if (!q) return; const b = view.getBoundingClientRect(); st.k = Math.max(st.k, 0.8); st.x = b.width / 2 - (q.x + SW / 2) * st.k; st.y = Math.max(10, b.height / 3 - (q.y + 20) * st.k); applyView(); };
-  // move around: drag, wheel, pinch
-  const pts = new Map(); let drag = null, pinch = null;
+  const applyView = () => { canvas.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.k})`; queueRender(); };
+  const zoomAt = (f, cx, cy) => { const k = Math.min(2.5, Math.max(0.02, st.k * f)), r = k / st.k; st.x = cx - (cx - st.x) * r; st.y = cy - (cy - st.y) * r; st.k = k; applyView(); };
+  const bounds = () => { let x0 = 1e12, y0 = 1e12, x1 = -1e12, y1 = -1e12; for (const q of POS.values()) { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x + SW); y1 = Math.max(y1, q.y + q.h); } return { x0, y0, x1, y1 }; };
+  const fit = () => { const b = view.getBoundingClientRect(), r = bounds(); st.k = Math.max(0.02, Math.min(1, (b.width - 40) / (r.x1 - r.x0), (b.height - 40) / (r.y1 - r.y0))); st.x = 20 - r.x0 * st.k; st.y = 20 - r.y0 * st.k; applyView(); };
+  const focusOn = name => { const q = POS.get(name); if (!q) return; const b = view.getBoundingClientRect(); st.k = Math.max(st.k, 0.8); st.x = b.width / 2 - (q.x + SW / 2) * st.k; st.y = Math.max(10, b.height / 3 - (q.y + 20) * st.k); applyView(); renderView(); };
+  // move around: drag, wheel, pinch; a box is moved by dragging its title
+  const pts = new Map(); let drag = null, pinch = null, boxDrag = null, saveT = 0;
+  const saveFlowPos = () => { clearTimeout(saveT); saveT = setTimeout(async () => { try { const g = await S.gal(gid); g.game.flowpos = Object.fromEntries(manual); await saveGallery(g); } catch (e) { } }, 500); };
+  function beginBox(e, s) { if (e.button > 0) return; e.stopPropagation(); const q = POS.get(s.n); boxDrag = { n: s.n, x: e.clientX, y: e.clientY, ox: q.x, oy: q.y, moved: false }; suppress = false; }
   view.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
     pts.set(e.pointerId, [e.clientX, e.clientY]); suppress = false;
@@ -4763,13 +4847,29 @@ async function openModder(gid) {
     else drag = { x: e.clientX, y: e.clientY, ox: st.x, oy: st.y };
   });
   const onMove = e => {
+    if (boxDrag) {
+      const dx = e.clientX - boxDrag.x, dy = e.clientY - boxDrag.y;
+      if (!boxDrag.moved && Math.hypot(dx, dy) > 5) { boxDrag.moved = true; suppress = true; }
+      if (boxDrag.moved) { const q = POS.get(boxDrag.n), el = els.get(boxDrag.n); q.x = Math.round(boxDrag.ox + dx / st.k); q.y = Math.round(boxDrag.oy + dy / st.k); if (el) { el.style.left = q.x + 'px'; el.style.top = q.y + 'px'; } queueEdges(); }
+      return;
+    }
     if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, r = view.getBoundingClientRect(); zoomAt(d / pinch.d, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top); pinch.d = d; suppress = true; }
     else if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (suppress || Math.hypot(dx, dy) > 5) { suppress = true; st.x = drag.ox + dx; st.y = drag.oy + dy; applyView(); } }
   };
-  const onUp = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { drag = null; setTimeout(() => { suppress = false; }, 0); } };
+  const onUp = e => {
+    if (boxDrag) { if (boxDrag.moved) { const q = POS.get(boxDrag.n); manual.set(boxDrag.n, [q.x, q.y]); saveFlowPos(); } boxDrag = null; setTimeout(() => { suppress = false; }, 0); return; }
+    pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { drag = null; setTimeout(() => { suppress = false; }, 0); }
+  };
   window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onUp);
   view.addEventListener('wheel', e => { e.preventDefault(); const r = view.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  // far out the boxes are only drawn: a tap on one zooms in on it
+  view.addEventListener('click', e => {
+    if (suppress || curLod !== 2) return;
+    const r = view.getBoundingClientRect(), wx = (e.clientX - r.left - st.x) / st.k, wy = (e.clientY - r.top - st.y) / st.k;
+    for (const [n, q] of POS) if (wx >= q.x && wx <= q.x + SW && wy >= q.y && wy <= q.y + q.h) { st.sel = { s: n, key: null }; st.k = 0.8; focusOn(n); select(); return; }
+  });
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => queueRender()) : null; ro && ro.observe(view);
 
   /* ---- changes: kept in the mod, put to work in the running game ---- */
   const localApply = p => {
@@ -4874,7 +4974,7 @@ async function openModder(gid) {
   /* ---- the panel under the picture ---- */
   const scenesLeadingTo = n => D.scenes.filter(s => s.n !== n && (s.fall === n || s.r.some(r => (r.k === 'jump' || r.k === 'call') && r.g === n))).map(s => s.n);
   const undoBtn = p => p ? h('button', { class: 'btn small ghost', onclick: () => takeBack(p) }, icon('undo'), 'Take back') : null;
-  const gotoBtn = n => h('button', { class: 'btn small', onclick: () => { st.sel = { s: n, key: null }; draw(); focusOn(n); select(); } }, icon('move'), `Show ${n}`);
+  const gotoBtn = n => h('button', { class: 'btn small', onclick: () => { st.sel = { s: n, key: null }; focusOn(n); select(); } }, icon('move'), `Show ${n}`);
   function drawPanel() {
     panel.replaceChildren();
     const sel = st.sel;
@@ -4884,7 +4984,7 @@ async function openModder(gid) {
     if (!r) {
       const from = scenesLeadingTo(s.n), nl = s.r.filter(x => x.k === 'say').length;
       return panel.append(h('div', { class: 'stack' }, h('b', {}, `Scene “${s.n}”`), h('p', { class: 'hint' }, `${nl} line${nl === 1 ? '' : 's'}, in ${s.f}${s.new ? ' (made here)' : ''}. ${from.length ? 'Reached from: ' + from.slice(0, 6).join(', ') + (from.length > 6 ? '…' : '') + '.' : 'Nothing leads here yet.'}`),
-        h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => newScene('', s.n) }, icon('plus'), 'New scene…'), st.open.has(s.n) || s.r.length <= LIM ? null : h('button', { class: 'btn small', onclick: () => { st.open.add(s.n); draw(); } }, 'Show all lines'))));
+        h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => newScene('', s.n) }, icon('plus'), 'New scene…'), st.open.has(s.n) || s.r.length <= LIM ? null : h('button', { class: 'btn small', onclick: () => { toggleOpen(s.n, true); } }, 'Show all lines'))));
     }
     const pre = h('p', { class: 'hint', style: 'margin:0' }, `${s.n} · ${s.f} line ${r.l}`);
     if (r.k === 'say') {
@@ -4929,24 +5029,26 @@ async function openModder(gid) {
     if (e.key !== 'Enter') return; const q = find.value.trim().toLowerCase(); if (!q) return;
     const hits = []; for (const s of D.scenes) { if (s.n.toLowerCase().includes(q)) hits.push({ s: s.n, key: null }); for (const r of s.r) if ((st.stage || r.k !== 'stage') && ((r.t || '') + ' ' + (r.g || '')).toLowerCase().includes(q)) hits.push({ s: s.n, key: r.key }); }
     if (!hits.length) return toast('Nothing found.', 2000);
-    fi = q === fq ? (fi + 1) % hits.length : 0; fq = q; const x = hits[fi]; if (x.key) st.open.add(x.s);
-    st.sel = x; draw(); focusOn(x.s); select();
+    fi = q === fq ? (fi + 1) % hits.length : 0; fq = q; const x = hits[fi];
+    if (x.key) { const r = rowByKey(x.key), pq = POS.get(x.s); if (r && pq && !pq.idx.has(r)) toggleOpen(x.s, true); }
+    st.sel = x; focusOn(x.s); select();
   });
-  const stageB = h('button', { class: 'btn small ghost', id: 'mod-stage', 'aria-pressed': 'false', onclick: () => { st.stage = !st.stage; draw(); } }, 'Pictures & sounds');
+  const stageB = h('button', { class: 'btn small ghost', id: 'mod-stage', 'aria-pressed': 'false', onclick: () => { st.stage = !st.stage; draw(true); } }, 'Pictures & sounds');
   const editsB = h('button', { class: 'btn small ghost', id: 'mod-edits-btn', onclick: editsList }, icon('list'), 'Changes');
   const drawBar = () => { stageB.setAttribute('aria-pressed', String(st.stage)); editsB.lastChild.textContent = P.length ? `Changes (${P.length})` : 'Changes'; };
   let closed = false;
-  const close = () => { if (closed) return; closed = true; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); document.removeEventListener('keydown', onKey, true); root.remove(); try { GAME.frame && GAME.frame.focus(); } catch (e) { } };
+  const close = () => { if (closed) return; closed = true; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); document.removeEventListener('keydown', onKey, true); ro && ro.disconnect(); cancelAnimationFrame(raf); root.remove(); try { GAME.frame && GAME.frame.focus(); } catch (e) { } };
   const onKey = e => { if (e.key !== 'Escape' || !$('#modder')) return; e.preventDefault(); e.stopPropagation(); if ($('#modmodal')) $('#modmodal').remove(); else close(); };
   document.addEventListener('keydown', onKey, true);
   const bar = h('div', { class: 'mtop' }, h('button', { class: 'btn small', id: 'mod-close', 'aria-label': 'Back to the game', onclick: close }, icon('back'), 'Game'), h('b', { class: 'mtitle' }, `Modding: ${g0.title}`),
-    find, stageB, h('button', { class: 'btn small ghost', id: 'mod-new', onclick: () => newScene('', 'start') }, icon('plus'), 'New scene'), editsB,
+    find, stageB, h('button', { class: 'btn small ghost', id: 'mod-tidy', title: 'Put every box back in its tidy place', onclick: () => { manual.clear(); saveFlowPos(); draw(true); fit(); } }, icon('sort'), 'Tidy'), h('button', { class: 'btn small ghost', id: 'mod-new', onclick: () => newScene('', 'start') }, icon('plus'), 'New scene'), editsB,
     h('button', { class: 'btn small ghost', 'aria-label': 'Zoom out', onclick: () => { const r = view.getBoundingClientRect(); zoomAt(0.8, r.width / 2, r.height / 2); } }, icon('zoomout')),
     h('button', { class: 'btn small ghost', 'aria-label': 'Zoom in', onclick: () => { const r = view.getBoundingClientRect(); zoomAt(1.25, r.width / 2, r.height / 2); } }, icon('zoomin')),
     h('button', { class: 'btn small ghost', id: 'mod-fit', 'aria-label': 'Show everything', onclick: fit }, icon('full')));
   root.replaceChildren(bar, view, panel, dl);
-  draw();
-  if (D.scenes.length <= 12) fit(); else focusOn(lay.pos.has('start') ? 'start' : D.scenes[0].n);
+  draw(true);
+  if (D.scenes.length <= 12) fit(); else focusOn(POS.has('start') ? 'start' : D.scenes[0].n);
+  if (window.TKB_DEBUG) window.TKB_FLOW = { pos: () => POS, st, manual, els: () => els, edges: () => EDG };
   const first = D.scenes.find(x => x.n === 'start') || D.scenes[0]; st.sel = { s: first.n, key: null }; select();
   busy(null);
 }
