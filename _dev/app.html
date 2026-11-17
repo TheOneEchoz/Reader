@@ -1904,6 +1904,16 @@ function rpyFind(items) {
   if (root === null) return null;
   return { root, items: items.filter(it => it.path.startsWith(root)) };
 }
+/* every game in a list of files (a ZIP of a whole library holds several): each game's folder is the one with game/ inside it */
+function rpyFindAll(items) {
+  const roots = new Set();
+  for (const it of items) {
+    const p = it.path; if (!/\.(rpyc|rpy|rpa|rpymc)$/i.test(p)) continue;
+    const k = /^game\//i.test(p) ? 0 : p.search(/\/game\//i) + 1; if (k < 0 || (k === 0 && !/^game\//i.test(p))) continue;
+    roots.add(p.slice(0, k));
+  }
+  return [...roots].filter(r => ![...roots].some(o => o !== r && r.startsWith(o))).map(root => ({ root, items: items.filter(it => it.path.startsWith(root)) }));
+}
 /* ---------- HTML games: RPG Maker MV and MZ, and other games made as a web page ----------
    Kept like a Ren'Py game (files encrypted in pieces), stored under "game/" + the path from the folder with index.html. */
 const HTML_KIND = { rmmv: 'RPG Maker MV', rmmz: 'RPG Maker MZ', html: 'a web page (HTML)' };
@@ -1992,6 +2002,7 @@ async function rpyVersion(f) {
   const rel = it => it.path.slice(f.root.length);
   const text = async it => { const u = new Uint8Array(await (await it.blob()).slice(0, 2e6).arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return s; };
   const pick = s => { const m = s.match(/(?:^|[^\d.])([678])\.(\d{1,2})\.(\d{1,2})(?:\.\d+)?(?![\d])/); return m ? `${m[1]}.${m[2]}.${m[3]}` : null; };
+  { const it = f.items.find(x => /^tankobon\.json$/i.test(rel(x))); if (it) { try { const j = JSON.parse(await text(it)); const v = j.v && pick(String(j.v)); if (v) return { v, how: 'zip' }; if (j.py) return { py: String(j.py), how: 'zip' }; } catch (e) { } } }   // (a ZIP the app made says which Ren'Py)
   for (const it of f.items.filter(it => /^renpy\/(__pycache__\/)?vc_version\b[^/]*$/i.test(rel(it)))) { const v = pick(await text(it)); if (v) return { v, how: 'version' }; }
   { const it = f.items.find(x => /^game\/script_version\.txt$/i.test(rel(x))); if (it) { const m = (await text(it)).match(/\(\s*([678])\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})/); if (m) return { v: `${m[1]}.${m[2]}.${m[3]}`, how: 'version' }; } }
   for (const n of ['log.txt', 'traceback.txt', 'errors.txt']) {
@@ -2192,7 +2203,7 @@ async function rpyGamesIn(files) {
   const games = [], rest = [];
   const tops = new Map();
   for (const f of files) { const p = (f.relPath || f.webkitRelativePath || '').replace(/\\/g, '/'); if (p.includes('/')) { const t = p.split('/')[0]; if (!tops.has(t)) tops.set(t, []); tops.get(t).push(f); } else rest.push(f); }
-  for (const [t, list] of tops) { const its = list.map(fileItem), found = rpyFind(its); if (found) { games.push({ found, title: rpyTitle(found.root, t) }); continue; } const hf = htmlFind(its); if (hf) games.push({ found: hf, html: hf.kind, title: htmlTitle(hf, t) }); else rest.push(...list); }
+  for (const [t, list] of tops) { const its = list.map(fileItem), all = rpyFindAll(its); if (all.length) { for (const found of all) games.push({ found, title: rpyTitle(found.root, t) }); continue; } const hf = htmlFind(its); if (hf) games.push({ found: hf, html: hf.kind, title: htmlTitle(hf, t) }); else rest.push(...list); }
   for (const f of rest.slice()) {
     if (/\.apk$/i.test(f.name)) {
       try { const its = await apkGame(f), found = its && rpyFind(its); if (found) { games.push({ found, title: rpyTitle(found.root, baseName(f.name)), apk: true }); rest.splice(rest.indexOf(f), 1); } } catch (e) { }
@@ -2200,8 +2211,8 @@ async function rpyGamesIn(files) {
     }
     if (!/\.zip$/i.test(f.name)) continue;
     try {
-      const its = await zipItems(f), found = rpyFind(its);
-      if (found) { games.push({ found, title: rpyTitle(found.root, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); }
+      const its = await zipItems(f), all = rpyFindAll(its);
+      if (all.length) { for (const found of all) games.push({ found, title: rpyTitle(found.root, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); }
       else { const hf = htmlFind(its); if (hf) { games.push({ found: hf, html: hf.kind, title: htmlTitle(hf, baseName(f.name)) }); rest.splice(rest.indexOf(f), 1); } }
     } catch (e) { }
   }
@@ -2495,6 +2506,7 @@ async function renderGameDetail(v, g) {
         h('button', { class: 'btn', id: 'game-assets', style: 'flex:1', onclick: () => openAssets(id) }, icon('image'), 'See the game\'s pictures'),
         h('button', { class: 'btn ghost', id: 'game-adjust', onclick: () => adjustCover(id) }, icon('edit'), 'Adjust the cover'),
         EXP ? h('button', { class: 'btn ghost', id: 'export-one', onclick: async () => exportOne(await S.gal(id)) }, icon('lock'), 'Encrypted copy') : null,
+        EXP ? h('button', { class: 'btn ghost', id: 'game-zip', onclick: () => exportGameZip(id) }, icon('download'), 'Save ZIP') : null,
         EXP ? h('button', { class: 'btn ghost', id: 'game-update', onclick: async () => {
           const files = await pickFiles({ folder: true }); if (!files.length) return;
           const { games } = await rpyGamesIn(files).catch(() => ({ games: [] }));
@@ -12613,12 +12625,50 @@ async function saveFileNative(blob, name) {
   }
   throw new Error('Android did not allow saving the file');
 }
+/* one Ren'Py game into a ZIP folder: game/… as the game plays in the app (its mods that are on included, Tankōbon's own edits left out), and tankobon.json with the Ren'Py version */
+async function zipGame(parent, gg, used, tick, cancelled, say) {
+  let name = (gg.title || 'Game').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 80) || 'Game', n = 1;
+  while (used.has(name.toLowerCase())) name = name.replace(/ \(\d+\)$/, '') + ` (${++n})`;
+  used.add(name.toLowerCase()); say && say(gg.title);
+  const dir = parent.folder(name), list = (await gameFileList(gg, 'on')).filter(f => !/zzzz_tankobon_/i.test(f.p));
+  for (const f of list) { if (cancelled()) throw new Error('stopped'); dir.file(f.p, await rpyRead(f.c, f.s), { binary: true }); tick(f.s); }
+  dir.file('tankobon.json', JSON.stringify({ title: gg.title, v: gg.game.ver || gg.game.rt, py: gg.game.py || null, rt: gg.game.rt }));
+}
+/* a ZIP of one game */
+async function exportGameZip(gid) {
+  const g = await S.gal(gid); if (!isRenpy(g)) return;
+  if (typeof JSZip === 'undefined') return toast('The ZIP tool could not load. Check your connection and try again.', 3500);
+  if ((g.game.size || 0) > 1.5e9 && !(await askYes('A big ZIP', `This game is about ${mb(g.game.size)}. A ZIP that big may not fit in this device's memory. Save it anyway?`, 'Save'))) return;
+  let cancel = false, done = 0; const total = Math.max(1, (g.game.size || 0) / 1e6);
+  const lbl = h('div', { class: 'num' }, 'Preparing…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
+  openSheet('Save the game as ZIP', h('div', { class: 'stack' },
+    h('p', { class: 'hint' }, 'The ZIP has the game\'s files (and the mods that are on) and is not encrypted. It can be added to the app or to the engine again.'),
+    h('div', { class: 'progress' }, lbl, bar), h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; closeSheet(); } }, 'Stop'))), () => { cancel = true; });
+  busy++;
+  try {
+    const zip = new JSZip();
+    await zipGame(zip, g, new Set(), n => { done += n / 1e6; lbl.textContent = `${mb(done * 1e6)} of ${mb(total * 1e6)}`; bar.firstChild.style.width = (90 * done / total) + '%'; }, () => cancel);
+    lbl.textContent = 'Packing the ZIP…';
+    const out = await zip.generateAsync({ type: 'blob', compression: 'STORE', streamFiles: true }, m => { bar.firstChild.style.width = (90 + m.percent * .1) + '%'; });
+    if (cancel) throw new Error('stopped');
+    const name = (g.title.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 80) || 'Game') + '.zip';
+    if (NATIVE) { const where = await saveFileNative(out, name); closeSheet(); toast(`ZIP saved to ${where}.`, 5000); }
+    else { const url = URL.createObjectURL(out), a = h('a', { href: url, download: name, style: 'display:none' }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 120000); closeSheet(); toast('ZIP saved. Look for it in your Downloads folder.', 4000); }
+  } catch (e) {
+    if (e.message === 'stopped') toast('Stopped'); else { console.error(e); toast('Could not create the ZIP: ' + (e.message || e), 4500); }
+  } finally { busy = Math.max(0, busy - 1); }
+}
 async function exportZip(g) {
   if (typeof JSZip === 'undefined') return toast('The ZIP tool could not load. Check your connection and try again.', 3500);
-  const total = totalPages(g); let done = 0, cancel = false;
+  // the games kept in this gallery's folders go in too: each in a folder of its own, with its files (and the mods that are on)
+  const games = new Map();
+  for (const gid of new Set(g.chapters.flatMap(c => c.games || []))) { const gg = await S.gal(gid); if (isRenpy(gg)) games.set(gid, gg); }
+  const gameMB = [...games.values()].reduce((n, x) => n + (x.game.size || 0) / 1e6, 0), pagesTotal = totalPages(g), total = pagesTotal + gameMB;
+  if (gameMB > 1500 && !(await askYes('A big ZIP', `The games in this gallery are about ${mb(gameMB * 1e6)}. A ZIP that big may not fit in this device's memory. Save it anyway?`, 'Save'))) return;
+  let done = 0, pg = 0, cancel = false;
   const lbl = h('div', { class: 'num' }, 'Preparing…'), bar = h('div', { class: 'bar' }, h('i', { style: 'width:0%' }));
   openSheet('Save as ZIP', h('div', { class: 'stack' },
-    h('p', { class: 'hint' }, 'The ZIP is a normal copy of this gallery that any app can open, so it is not encrypted. Each chapter becomes a folder, in your order.'),
+    h('p', { class: 'hint' }, 'The ZIP is a normal copy of this gallery that any app can open, so it is not encrypted. Each chapter becomes a folder, in your order.' + (games.size ? ' The games in it are saved too, each in its own folder (their files, and the mods that are on); a ZIP of them can be added to the app or to the engine again.' : '')),
     h('div', { class: 'progress' }, lbl, bar), h('div', {}, h('button', { class: 'btn ghost small', onclick: () => { cancel = true; closeSheet(); } }, 'Stop'))), () => { cancel = true; });
   busy++;
   try {
@@ -12644,7 +12694,12 @@ async function exportZip(g) {
           if (base) lf.file('00 base' + extOf(nm, base), base, { binary: true });
           for (const [k, l] of L.list.entries()) { const lb = await S.blob('images', l.id); if (lb) lf.file(`${pad(k + 1, 2)} ${safe(l.name)}${extOf((g.meta[l.id] || [])[2] || '', lb)}`, lb, { binary: true }); }
         }
-        done++; lbl.textContent = `Adding page ${done.toLocaleString()} of ${total.toLocaleString()}`; bar.firstChild.style.width = (80 * done / total) + '%';
+        done++; pg++; lbl.textContent = `Adding page ${pg.toLocaleString()} of ${pagesTotal.toLocaleString()}`; bar.firstChild.style.width = (80 * done / Math.max(1, total)) + '%';
+      }
+      const used = new Set();
+      for (const gid of c.games || []) {
+        const gg = games.get(gid); if (!gg) continue;
+        await zipGame(folder, gg, used, n => { done += n / 1e6; bar.firstChild.style.width = (80 * done / Math.max(1, total)) + '%'; }, () => cancel, t => { lbl.textContent = `Adding the game “${t}”`; });
       }
     }
     if (g.customCover && g.cover === g.customCover) { const cb = await S.blob('images', g.customCover); if (cb) zip.file('cover' + (((g.meta[g.cover] || [])[2] || '').match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase(), cb, { binary: true }); }
