@@ -1,6 +1,6 @@
 {
- "version": 141,
- "name": "1.23.0-beta.43",
+ "version": 142,
+ "name": "1.23.0-beta.44",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,8 @@
   "qrcode.js"
  ],
  "notes": [
-  "Modding mode: select several boxes and move them together. Shift-click or Ctrl-click a box to add or remove it, drag a rectangle with Shift held over empty space to select what it touches, or turn on the new Select button (for touch screens) and just tap. Esc clears the selection.",
-  "Modding mode: a new layout that follows the story. Scenes go from left to right in the order the story reaches them, scenes that lead to the same scene sit one above the other in the column before it, and the order is chosen so as few arrows as possible cross. The solid jump arrows decide the layout; the dashed and dotted ones (calls and fall-through) only matter for scenes no jump leads to. On a 700-scene story, crossings went from about 16,500 to about 3,100 and no jump points backward any more.",
-  "Long arrows now run in lanes between the columns instead of behind boxes. Tidy puts everything back in this layout."
+  "Modding mode: shared scenes. A scene that five or more scenes lead to (a world map, a helper, a shared ending) is now a shared scene, like a function in Unreal Engine: it sits in a block of its own at the top, marked with ƒ and “used by N”, and no arrows are drawn to it. Each scene that uses it shows ƒ and a small ↗ link in the line that calls it; tap the link to go there. Select the shared scene to see which scenes use it, outlined, and to list them. You can also choose Show the arrows for a moment.",
+  "In the panel of any scene you can choose Make it a shared scene, or Draw it as a normal scene for one that was made shared automatically. This is remembered for each game.",
+  "With the shared scenes out of the way, the rest of the story is a lot tidier: on a 700-scene story the crossings went from about 3,100 to about 2,100."
  ]
 }

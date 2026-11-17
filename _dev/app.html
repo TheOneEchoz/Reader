@@ -561,6 +561,10 @@ body:has(#modder) #toast{z-index:170;top:calc(64px + env(safe-area-inset-top,0px
 .mscene{position:absolute;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;font-size:12.5px;box-shadow:var(--shadow)}
 .mscene.sel{border-color:var(--accent)}
 .mscene.new{border-style:dashed}
+.mscene.shared .mh{background:var(--accent-soft)}
+.mscene.usr{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fx{font-family:Georgia,serif;font-style:italic;font-weight:700;color:var(--accent)}
+.mrow .goref{margin-left:auto;flex:none;border:0;background:transparent;color:var(--accent);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px}
 .mscene .mh{height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;background:var(--surface2);cursor:grab;touch-action:none;user-select:none}
 .mscene.lod{box-shadow:none}
 .mscene.multi{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -4659,7 +4663,7 @@ async function openModder(gid) {
   if (!D || !D.scenes || !D.scenes.length) { root.remove(); return toast(D ? 'No story scenes were found in this game.' : 'The story could not be read from this game.', 4000); }
   const g0 = await S.gal(gid);
   let P = await flowPatches(gid), nid = P.reduce((m, p) => Math.max(m, p.id || 0), 0);
-  const st = { sel: null, multi: new Set(), selMode: false, open: new Set(), stage: false, k: 1, x: 24, y: 24 };
+  const st = { sel: null, multi: new Set(), selMode: false, refs: false, open: new Set(), stage: false, k: 1, x: 24, y: 24 };
   const { SW, GX, GY, HH, RH, LIM } = FLOW;
   let suppress = false;
   const labelSet = () => new Set([...D.labels, ...P.filter(p => p.op === 'scene').map(p => p.name)]);
@@ -4675,6 +4679,18 @@ async function openModder(gid) {
   const dl = h('datalist', { id: 'modlabels' });
   const vrows = s => st.stage ? s.r : s.r.filter(r => r.k !== 'stage');
   const manual = new Map(Object.entries(g0.game.flowpos || {}).filter(([, v]) => Array.isArray(v) && v.length === 2)); // boxes moved by hand: name -> [x, y]
+  const sharedOv = new Map(Object.entries(g0.game.flowshared || {}).filter(([, v]) => typeof v === 'boolean'));   // scenes the user made shared (true) or normal (false)
+  let SHARED = new Set(), USERS = new Map();   // shared scenes (like functions: used from many places) and, for each scene, the scenes that lead to it
+  const SHARE_MIN = 5;
+  const computeShared = () => {
+    USERS = new Map(); SHARED = new Set();
+    for (const s of D.scenes) {
+      const add = b => { if (b && b !== s.n) (USERS.get(b) || USERS.set(b, new Set()).get(b)).add(s.n); };
+      for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g) add(r.g);
+      if (s.fall) add(s.fall);
+    }
+    for (const s of D.scenes) { const o = sharedOv.get(s.n), c = USERS.has(s.n) ? USERS.get(s.n).size : 0; if (o === true || (o !== false && s.n !== 'start' && c >= SHARE_MIN)) SHARED.add(s.n); }
+  };
   let auto = new Map(), POS = new Map(), EDG = [], WP = new Map(), edited = new Set(), dlKey = '';   // auto: tidy places; POS: name -> {x, y, h, rows, more, extra, idx}
   const sizeOf = s => {
     const all = vrows(s), open = st.open.has(s.n), shown = open ? all : all.slice(0, LIM), more = all.length - shown.length, extra = more > 0 || (open && all.length > LIM) ? 1 : 0;
@@ -4692,23 +4708,21 @@ async function openModder(gid) {
     for (const s of sc) {
       const q = sz.get(s.n);
       const add = (b, k, row) => {
-        if (!by.has(b) || b === s.n) return;
+        if (!by.has(b) || b === s.n || SHARED.has(b) || SHARED.has(s.n)) return;
         const key = s.n + '\n' + b, old = links.get(key), oy = row ? HH + (q.idx.has(row) ? q.idx.get(row) : q.rows.length) * RH + RH / 2 : q.h - 8;
         if (!old) links.set(key, { a: s.n, b, k, oy }); else if (k === 'jump' && old.k !== 'jump') { old.k = 'jump'; old.oy = oy; }
       };
       for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g) add(r.g, r.k, r);
       if (s.fall) add(s.fall, 'fall', null);
     }
-    // a scene that many others lead to (a shared helper, a menu) would tie everything into one tangle: its arrows are still drawn,
-    // but it does not take part in grouping and columns
-    const fan = new Map(sc.map(s => [s.n, 0])); for (const l of links.values()) fan.set(l.b, fan.get(l.b) + 1);
-    const jumped = new Set(); for (const l of links.values()) if (l.k === 'jump' && fan.get(l.b) < 10) jumped.add(l.b);
-    const E = [...links.values()].filter(l => fan.get(l.b) < 10 && (l.k === 'jump' || !jumped.has(l.b)));
+    // shared scenes (many others lead to them) stay out of all this: they are put in a block of their own
+    const jumped = new Set(); for (const l of links.values()) if (l.k === 'jump') jumped.add(l.b);
+    const E = [...links.values()].filter(l => l.k === 'jump' || !jumped.has(l.b));
     const outE = new Map(sc.map(s => [s.n, []])), inE = new Map(sc.map(s => [s.n, []]));
     for (const e of E) { outE.get(e.a).push(e); inE.get(e.b).push(e); }
     const uf = new Map(sc.map(s => [s.n, s.n])), root = x => { while (uf.get(x) !== x) { uf.set(x, uf.get(uf.get(x))); x = uf.get(x); } return x; };
     for (const e of E) { const ra = root(e.a), rb = root(e.b); if (ra !== rb) uf.set(ra, rb); }
-    const groups = new Map(); for (const s of sc) { const r = root(s.n); (groups.get(r) || groups.set(r, []).get(r)).push(s); }
+    const groups = new Map(); for (const s of sc) { if (SHARED.has(s.n)) continue; const r = root(s.n); (groups.get(r) || groups.set(r, []).get(r)).push(s); }
     let total = 0; for (const s of sc) total += (SW + GX) * (sz.get(s.n).h + GY);
     const DUMMY = 8, GYD = 10, cw = SW + GX;
     const layoutGroup = list => {
@@ -4799,7 +4813,15 @@ async function openModder(gid) {
     for (const list of groups.values()) { const g = layoutGroup(list); placed.push({ first: list.some(s => s.n === 'start') ? 1 : 0, n: list.length, ...g }); }
     placed.sort((a, b) => b.first - a.first || b.n - a.n);
     const rowW = Math.max(Math.min(Math.max(...placed.map(g => g.W)), 30000), Math.sqrt(total) * 1.8, 4000);
-    let px = 0, py = 0, rh = 0; const A = new Map(), wp = new Map();
+    const A = new Map(), wp = new Map();
+    const shl = sc.filter(s => SHARED.has(s.n)).sort((a, b) => USERS.get(b.n).size - USERS.get(a.n).size);
+    let py0 = 0;
+    if (shl.length) {
+      const nc = Math.min(8, Math.max(1, Math.ceil(Math.sqrt(shl.length * 1.5)))); let y = 0;
+      for (let i = 0; i < shl.length; i += nc) { let hm = 0; shl.slice(i, i + nc).forEach((s, j) => { A.set(s.n, [j * cw, y]); hm = Math.max(hm, sz.get(s.n).h); }); y += hm + GY + 10; }
+      py0 = y + 100;
+    }
+    let px = 0, py = py0, rh = 0;
     for (const g of placed) {
       if (px > 0 && px + g.W > rowW) { px = 0; py += rh + 90; rh = 0; }
       for (const [n, [lx, ly]] of g.local) A.set(n, [px + lx, py + ly]);
@@ -4810,6 +4832,7 @@ async function openModder(gid) {
   };
   /* full: every scene gets its tidy place again; otherwise the places stay and a new scene goes next to the scene that leads to it */
   const relayout = full => {
+    computeShared();
     if (full || !auto.size) { const r = tidy(); auto = r.A; WP = r.wp; }
     POS = new Map(); EDG = [];
     for (const s of D.scenes) { const q = sizeOf(s), m = manual.get(s.n) || auto.get(s.n); if (m) { q.x = m[0]; q.y = m[1]; } POS.set(s.n, q); }
@@ -4817,9 +4840,7 @@ async function openModder(gid) {
       for (const r of s.r) if ((r.k === 'jump' || r.k === 'call') && r.g && r.g !== s.n && POS.has(r.g)) EDG.push({ a: s.n, b: r.g, kind: r.k, row: r });
       if (s.fall && s.fall !== s.n && POS.has(s.fall)) EDG.push({ a: s.n, b: s.fall, kind: 'fall', row: null });
     }
-    const seen = new Set(), fan = new Map();
-    for (const e of EDG) { const k = e.a + '\n' + e.b; if (!seen.has(k)) { seen.add(k); fan.set(e.b, (fan.get(e.b) || 0) + 1); } }
-    for (const e of EDG) e.hub = fan.get(e.b) >= 10;   // many scenes lead here: its arrows only show while one end is selected
+    for (const e of EDG) e.hub = SHARED.has(e.a) || SHARED.has(e.b);   // arrows of shared scenes only show while one end is selected (or "Show arrows")
     for (const s of D.scenes) {
       if (manual.has(s.n) || auto.has(s.n)) continue;
       const q = POS.get(s.n), e = EDG.find(x => x.b === s.n), src = e && POS.get(e.a);
@@ -4836,22 +4857,24 @@ async function openModder(gid) {
     const pad = 8 + Math.min(r.d, 6) * 10;
     let body;
     if (r.k === 'say') body = [r.w ? h('b', {}, charName(r.w) + ': ') : null, r.t];
-    else if (r.k === 'jump' || r.k === 'call') body = r.g ? r.g : '(computed) ' + r.t;
+    else if (r.k === 'jump' || r.k === 'call') body = r.g ? (SHARED.has(r.g) ? [h('span', { class: 'fx' }, 'ƒ'), ' ' + r.g] : r.g) : '(computed) ' + r.t;
     else if (r.k === 'choice') body = r.t;
     else if (r.k === 'branch') body = r.t === 'True' ? 'else' : r.t;
     else if (r.k === 'if') body = 'branch';
     else body = r.t || '';
     const full = r.k === 'say' ? (r.w ? charName(r.w) + ': ' : '') + r.t : r.k === 'jump' || r.k === 'call' ? r.k + ' ' + (r.g || r.t) : r.t;
     return h('div', { class: `mrow k-${r.k}${r.h ? ' off' : ''}${edited.has(r.key) ? ' edited' : ''}${st.sel && st.sel.key === r.key && st.sel.s === s.n ? ' sel' : ''}`, 'data-key': r.key, style: `padding-left:${pad}px`, title: trunc(full, 300),
-      onclick: e => clickScene(e, s, r.key) }, TAGS[r.k] ? h('span', { class: 'tag' }, TAGS[r.k]) : null, h('span', { class: 'txt' }, body));
+      onclick: e => clickScene(e, s, r.key) }, TAGS[r.k] ? h('span', { class: 'tag' }, TAGS[r.k]) : null, h('span', { class: 'txt' }, body),
+      (r.k === 'jump' || r.k === 'call') && r.g && SHARED.has(r.g) ? h('button', { class: 'goref', type: 'button', title: 'Show the shared scene ' + r.g, 'aria-label': 'Show ' + r.g, onpointerdown: e => e.stopPropagation(), onclick: e => { e.stopPropagation(); if (suppress) return; st.sel = { s: r.g, key: null }; focusOn(r.g); select(); } }, '↗') : null);
   };
+  const isUser = n => !!(st.sel && SHARED.has(st.sel.s) && USERS.get(st.sel.s).has(n));
   const sceneEl = (s, q, lod) => {
     const nl = s.r.filter(r => r.k === 'say').length;
-    const head = h('div', { class: 'mh', onpointerdown: e => beginBox(e, s), onclick: e => clickScene(e, s, null) }, h('b', {}, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}`));
+    const head = h('div', { class: 'mh', onpointerdown: e => beginBox(e, s), onclick: e => clickScene(e, s, null) }, h('b', {}, SHARED.has(s.n) ? [h('span', { class: 'fx' }, 'ƒ'), ' '] : null, s.n), h('small', {}, `${nl} line${nl === 1 ? '' : 's'}${SHARED.has(s.n) ? ' · used by ' + USERS.get(s.n).size : ''}`));
     const open = st.open.has(s.n);
     const tail = lod ? null : q.more ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; toggleOpen(s.n, true); } }, `+ ${q.more} more…`)
       : open && q.extra ? h('div', { class: 'mrow more', onclick: () => { if (suppress) return; toggleOpen(s.n, false); } }, 'Show fewer') : null;
-    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : '') + (lod ? ' lod' : '') + (st.multi.has(s.n) ? ' multi' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px;height:${q.h}px` }, head, lod ? null : q.rows.map(r => rowEl(s, r)), tail);
+    return h('div', { class: 'mscene' + (st.sel && st.sel.s === s.n ? ' sel' : '') + (s.new ? ' new' : '') + (SHARED.has(s.n) ? ' shared' : '') + (isUser(s.n) ? ' usr' : '') + (lod ? ' lod' : '') + (st.multi.has(s.n) ? ' multi' : ''), 'data-scene': s.n, style: `left:${q.x}px;top:${q.y}px;width:${SW}px;height:${q.h}px` }, head, lod ? null : q.rows.map(r => rowEl(s, r)), tail);
   };
   const cv = h('canvas', { id: 'modedges' });
   const cx2 = cv.getContext('2d');
@@ -4878,7 +4901,7 @@ async function openModder(gid) {
     const vx0 = -st.x / k, vy0 = -st.y / k, vx1 = vx0 + W / k, vy1 = vy0 + Hh / k;
     if (curLod === 2) {
       c.strokeStyle = col.line; c.lineWidth = 1 / k;
-      for (const [n, q] of POS) { if (q.x > vx1 || q.x + SW < vx0 || q.y > vy1 || q.y + q.h < vy0) continue; c.fillStyle = (st.sel && st.sel.s === n) || st.multi.has(n) ? col.accent : col.surface; c.fillRect(q.x, q.y, SW, q.h); c.strokeRect(q.x, q.y, SW, q.h); }
+      for (const [n, q] of POS) { if (q.x > vx1 || q.x + SW < vx0 || q.y > vy1 || q.y + q.h < vy0) continue; c.fillStyle = (st.sel && st.sel.s === n) || st.multi.has(n) || isUser(n) ? col.accent : col.surface; c.fillRect(q.x, q.y, SW, q.h); c.strokeRect(q.x, q.y, SW, q.h); }
     }
     const hot = [];
     const one = (e, isHot) => {
@@ -4886,7 +4909,7 @@ async function openModder(gid) {
       for (const p of pts) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
       if (x1 + 60 < vx0 || x0 - 60 > vx1 || y1 < vy0 || y0 > vy1) return;
       const isSel = st.sel && (st.sel.s === e.a || st.sel.s === e.b);
-      if (e.hub && !isSel) return;
+      if (e.hub && (!isSel || (SHARED.has(st.sel.s) && !st.refs))) return;
       if (!isHot && isSel) { hot.push(e); return; }
       c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
       for (let i = 1; i < pts.length; i++) { const A = pts[i - 1], B = pts[i], dx = B[0] > A[0] + 80 ? (B[0] - A[0]) / 2 : 60; c.bezierCurveTo(A[0] + dx, A[1], B[0] - dx, B[1], B[0], B[1]); }
@@ -4930,6 +4953,7 @@ async function openModder(gid) {
     $$('.mscene.sel, .mrow.sel', canvas).forEach(e => e.classList.remove('sel'));
     const se = st.sel && els.get(st.sel.s);
     if (se) { se.classList.add('sel'); if (st.sel.key) { const re = [...se.querySelectorAll('.mrow')].find(e => e.dataset.key === st.sel.key); re && re.classList.add('sel'); } }
+    els.forEach((el, n) => el.classList.toggle('usr', isUser(n)));
     drawEdges(); drawPanel();
   };
   const applyView = () => { canvas.style.transform = `translate(${st.x}px,${st.y}px) scale(${st.k})`; queueRender(); };
@@ -5110,6 +5134,17 @@ async function openModder(gid) {
   /* ---- the panel under the picture ---- */
   const scenesLeadingTo = n => D.scenes.filter(s => s.n !== n && (s.fall === n || s.r.some(r => (r.k === 'jump' || r.k === 'call') && r.g === n))).map(s => s.n);
   const undoBtn = p => p ? h('button', { class: 'btn small ghost', onclick: () => takeBack(p) }, icon('undo'), 'Take back') : null;
+  const setShared = async (n, v) => {
+    sharedOv.set(n, v);
+    try { const g = await S.gal(gid); g.game.flowshared = Object.fromEntries(sharedOv); await saveGallery(g); } catch (e) { }
+    draw(true); st.sel = { s: n, key: null }; focusOn(n); select();
+  };
+  const sharedNote = n => { const us = [...USERS.get(n)]; return h('div', { class: 'stack', id: 'mp-shared' },
+    h('p', { class: 'hint', style: 'margin:0' }, `A shared scene: ${us.length} scenes lead to it, so no arrows are drawn to it. The scenes that use it are outlined, and each one has a ƒ link to it. Used by:`),
+    h('div', { class: 'row' }, us.slice(0, 14).map(u => h('button', { class: 'btn small', onclick: () => { st.sel = { s: u, key: null }; focusOn(u); select(); } }, u)), us.length > 14 ? h('span', { class: 'hint' }, `and ${us.length - 14} more`) : null)); };
+  const sharedRow = n => SHARED.has(n)
+    ? h('div', { class: 'row' }, h('button', { class: 'btn small', id: 'mp-refs', onclick: () => { st.refs = !st.refs; drawEdges(); drawPanel(); } }, st.refs ? 'Hide the arrows' : 'Show the arrows'), h('button', { class: 'btn small', id: 'mp-unshare', onclick: () => setShared(n, false) }, 'Draw it as a normal scene'))
+    : h('div', { class: 'row' }, h('button', { class: 'btn small', id: 'mp-share', onclick: () => setShared(n, true) }, 'Make it a shared scene'));
   const gotoBtn = n => h('button', { class: 'btn small', onclick: () => { st.sel = { s: n, key: null }; focusOn(n); select(); } }, icon('move'), `Show ${n}`);
   function drawPanel() {
     panel.replaceChildren();
@@ -5125,8 +5160,8 @@ async function openModder(gid) {
     const r = sel.key ? s.r.find(x => x.key === sel.key) : null;
     if (!r) {
       const from = scenesLeadingTo(s.n), nl = s.r.filter(x => x.k === 'say').length;
-      return panel.append(h('div', { class: 'stack' }, h('b', {}, `Scene “${s.n}”`), h('p', { class: 'hint' }, `${nl} line${nl === 1 ? '' : 's'}, in ${s.f}${s.new ? ' (made here)' : ''}. ${from.length ? 'Reached from: ' + from.slice(0, 6).join(', ') + (from.length > 6 ? '…' : '') + '.' : 'Nothing leads here yet.'}`),
-        h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => newScene('', s.n) }, icon('plus'), 'New scene…'), st.open.has(s.n) || s.r.length <= LIM ? null : h('button', { class: 'btn small', onclick: () => { toggleOpen(s.n, true); } }, 'Show all lines'))));
+      return panel.append(h('div', { class: 'stack' }, h('b', {}, `Scene “${s.n}”`), SHARED.has(s.n) ? sharedNote(s.n) : null, h('p', { class: 'hint' }, `${nl} line${nl === 1 ? '' : 's'}, in ${s.f}${s.new ? ' (made here)' : ''}. ${from.length ? 'Reached from: ' + from.slice(0, 6).join(', ') + (from.length > 6 ? '…' : '') + '.' : 'Nothing leads here yet.'}`),
+        h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => newScene('', s.n) }, icon('plus'), 'New scene…'), st.open.has(s.n) || s.r.length <= LIM ? null : h('button', { class: 'btn small', onclick: () => { toggleOpen(s.n, true); } }, 'Show all lines')), sharedRow(s.n)));
     }
     const pre = h('p', { class: 'hint', style: 'margin:0' }, `${s.n} · ${s.f} line ${r.l}`);
     if (r.k === 'say') {
@@ -5191,7 +5226,7 @@ async function openModder(gid) {
   root.replaceChildren(bar, view, panel, dl);
   draw(true);
   if (D.scenes.length <= 12) fit(); else focusOn(POS.has('start') ? 'start' : D.scenes[0].n);
-  if (window.TKB_DEBUG) window.TKB_FLOW = { pos: () => POS, st, manual, els: () => els, edges: () => EDG, wp: () => WP, paths: () => EDG.filter(e => !e.hub).map(e => ({ k: e.kind, a: e.a, b: e.b, p: edgePts(e) })) };
+  if (window.TKB_DEBUG) window.TKB_FLOW = { pos: () => POS, st, manual, els: () => els, edges: () => EDG, shared: () => SHARED, users: () => USERS, wp: () => WP, paths: () => EDG.filter(e => !e.hub).map(e => ({ k: e.kind, a: e.a, b: e.b, p: edgePts(e) })) };
   const first = D.scenes.find(x => x.n === 'start') || D.scenes[0]; st.sel = { s: first.n, key: null, auto: true }; select();
   busy(null);
 }
