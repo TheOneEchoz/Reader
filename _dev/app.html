@@ -545,6 +545,10 @@ body:has(#imged) .undobar{z-index:170;top:calc(64px + env(safe-area-inset-top,0p
 #gamebox .gamemods{left:208px}
 #gamebox .gamequick[hidden]+.gamemods{left:168px}
 #gamebox .gameexit[hidden]{display:none}
+#modderlayer{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:var(--bg,#111)}
+#modderlayer .modderbar{display:flex;align-items:center;gap:10px;padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line,#333)}
+#modderlayer .modderbar .grow{flex:1}
+#modderlayer iframe{flex:1;width:100%;border:0;background:#1b1a17}
 .appbeta{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--accent);color:#fff}
 #gamebox .gameerr{left:auto;right:8px;color:#ffb648;opacity:.9}
 #modder{position:fixed;inset:0;z-index:150;background:var(--bg);color:var(--ink);display:grid;grid-template-rows:auto minmax(0,1fr) auto}
@@ -2073,7 +2077,7 @@ function openExtraApps() {
       a.beta ? h('p', { class: 'hint', style: 'margin:0' }, 'In beta: it is not completely stable or easy to use yet, and it changes often.') : null,
       h('p', { class: 'hint', style: 'margin:0' }, (on ? 'Adds ' : 'It adds ') + a.adds.charAt(0).toLowerCase() + a.adds.slice(1)),
       h('div', { class: 'row', style: 'flex-wrap:wrap' },
-        on ? h('button', { class: 'btn primary', id: `app-open-${a.id}`, onclick: () => window.open(appUrl(a), 'tkb-' + a.id) }, 'Open')
+        on ? h('button', { class: 'btn primary', id: `app-open-${a.id}`, onclick: () => { if (a.id === 'modder') { closeSheet(); openModderFor(null); } else window.open(appUrl(a), 'tkb-' + a.id); } }, 'Open')
           : h('button', { class: 'btn primary', id: `app-get-${a.id}`, onclick: () => { UI.apps = { ...(UI.apps || {}), [a.id]: true }; saveMeta(); draw(); toast(`${a.name} is on. ${a.adds}`, 4000); } }, 'Get'),
         on ? h('button', { class: 'btn ghost', id: `app-remove-${a.id}`, onclick: () => { UI.apps = { ...(UI.apps || {}) }; delete UI.apps[a.id]; saveMeta(); draw(); toast(`${a.name} removed from Tankōbon. What you made with it stays in its own app.`, 4000); } }, 'Remove') : null));
   }));
@@ -2084,7 +2088,45 @@ function openExtraApps() {
 }
 /* the modder, opened for a game. Tankōbon hands the game over on a BroadcastChannel when the modder asks (only while unlocked),
    and keeps what the modder sends back as a mod on that game. */
-function openModderFor(gid) { const a = EXTRA_APPS.find(x => x.id === 'modder'); window.open(appUrl(a, '?tkb=' + encodeURIComponent(gid)), 'tkb-modder'); }
+function openModderFor(gid) {
+  if (DESK || window.TKB_MODDER_INSIDE) return openModderInside(gid);
+  const a = EXTRA_APPS.find(x => x.id === 'modder'); window.open(appUrl(a, gid ? '?tkb=' + encodeURIComponent(gid) : ''), 'tkb-modder');
+}
+/* the desktop app cannot open another window of its own, so there the modder opens inside Tankōbon's window, over it. Its files
+   come from the website each time (so it keeps its own updates), put together into one page; the last copy is kept for when
+   the computer is offline. It runs as a page of the same app, so the hand-over works the same way. */
+const MODDER_SITE = () => window.TKB_MODDER_SITE || 'https://theoneechoz.github.io/Reader/modder/';
+async function modderPage(gid) {
+  let html = null;
+  try {
+    const base = MODDER_SITE(), idx = await (await fetch(base + 'index.html', { cache: 'no-store' })).text();
+    const refs = [...new Set([...idx.matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="([^"]+)"/g)].map(m => m[1]).filter(u => !/^(https?:|data:)/.test(u) && /\.(js|css)(\?|$)/.test(u)))];
+    const files = {};
+    for (const r of refs) { const res = await fetch(new URL(r, base).href, { cache: 'no-store' }); if (!res.ok) throw new Error(r + ': HTTP ' + res.status); files[r] = await res.text(); }
+    html = idx
+      .replace(/<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/g, (m, u) => files[u] != null ? '<script>' + files[u].replace(/<\/script/gi, '<\\/script') + '<\/script>' : m)
+      .replace(/<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g, (m, u) => files[u] != null ? '<style>' + files[u] + '</style>' : m)
+      .replace(/<head>/, `<head><base href="${base}">`);
+    await DB.put('meta', { id: 'modder-page', html, at: Date.now() }).catch(() => { });
+  } catch (e) {
+    const c = await DB.get('meta', 'modder-page').catch(() => null);
+    if (!c) throw new Error('The modder could not be reached on the website, and there is no copy of it on this computer yet.');
+    html = c.html; toast('Offline: opening the last copy of the modder.', 3500);
+  }
+  return html.replace(/<head>/, `<head><script>window.TKB_GAME = ${JSON.stringify(gid || '')}; window.TKB_INSIDE = true;<\/script>`);
+}
+async function openModderInside(gid) {
+  const old = $('#modderlayer'); if (old) old.remove();
+  const status = h('span', { class: 'sub' }, 'Opening the modder…');
+  const frame = h('iframe', { id: 'modderframe', title: 'Tankōbon Modder', allow: 'autoplay; fullscreen' });
+  const layer = h('div', { id: 'modderlayer', role: 'dialog', 'aria-label': 'Modder' },
+    h('div', { class: 'modderbar' }, h('b', {}, 'Modder'), h('span', { class: 'appbeta' }, 'Beta'), status, h('div', { class: 'grow' }),
+      h('button', { class: 'btn small', id: 'modder-close', onclick: () => layer.remove() }, icon('x'), 'Close')),
+    frame);
+  document.body.append(layer);
+  try { frame.srcdoc = await modderPage(gid); status.textContent = ''; }
+  catch (e) { status.textContent = e.message || String(e); }
+}
 const MODDER_LINK = (() => {
   let bc = null; try { bc = new BroadcastChannel('tankobon-modder'); } catch (e) { return null; }
   const acked = new Map();
@@ -5759,7 +5801,7 @@ function openGlobalSettings() {
       setItem('layers', 'Layer library', 'Layer images to reuse on any layered image', () => { closeSheet(); openLayerLibrary(); }),
       setItem('plus', 'Add the sample gallery', 'A short example comic to try the reader with', () => { closeSheet(); addSample(); })),
     setGroup('App',
-      EXP && !NATIVE ? setItem('plus', 'Extra apps', hasApp('modder') ? 'The modder · on' : 'Apps that work with Tankōbon, for those who want them', () => { closeSheet(); openExtraApps(); }) : null,
+      EXP && (!NATIVE || DESK) ? setItem('plus', 'Extra apps', hasApp('modder') ? 'The modder · on' : 'Apps that work with Tankōbon, for those who want them', () => { closeSheet(); openExtraApps(); }) : null,
       NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VNAME} · version ${VNAME(upd.version, upd)} is available` : AppFile.latest ? `Version ${APP_VNAME} · a new app file is available` : `Version ${APP_VNAME}`, go2(openUpdates), upd || AppFile.latest ? h('span', { class: 'chip' }, 'NEW') : null) : null,
       !NATIVE && !isStandalone() ? setItem('plus', 'Install the app', 'Open it from its own icon, full screen', go2(openInstallHelp)) : null,
       !NATIVE ? setItem('download', 'Version', `${APP_VNAME} · updates arrive by themselves`) : null)));
@@ -10199,7 +10241,7 @@ document.addEventListener('pointerdown', e => {
 }, true);
 /* ---- privacy screen: cover everything as soon as the app loses focus, before Android takes its recent-apps picture ---- */
 const shield = $('#shield');
-const cover = () => { if (UI.shield !== false && !(GAME.frame && document.activeElement === GAME.frame && !document.hidden)) shield.hidden = false; }; // (a game being played has the focus: still this app)
+const cover = () => { if (UI.shield !== false && !(((GAME.frame && document.activeElement === GAME.frame) || (document.activeElement && document.activeElement.id === 'modderframe')) && !document.hidden)) shield.hidden = false; }; // (a game being played, or the modder inside the window, has the focus: still this app)
 const uncover = () => { if (!document.hidden && document.hasFocus()) shield.hidden = true; };
 window.addEventListener('blur', cover);
 window.addEventListener('pagehide', cover);

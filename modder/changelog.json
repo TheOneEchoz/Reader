@@ -1,7 +1,18 @@
 [
- {"v": "nodes-5.10", "date": "2026-11-20", "items": [
-  "The modder is its own app now, on the Tankōbon website (modder/), with its own updates. It can be installed apart from Tankōbon.",
-  "Games come from Tankōbon: “Mod this game” on a game's page there opens the modder with the game handed over (no adding it again). A game already here only gets what is new, and your edits stay.",
-  "Send to Tankōbon: the Story edits made here go back to Tankōbon as a mod on that game, which can be switched off there."
- ]}
+ {
+  "v": "nodes-5.10.1",
+  "date": "2026-11-20",
+  "items": [
+   "Works inside Tankōbon's desktop app: there the modder opens in Tankōbon's window (its files still come from the website, so it keeps its own updates)."
+  ]
+ },
+ {
+  "v": "nodes-5.10",
+  "date": "2026-11-20",
+  "items": [
+   "The modder is its own app now, on the Tankōbon website (modder/), with its own updates. It can be installed apart from Tankōbon.",
+   "Games come from Tankōbon: “Mod this game” on a game's page there opens the modder with the game handed over (no adding it again). A game already here only gets what is new, and your edits stay.",
+   "Send to Tankōbon: the Story edits made here go back to Tankōbon as a mod on that game, which can be switched off there."
+  ]
+ }
 ]

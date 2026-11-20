@@ -5,9 +5,10 @@
    (localStorage 'engine.site'), else the app's website. RPY_BASE in js/10-basics.js is SITE + 'renpy/'. */
 const SITE = (() => {
   try { const s = localStorage.getItem('engine.site'); if (s) return s.replace(/\/?$/, '/'); } catch (e) { }
-  const here = new URL('./', location.href).href;
+  // (document.baseURI, not location: inside Tankōbon's desktop app the page is put together there, with its address in <base>)
+  const here = new URL('./', document.baseURI).href;
   // next to this page, or one folder up (the modder lives in modder/ on the Tankōbon website, beside its renpy/ folder)
-  for (const base of [here, new URL('../', location.href).href]) {
+  for (const base of [here, new URL('../', document.baseURI).href]) {
     try { const x = new XMLHttpRequest(); x.open('HEAD', base + 'renpy/versions.txt', false); x.send(); if (x.status === 200) return base; } catch (e) { }
   }
   return 'https://theoneechoz.github.io/Reader/';

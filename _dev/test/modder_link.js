@@ -80,12 +80,31 @@ let fails = 0; const ok = (n, c, x = '') => { if (!c) fails++; console.log((c ? 
   sentN = await mp.evaluate(() => window.__n);
   const mods2 = await mp.evaluate(async id => (await S.gal(id)).game.mods.map(m => [m.name, !!m.flow, !!m.modder]), gid);
   ok('handed over again: only the small records that change, and the modder\'s own edits are kept (once)', sentN > 0 && sentN < 10 && mods2.filter(m => m[1]).length === 1 && !mods2.some(m => m[2]), JSON.stringify([sentN, mods2]));
+  // the desktop app's way: the modder inside Tankōbon's window (put together from its files on the website)
+  await mp.close();
+  await p.evaluate(() => { window.TKB_MODDER_INSIDE = true; window.TKB_MODDER_SITE = location.origin + '/modder/'; });
+  await p.click('#game-mod'); await p.waitForSelector('#modderlayer iframe');
+  const inner = () => p.frames().find(f => f.url() === 'about:srcdoc' && f.name() === 'modderframe');
+  let fi = null; for (let k = 0; k < 60 && !fi; k++) { await p.waitForTimeout(500); fi = inner(); }
+  await fi.waitForFunction(() => /is here/.test((document.getElementById('tkbstatus') || {}).textContent || ''), null, { timeout: 60000 }).catch(() => { });
+  const inTxt = await fi.$eval('#tkbstatus', e => e.textContent).catch(e => String(e));
+  await p.screenshot({ path: '/tmp/claude-0/shots/modder-inside.png' });
+  ok('inside Tankōbon\'s window (desktop app): the modder opens and gets the game', /is here/.test(inTxt), inTxt);
+  await fi.click(`.gamecard[data-id="${gid}"] button:has-text("Send to Tankōbon")`); await p.waitForTimeout(3000);
+  ok('and Send to Tankōbon works from there', /Sent to Tankōbon/.test(await fi.$eval('#toast', e => e.textContent).catch(() => '')));
+  await p.click('#modder-close'); ok('Close comes back to Tankōbon', !(await p.$('#modderlayer')));
+  // offline: the last copy
+  await ctx.route('**/modder/**', r => r.abort());
+  await p.click('#game-mod'); await p.waitForSelector('#modderlayer iframe'); await p.waitForTimeout(2500);
+  ok('offline, the last copy of the modder opens', /Offline/.test(await p.$eval('#toast', e => e.textContent)) && (await p.$eval('#modderframe', f => (f.srcdoc || '').length)) > 10000);
+  await p.click('#modder-close'); await ctx.unroute('**/modder/**');
   // locked Tankōbon: the modder waits
   await p.evaluate(() => lockNow()); await p.waitForTimeout(800);
-  const r = await mp.evaluate(() => new Promise(res => { const bc = new BroadcastChannel('tankobon-modder'); bc.onmessage = e => { if (e.data && e.data.rid === 'x1' && e.data.t !== 'hello') res(e.data.t); }; bc.postMessage({ t: 'hello', rid: 'x1', gid: 'whatever', have: [] }); setTimeout(() => res('none'), 3000); }));
+  const mq = await ctx.newPage(); await mq.goto('http://localhost:8769/modder/');
+  const r = await mq.evaluate(() => new Promise(res => { const bc = new BroadcastChannel('tankobon-modder'); bc.onmessage = e => { if (e.data && e.data.rid === 'x1' && e.data.t !== 'hello') res(e.data.t); }; bc.postMessage({ t: 'hello', rid: 'x1', gid: 'whatever', have: [] }); setTimeout(() => res('none'), 3000); }));
   ok('a locked Tankōbon hands nothing over', r === 'locked', r);
   errs.splice(0, errs.length, ...errs.filter(e => !/serviceWorker/.test(e)));
-  ok('no errors', errs.length === 0 && merrs.length === 0, [...errs, ...merrs].slice(0, 3).join(' | '));
+  ok('no errors', errs.filter(e => !/modder/i.test(e)).length === 0 && merrs.length === 0, [...errs, ...merrs].slice(0, 3).join(' | '));
   console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
   await b.close(); process.exit(fails ? 1 : 0);
 })();

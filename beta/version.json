@@ -1,6 +1,6 @@
 {
- "version": 144,
- "name": "1.23.0-beta.46",
+ "version": 145,
+ "name": "1.23.0-beta.47",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,8 +22,6 @@
   "qrcode.js"
  ],
  "notes": [
-  "Modding is now a separate app, the Modder, with its own updates, for those who want it. Settings › Extra apps lists it (and other apps that work with Tankōbon, as they come). It is in beta: not completely stable or easy to use yet.",
-  "With the Modder got, each Ren'Py game's page has “Mod this game”: it opens the Modder with the game handed over. What you change there comes back with Send to Tankōbon, as a mod on the game (“Story edits (from the modder)”) that you can switch off.",
-  "Taken out of Tankōbon: Modding mode (the flowchart), the Fix this error sheets, Edit this scene and the mod file editor; they are the Modder's job now. Tankōbon keeps playing games, saves, Ren'Py Sync, skipping errors and switching mods on and off. Mods you already made (Fixes, Scene edits, Story edits) keep working."
+  "Desktop app: Extra apps is there too, and the Modder works. As the desktop app cannot open another window, the Modder opens inside Tankōbon's window, over it (Close comes back). Its files still come from the website each time, so it keeps its own updates; the last copy is kept for when the computer is offline."
  ]
 }

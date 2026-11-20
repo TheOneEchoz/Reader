@@ -88,7 +88,8 @@ const TKB_LINK = (() => {
     }
     toast('Tankōbon did not answer. Open it (unlocked) in another tab and try again.', 5000);
   }
-  const q = new URLSearchParams(location.search).get('tkb');
+  // (opened inside Tankōbon's desktop app, the game comes as window.TKB_GAME)
+  const q = new URLSearchParams(location.search).get('tkb') || window.TKB_GAME || null;
   if (q) (async () => { for (let k = 0; k < 50 && !(window.ENGINE && window.ENGINE.draw); k++) await new Promise(z => setTimeout(z, 100)); receive(q).catch(e => console.error('tkb', e)); })();
   return { receive, send };
 })();

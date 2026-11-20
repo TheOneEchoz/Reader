@@ -1,5 +1,14 @@
 [
  {
+  "v": 145,
+  "name": "1.23.0-beta.47",
+  "date": "2026-11-20",
+  "beta": true,
+  "items": [
+   "Desktop app: Extra apps is there too, and the Modder works. As the desktop app cannot open another window, the Modder opens inside Tankōbon's window, over it (Close comes back). Its files still come from the website each time, so it keeps its own updates; the last copy is kept for when the computer is offline."
+  ]
+ },
+ {
   "v": 144,
   "name": "1.23.0-beta.46",
   "date": "2026-11-20",

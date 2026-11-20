@@ -251,7 +251,7 @@
           toast(mod.on ? 'Story edits enabled for next launch.' : 'Story edits disabled for next launch.',3300);
         } }, (g.game.mods||[]).find(m=>m.flow)?.on ? 'Disable Story edits' : 'Enable Story edits') : null,
         h('button', { class: 'btn ghost', onclick: async () => { if (!(await askYes('Delete this game?', g.title, 'Delete'))) return; await ST.delMany('images', await rpyIds(g)); await ST.del('galleries', g.id); draw(); } }, 'Delete'))),
-      gs.length ? null : h('p', { class: 'hint' }, 'No games yet. Add a Ren\'Py game (a folder or a zip).'));
+      ...(gs.length ? [] : [h('p', { class: 'hint' }, 'No games yet. Add a Ren\'Py game (a folder or a zip), or use “Mod this game” in Tankōbon.')]));
     const reg = await RPY.reg(); $('#runtimeinfo').textContent = 'Runtime from ' + RPY_BASE + (Object.keys(reg).length ? ' · have ' + Object.keys(reg).join(', ') : '');
     probeRuntime();
   }
