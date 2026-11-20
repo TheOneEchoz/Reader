@@ -1,0 +1,26 @@
+// Run with: node tests/graph-validation.test.js
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const path = require('node:path');
+const source = fs.readFileSync(path.join(__dirname, '../js/75-nodes.js'), 'utf8');
+const context = vm.createContext({ console });
+vm.runInContext(source, context);
+const test = code => vm.runInContext(code, context);
+const asJson = code => JSON.parse(JSON.stringify(test(code)));
+assert.equal(test('ENGINE_VERSION'), 'nodes-5.10');
+assert.deepEqual(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'return'}], entry:'a' }, ['start'])"), []);
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'say', next:'gone'}], entry:'a' })")[0].code, 'broken-wire');
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'say', next:'a'}], entry:'gone' })")[0].code, 'missing-entry');
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'if',arms:[{cond:'x',to:'b'},{cond:'',to:'b'}]},{id:'b',k:'return'}],entry:'a'})").some(i=>i.code==='else-order'), false);
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'if',arms:[{cond:'x',to:'b'},{cond:'',to:'b'},{cond:'y',to:'b'}]},{id:'b',k:'return'}],entry:'a'})").some(i=>i.code==='else-order'), true);
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a',k:'jump',target:'missing'}],entry:'a'}, ['start'])").some(i=>i.code==='unresolved-label'), true);
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a',k:'return'},{id:'b',k:'say'}],entry:'a'})").some(i=>i.code==='unreachable'), true);
+assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a',k:'chart',name:'Nested',nodes:[{id:'b',k:'say',next:'unknown'}], entry:'b'}],entry:'a'})").some(i=>i.scope.includes('Nested') && i.code==='broken-wire'), true);
+assert.equal(asJson("tkbValidatePatches([{op:'chart',name:'start',nodes:[{id:'a',k:'jump',target:'extra'}],entry:'a'},{op:'chart',name:'extra',nodes:[{id:'b',k:'return'}],entry:'b'}],['start'])").some(i=>i.code==='unresolved-label'), false);
+const original = "const g={nodes:[{id:'a',k:'say',next:'b'},{id:'b',k:'return'}],entry:'a'}; const before=JSON.stringify(g); tkbValidateGraph('test',g); JSON.stringify(g)===before";
+assert.equal(test(original), true, 'validation must not change a graph');
+assert.equal(asJson("rowsToNodes([{d:0,k:'return',key:'foo:1:return',t:'trust * 2'}])")[0].expr, 'trust * 2');
+assert.equal(asJson("rowsToNodes([{d:0,k:'jump',key:'foo:1:jump',g:null,t:'choice_destination'}])")[0].target, 'expression choice_destination');
+assert.equal(asJson("tkbValidateGraph('start',{nodes:[{id:'x',k:'raw',code:'line1\\nline2'}],entry:'x'})").some(x=>x.code==='multiline-raw'), true);
+console.log('13 graph validation checks passed');

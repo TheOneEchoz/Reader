@@ -10,6 +10,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   // Ren'Py for the game player is downloaded by the app itself and kept encrypted: never cached here
   if (url.pathname.includes('/renpy/')) return;
+  if (url.pathname.includes('/modder/')) return; // (the modder is another app, with its own updates)
   if (url.origin === location.origin) {
     // App files: use the network when online so updates arrive, fall back to the cache offline.
     e.respondWith(fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })

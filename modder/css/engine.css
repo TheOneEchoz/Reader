@@ -1,0 +1,256 @@
+/* only for the engine's own little page (not in the app) */
+#games{padding-block:12px}
+.gamecard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px}
+.gamecard .grow{flex:1;min-width:0}
+.gamecard b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.addbox{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.addbox input[type=file]{display:none}
+.thumbstub{width:100%;height:100%}
+.engineinfo{color:var(--muted);font-size:13px}
+
+#charts{position:fixed;inset:0;z-index:60;background:var(--bg,#fff);overflow:auto}#charts .cbody{padding:14px;max-width:760px;margin:auto}.ncard{border:1px solid var(--line,#bbb);border-radius:10px;padding:10px;display:grid;gap:6px}.ncard.k-menu,.ncard.k-if,.ncard.k-chart{border-left:4px solid var(--accent,#d0382a)}
+#cview{position:absolute;inset:44px 0 150px 0;overflow:hidden;touch-action:none;background:var(--surface2,#eee)}#cinner{position:absolute;left:0;top:0;transform-origin:0 0}#cedges{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}#cedges path{fill:none;stroke:var(--muted,#888);stroke-width:2}#cedges path.tmp{stroke:var(--accent,#d0382a);stroke-dasharray:5 4}
+.gnode{position:absolute;box-sizing:border-box;background:var(--surface,#fff);border:1px solid var(--line,#bbb);border-radius:8px;font-size:12px;cursor:grab;user-select:none}.gnode.sel{border-color:var(--accent,#d0382a);box-shadow:0 0 0 2px var(--accent,#d0382a)}
+.gnode .gh{height:24px;line-height:24px;padding:0 8px;font-weight:700;border-bottom:1px solid var(--line,#bbb)}.gnode .gt{height:20px;line-height:20px;padding:0 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;opacity:.8}
+.gnode.k-menu .gh,.gnode.k-if .gh{background:var(--accent,#d0382a);color:#fff;border-radius:7px 7px 0 0}.gnode.k-chart{border-width:2px}.gp{position:absolute;right:0;left:0;height:22px;line-height:22px;text-align:right;padding-right:10px}.gp small{opacity:.7}
+.pin{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--accent,#d0382a);border:2px solid var(--surface,#fff);cursor:crosshair}.pin.in{left:-7px;top:6px;background:var(--muted,#888)}.pin.out{right:-7px;top:5px}
+#cpanel{position:absolute;left:0;right:0;bottom:0;height:150px;overflow:auto;padding:10px;border-top:1px solid var(--line,#bbb);background:var(--bg,#fff)}#charts .mtop{position:absolute;left:0;right:0;top:0;height:44px;display:flex;gap:6px;align-items:center;padding:0 8px;overflow-x:auto}#charts .cbody{padding:56px 14px 14px}
+#charts{z-index:160!important;color:var(--ink);display:block}
+
+#modview,#cview{cursor:default}#modview.panning,#cview.panning{cursor:grabbing}
+.gnode .gimg{position:absolute;left:6px;right:6px;display:flex;align-items:center;justify-content:center;background:var(--surface2,#eee);border-radius:6px;overflow:hidden;pointer-events:none}
+.gnode .gimg img{max-width:100%;max-height:100%;object-fit:contain;-webkit-user-drag:none}.gnode .gimg small{opacity:.6}
+
+.gnode .gimg.layers img{position:absolute;left:0;top:0;width:100%;height:100%}
+.mscene.hit{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+#modfind-results{position:fixed;z-index:8;max-height:60vh;overflow:auto;background:var(--surface,#fff);color:var(--ink);border:1.5px solid var(--line,#bbb);border-radius:10px;box-shadow:var(--shadow,0 6px 24px #0004)}
+#modfind-results[hidden]{display:none}
+#modfind-results .fhead{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:var(--muted,#888);border-bottom:1px solid var(--line,#bbb);position:sticky;top:0;background:inherit}
+#modfind-results .fres{display:grid;gap:2px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line,#bbb);padding:7px 10px;color:inherit;cursor:pointer;font:inherit;font-size:12.5px}
+#modfind-results .fres:hover,#modfind-results .fres.act{background:var(--accent-soft,#fdd)}
+#modfind-results .fres small{color:var(--muted,#888);font-weight:400}
+#modfind-results .fline{color:var(--muted,#888);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#modfind-results .fline:hover{color:inherit;text-decoration:underline}
+#modfind-results mark{background:var(--accent,#d0382a);color:#fff;border-radius:3px;padding:0 1px}
+
+.gnode .gimg small{font-size:11px;line-height:1.25;text-align:center;padding:4px}
+.frow{display:flex;gap:6px;align-items:center}.frow .text{flex:1;min-width:0}
+#chpick{position:fixed;inset:0;z-index:170;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px}
+#chpick .box{background:var(--surface,#fff);color:var(--ink);border-radius:12px;padding:14px;width:min(560px,100%);max-height:85vh;display:flex;flex-direction:column;gap:8px}
+#chpick .plist{overflow:auto;display:grid;gap:4px;min-height:120px}
+#chpick .pitem{display:flex;gap:10px;align-items:center;text-align:left;background:none;border:1px solid var(--line,#bbb);border-radius:8px;padding:6px 8px;color:inherit;cursor:pointer;font:inherit;font-size:13px}
+#chpick .pitem:hover{background:var(--accent-soft,#fdd)}
+#chpick .pth{position:relative;flex:none;width:56px;height:56px;background:var(--surface2,#eee);border-radius:6px;overflow:hidden}
+#chpick .pth img{width:100%;height:100%;object-fit:contain}#chpick .pth.layers img{position:absolute;left:0;top:0}
+#chpick .pn{overflow:hidden;text-overflow:ellipsis;word-break:break-all}
+
+/* the trace window, over the running game (js/77-trace.js) */
+#gamebox .gametrace{left:auto;right:128px}
+#gamebox .gametrace.on{opacity:.95;color:#7fd6a0}
+.gametracebox{position:absolute;z-index:3;width:min(360px,calc(100vw - 16px));max-height:min(48vh,340px);display:flex;flex-direction:column;background:rgba(14,15,18,.9);color:#e8e8e8;border:1px solid rgba(255,255,255,.14);border-radius:10px;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;box-shadow:0 6px 24px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);bottom:8px;overflow:hidden;-webkit-user-select:text;user-select:text}
+.gametracebox[hidden]{display:none}
+.gametracebox.c-bl{left:8px}.gametracebox.c-br{right:8px;left:auto;bottom:72px}
+.gametracebox .tbar{display:flex;align-items:center;gap:4px;padding:5px 6px 5px 10px;border-bottom:1px solid rgba(255,255,255,.12);flex:none}
+.gametracebox .tbar .grow{flex:1}
+.gametracebox .tstatus{color:#9aa;font-size:11px;margin-left:6px}
+.gametracebox .tbtn{all:unset;cursor:pointer;min-width:22px;height:22px;text-align:center;line-height:22px;border-radius:5px;color:#ccc}
+.gametracebox .tbtn:hover,.gametracebox .tbtn:focus-visible{background:rgba(255,255,255,.14);color:#fff}
+.gametracebox.paused .tbar b::after{content:" (paused)";font-weight:400;color:#ffb648}
+.gametracebox .tlist{overflow:auto;flex:1;min-height:0;overscroll-behavior:contain}
+.gametracebox.collapsed .tlist .trow:nth-child(n+2){display:none}
+.gametracebox.collapsed .tlist .trow .tdet{display:none}
+.gametracebox .tempty{padding:12px;color:#9aa}
+.trow{padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.07);border-left:3px solid transparent}
+.trow.new{background:rgba(127,214,160,.1);border-left-color:#7fd6a0}
+.trow .thead{display:flex;gap:8px;align-items:baseline;cursor:pointer;color:#9aa;font-size:11px}
+.trow .tn{color:#789}.trow .tk{color:#ffcf70;font-weight:700}.trow .tc{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .tsum{margin-top:2px;word-break:break-word;color:#fff}
+.trow .tvars{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:3px;color:#8fc6ff}.trow .tvars b{color:#bde}
+.trow .tdet{margin-top:4px;padding-top:4px;border-top:1px dashed rgba(255,255,255,.14);color:#bbb;word-break:break-word}
+.trow .tdet i{color:#789;font-style:normal;margin-right:4px}
+.trow .tsep{text-align:center;color:#789;font-size:11px}
+@media (prefers-reduced-motion:no-preference){.trow.new{animation:trowin .35s ease-out}@keyframes trowin{from{background:rgba(127,214,160,.45)}}}
+
+/* variant picker (Character + Variant) */
+#chpick .vprev{position:relative;flex:none;height:160px;display:flex;align-items:center;justify-content:center;background:var(--surface2,#eee);border-radius:8px;overflow:hidden}
+#chpick .vprev img{max-width:100%;max-height:100%;object-fit:contain}#chpick .vprev.layers img{position:absolute;left:0;top:0;width:100%;height:100%}
+#chpick .vlist{display:flex;flex-direction:column;gap:10px}
+#chpick .vrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+#chpick .vopt{background:none;border:1px solid var(--line,#bbb);border-radius:999px;padding:4px 10px;color:inherit;cursor:pointer;font:inherit;font-size:13px}
+#chpick .vopt.on{background:var(--accent,#c33);border-color:var(--accent,#c33);color:#fff}
+
+/* Nodes 2.7: interactive preview of the SAME running game and the graph's live cursor. */
+#gamebox.preview-docked{inset:auto 18px 20px auto!important;width:min(43vw,550px);min-width:min(330px,92vw);height:min(48vh,395px);min-height:200px;z-index:210!important;border:1px solid rgba(255,255,255,.22);border-radius:12px;overflow:hidden;box-shadow:0 14px 45px #0009;resize:none}
+#gamebox.preview-docked iframe{top:38px;bottom:0;left:0;right:0;height:calc(100% - 38px);width:100%;inset:38px 0 0 0}
+#gamebox.preview-docked .gameexit,#gamebox.preview-docked .gametracebox{display:none!important}
+#gamebox .preview-game-head{display:none}
+#gamebox.preview-docked .preview-game-head{height:38px;position:absolute;left:0;right:0;top:0;z-index:9;background:#171a20;border-bottom:1px solid #333a45;color:#f2f3f5;display:flex;align-items:center;gap:7px;padding:0 8px 0 31px;font:12px/1.1 system-ui,sans-serif;user-select:none}
+#gamebox .preview-game-caption{flex:1;min-width:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#gamebox .preview-game-action{background:#30343f;border:1px solid #454b5a;color:#fff;border-radius:7px;padding:5px 7px;font:inherit;cursor:pointer;white-space:nowrap}
+#gamebox .preview-game-action:hover{background:#494e5c}
+#gamebox .preview-game-close{font-size:18px;line-height:18px;padding:1px 7px}
+#charts .ch-livebar{display:none}
+#charts.preview-active .ch-livebar{display:block;position:absolute;top:44px;left:0;right:0;z-index:1;height:27px;padding:5px 12px;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#ace0bb;background:#163024;border-bottom:1px solid #315e46;pointer-events:none}
+#charts.preview-active #cview{top:71px}
+#charts.preview-active .gnode.running{border-color:#65ed94!important;box-shadow:0 0 0 3px #1edb6ca8,0 0 22px #1edb6c3f!important;z-index:3}
+#charts.preview-active .gnode.executed:not(.running){border-color:#448a61}
+#charts.preview-active #cedges path.executed{stroke:#69dd91;stroke-width:3}
+@media(max-width:680px){#gamebox.preview-docked{width:min(93vw,550px);height:min(40vh,310px);right:3vw;bottom:12px}}
+
+/* Browser-native resize grips always sit at the lower edge. Use an explicit
+   top-left grip while keeping the preview's bottom/right edges stationary. */
+#gamebox .preview-resize-handle{display:none}
+#gamebox.preview-docked .preview-resize-handle{position:absolute;top:0;left:0;z-index:12;display:block;box-sizing:border-box;width:29px;height:29px;padding:0;border:0;border-radius:11px 0 7px 0;background:transparent;color:#c0cedd;cursor:nwse-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+#gamebox.preview-docked .preview-resize-handle::before{content:"";position:absolute;top:6px;left:6px;width:16px;height:16px;background:repeating-linear-gradient(135deg,currentColor 0 1.5px,transparent 1.5px 5px);clip-path:polygon(0 0,100% 0,0 100%);opacity:.85}
+#gamebox.preview-docked .preview-resize-handle:hover{background:#454e60;color:#fff}
+#gamebox.preview-docked .preview-resize-handle:focus-visible{outline:2px solid #a8d9ff;outline-offset:-2px}
+#gamebox.preview-docked.preview-resizing{user-select:none;-webkit-user-select:none}
+
+/* Scene preparation and crash recovery — nodes-2.8 */
+#gamebox .gamerestart{left:auto;right:168px;opacity:.85;color:#ffd4a5}
+#gamebox.preview-docked .preview-game-head{gap:5px;padding:0 7px 0 31px}
+#gamebox.preview-docked .preview-game-action{padding:5px 6px;font-size:11px}
+.preview-setup-shade{position:fixed;inset:0;z-index:410;background:rgba(0,0,0,.74);display:grid;place-items:center;padding:18px;box-sizing:border-box}
+.preview-setup-dialog{display:flex;flex-direction:column;gap:10px;background:#1b1e25;color:#f5f5f8;border:1px solid #555b68;border-radius:12px;box-shadow:0 20px 80px #000c;padding:16px;width:min(630px,calc(100vw - 28px));max-height:calc(100vh - 36px);overflow:auto;font:13px/1.45 system-ui,sans-serif;box-sizing:border-box}
+.preview-setup-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.preview-setup-head h2{margin:0;font-size:16px}
+.preview-setup-label{display:flex;flex-direction:column;gap:7px;font-weight:600;color:#f4f4f6}
+.preview-setup-input{box-sizing:border-box;width:100%;min-height:98px;resize:vertical;background:#111319;color:#fff;border:1px solid #5a6070;border-radius:8px;padding:10px;white-space:pre;font:12px/1.5 ui-monospace,monospace;tab-size:4}
+.preview-setup-tip{margin:0;color:#b4b8c4;line-height:1.5;font-size:12px}
+.preview-setup-status{margin:0;min-height:17px;font-size:12px;color:#ffd5a3;overflow-wrap:anywhere}
+.preview-setup-advanced{border:1px solid #444b57;padding:8px;border-radius:7px}
+.preview-setup-advanced summary{cursor:pointer;font-weight:600;margin-bottom:6px}
+.preview-setup-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.preview-setup-dialog .preview-game-action{background:#303744;color:#fff;border:1px solid #555b67;border-radius:7px;padding:7px 11px;cursor:pointer}
+.preview-setup-dialog .preview-game-action:hover{background:#40495b}
+.preview-setup-dialog .preview-game-action.primary{background:#de5c48;border-color:#e97967}
+@media(max-width:680px){#gamebox.preview-docked .preview-game-caption{display:none}#gamebox.preview-docked .preview-game-head{justify-content:space-between}#gamebox.preview-docked .preview-game-action{font-size:10px;padding:5px 4px}}
+
+/* nodes-2.9: automatic setup suggestions and unmatched execution diagnostics */
+.preview-setup-found{display:grid;gap:8px;max-height:35vh;overflow-y:auto;padding-right:3px}
+.preview-setup-var{display:grid;gap:3px;background:#242934;border:1px solid #3f4958;border-radius:8px;padding:9px}
+.preview-setup-varhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.preview-setup-varhead b{font-size:13px}
+.preview-setup-varhead small{border-radius:20px;padding:2px 7px;font-size:11px}
+.preview-setup-defined{color:#a7dac0;background:#234433}
+.preview-setup-missing{color:#ffc3a9;background:#523025}
+.preview-setup-context{color:#b4bfca;font-size:11px;overflow-wrap:anywhere}
+.preview-setup-value{background:#111319;color:#fff;border:1px solid #586375;border-radius:7px;padding:8px 9px;width:100%;box-sizing:border-box;font:12px/1.4 ui-monospace,monospace}
+.preview-setup-dialog .preview-game-action.preview-setup-small{justify-self:start;font-size:11px;padding:4px 8px}
+#charts .ch-unmatched-shade{position:absolute;inset:0;z-index:220;background:#000b;display:flex;justify-content:center;align-items:center;padding:16px}
+#charts .ch-unmatched-dialog{background:#1d2029;border:1px solid #596273;border-radius:10px;padding:14px;color:#fff;width:min(680px,100%);max-height:85vh;display:flex;flex-direction:column;gap:10px}
+#charts .ch-unmatched-list{overflow-y:auto;display:grid;gap:8px;min-height:50px}
+#charts .ch-unmatched-row{display:grid;gap:4px;border:1px solid #414c59;border-radius:7px;padding:8px;overflow-wrap:anywhere}
+#charts .ch-unmatched-row small{color:#b9c4d0;font-size:11px}
+#charts #ch-last-node,#charts #ch-unmatched-btn{white-space:nowrap}
+
+/* nodes-3.3: open, auto-sizing Transition Containers */
+#charts #cinner .gframe{position:absolute;box-sizing:border-box;pointer-events:none;z-index:0;border:2px dashed rgba(176,147,245,.83);border-radius:12px;background:rgba(139,102,221,.085);min-width:230px;min-height:110px;transition:border-color .12s ease,background .12s ease;}
+#charts #cinner .gframe .gf-head{position:absolute;top:0;left:0;right:0;box-sizing:border-box;height:28px;display:flex;align-items:center;gap:9px;padding:3px 8px;pointer-events:auto;cursor:move;border-bottom:1px solid rgba(186,164,240,.42);border-radius:9px 9px 0 0;background:#282438;color:#efe9ff;user-select:none;font:12px/1.3 system-ui,sans-serif;}
+#charts #cinner .gframe .gf-head b{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+#charts #cinner .gframe .gf-count{font-size:10px;white-space:nowrap;color:#cbbded;}
+#charts #cinner .gframe .gf-mode{pointer-events:auto;cursor:pointer;min-width:92px;max-width:118px;background:#181723;color:#f0e8ff;border:1px solid #71608e;border-radius:5px;padding:2px 3px;font:11px system-ui,sans-serif;}
+#charts #cinner .gframe.selected{border-color:#dcc9ff;background:rgba(169,115,249,.14);box-shadow:0 0 0 2px #ad7ce94a;}
+#charts #cinner .gnode{z-index:2;}
+#charts #cedges{z-index:1;}
+#charts.preview-active #cinner .gframe.running{border-color:#65ed94;background:rgba(66,178,104,.10);}
+#charts.preview-active #cinner .gframe.executed:not(.running){border-color:#448a61;}
+
+/* nodes-3.5: compact report stays below the header, never behind buttons. */
+#charts .mtop{z-index:10;background:var(--surface,#17191e);white-space:nowrap;scrollbar-width:thin}
+#charts #ch-compact-result{position:absolute;top:48px;left:12px;right:12px;width:auto;max-height:94px;overflow-y:auto;z-index:12;align-items:center;gap:8px;line-height:1.35;border:1px solid var(--line,#555);border-radius:8px;box-shadow:0 8px 22px #0007;pointer-events:auto}
+#gamebox.preview-docked .preview-stepbar{position:absolute;bottom:0;left:0;right:0;z-index:12;display:flex;gap:6px;align-items:center;padding:6px 8px;background:rgba(15,20,28,.94);border-top:1px solid #4d6076;color:#fff;font:12px/1.3 system-ui,sans-serif;user-select:none}
+#gamebox.preview-docked .preview-stepbar[hidden]{display:none!important}
+#gamebox.preview-docked .preview-stepbar .preview-step-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;color:#becce0}
+#gamebox.preview-docked .preview-stepbar .step-next{background:#276b49;border-color:#469b70;font-weight:700}
+#gamebox.preview-docked .preview-stepbar .preview-game-action:disabled{opacity:.55;cursor:wait}
+@media(max-width:550px){#gamebox.preview-docked .preview-game-caption{display:none}#gamebox.preview-docked .preview-game-action{padding:4px 5px}}
+
+/* nodes-4.0: runtime selection and offline file inspection */
+.tkb-runtime-select,.tkb-file-search{display:block;width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit}
+.tkb-inspect-view{display:grid;gap:10px;min-width:0}
+.tkb-file-columns{display:grid;grid-template-columns:minmax(180px,38%) minmax(0,1fr);gap:10px;height:min(52vh,440px);min-height:230px}
+.tkb-file-results{overflow:auto;display:flex;flex-direction:column;gap:2px}
+.tkb-file-item{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit;font:12px/1.3 system-ui;text-align:left;padding:6px 8px;overflow-wrap:anywhere;cursor:pointer}
+.tkb-file-item:hover{background:var(--surface2)}
+.tkb-file-preview{overflow:auto;background:var(--surface2);padding:10px;border-radius:8px;font-size:12px}
+.tkb-file-code{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;margin:0}
+.tkb-inspect-img{display:block;max-width:100%;max-height:100%;object-fit:contain;margin:auto}
+@media(max-width:600px){.tkb-file-columns{grid-template-columns:1fr;grid-template-rows:130px minmax(160px,1fr);height:60vh}}
+/* Wrap game actions instead of letting additional runtime controls overflow the library. */
+#games .gamecard{flex-wrap:wrap}
+#games .gamecard>.grow{flex-basis:260px}
+
+/* nodes-4.3: virtual filesystem editor */
+#gamebox .gamefiles{left:248px;opacity:.85;color:#bde7ff}
+#gamebox.preview-docked .gamefiles{display:none!important}
+.tkb-vfs{display:grid;gap:9px;min-width:0}
+.tkb-vfs-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tkb-vfs-path{display:flex;align-items:center;flex-wrap:wrap;gap:2px;min-height:30px}
+.tkb-vfs-crumb{display:flex;align-items:center;gap:3px;color:var(--muted)}
+.tkb-vfs-list{min-height:230px}
+.tkb-vfs-preview{display:flex;flex-direction:column;gap:9px;min-height:230px}
+.tkb-vfs-editor{font:12px/1.45 ui-monospace,monospace;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:8px;min-height:210px;resize:vertical;tab-size:4;white-space:pre;flex:1;width:100%;box-sizing:border-box}
+.tkb-vfs-title{font-size:12px;overflow-wrap:anywhere}
+body:has(.tkb-vfs) #sheet .sp{width:min(1050px,100%);max-height:96dvh}
+body:has(.tkb-vfs) #sheet .sb{gap:8px}
+
+/* Safe-mode legacy scene browser: no command edits or wire rewrites. */
+.charts-readonly .gnode .pin.out { pointer-events:none; opacity:.45; }
+.charts-readonly #cpanel :disabled { opacity:.63; cursor:default; }
+.charts-readonly #ch-add-node, .charts-readonly #ch-apply, .charts-readonly #ch-compact-btn { display:none; }
+#ch-scene-search { width:100%; max-width:500px; }
+#ch-scene-results { max-width:100%; gap:6px; }
+#ch-scene-results .btn { text-align:left; justify-content:flex-start; }
+
+#charts.charts-readonly #ch-readonly-banner { position:absolute;top:44px;left:0;right:0;z-index:9;background:var(--surface,#17191e);color:var(--ink,#fff);min-height:38px;box-sizing:border-box; }
+#charts.charts-readonly #cview { top:82px; }
+#charts.charts-readonly #ch-compact-result { top:86px; }
+#charts.charts-readonly .gnode { cursor:pointer; }
+#charts.charts-readonly .gf-head { cursor:pointer; }
+/* Legacy scene-to-scene overview (above command charts). */
+#charts .ch-map-main{position:absolute;inset:44px 0 0;display:flex;min-height:0;overflow:hidden;background:var(--bg)}
+#charts .ch-map-sidebar{width:270px;flex:none;min-width:195px;display:flex;flex-direction:column;gap:10px;padding:12px;border-right:1px solid var(--line);background:var(--surface);min-height:0}
+#charts .ch-map-sidebar p{margin:0;font-size:13px}
+#charts .ch-map-sidebar input{width:100%;min-width:0;padding:8px 10px}
+#charts .ch-map-matches{overflow-y:auto;min-height:0;flex:1;display:flex;flex-direction:column;gap:3px}
+#charts .ch-map-result{display:flex;gap:4px;align-items:center;justify-content:space-between;text-align:left;padding:8px;border-radius:6px;border:1px solid transparent;font-size:13px}
+#charts .ch-map-result span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#charts .ch-map-result small{font-size:11px;color:var(--muted)}
+#charts .ch-map-result:hover,#charts .ch-map-result:focus-visible{background:var(--surface2);border-color:var(--line)}
+#charts .ch-map-legend{display:flex;gap:9px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+#charts .ch-map-legend span::before{content:'';display:inline-block;width:15px;border-top:2px solid var(--accent);vertical-align:middle;margin-right:4px}
+#charts .ch-map-legend .call::before{border-color:#65a9ed;border-top-style:dashed}
+#charts .ch-map-legend .fall::before{border-color:#a0a6ae;border-top-style:dotted}
+#charts .ch-map-viewport{position:relative;overflow:hidden;flex:1;min-width:0;touch-action:none;cursor:grab;background:radial-gradient(var(--line) .6px,transparent .7px) 0 0/20px 20px}
+#charts .ch-map-viewport.panning{cursor:grabbing}
+#charts .ch-map-world{position:absolute;left:0;top:0;transform-origin:0 0}
+#charts .ch-map-lines{position:absolute;inset:0;overflow:visible;pointer-events:none}
+#charts .ch-map-lines path{stroke:var(--accent);stroke-width:2;fill:none;opacity:.65}
+#charts .ch-map-lines path.call{stroke:#65a9ed;stroke-dasharray:7 5;opacity:.55}
+#charts .ch-map-lines path.fall{stroke:#a0a6ae;stroke-dasharray:2 5;opacity:.55}
+#charts .ch-map-node{position:absolute;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;padding:12px 15px;overflow:hidden;text-align:left;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;background:var(--surface);box-shadow:var(--shadow);color:var(--ink);font-size:14px;cursor:pointer}
+#charts .ch-map-node b{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#charts .ch-map-node small{font-size:11px;color:var(--muted)}
+#charts .ch-map-node.start{border-left-color:#55ae79}
+#charts .ch-map-node.focused{outline:3px solid var(--accent);outline-offset:3px}
+#charts .ch-map-node.dim{opacity:.35}
+#charts .ch-map-node:hover{border-color:var(--accent)}
+@media(max-width:700px){#charts .ch-map-sidebar{width:160px;min-width:130px;padding:8px}#charts .ch-map-sidebar p{font-size:11px}#charts .ch-map-legend{display:none}}
+
+/* 5.8: predictable port alignment, branch lanes and legible connections. */
+#charts #cinner .gchoice-band{position:absolute;pointer-events:none;box-sizing:border-box;border:1px dashed rgba(133,156,201,.32);background:rgba(91,123,179,.042);border-radius:12px;z-index:0;}
+#charts #cinner .gchoice-label{position:absolute;top:2px;left:12px;max-width:calc(100% - 20px);font:11px/1.4 system-ui,sans-serif;color:#a5bdd9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#charts #cedges path.ch-edge{pointer-events:stroke;stroke-linecap:round;stroke-linejoin:round;transition:stroke .09s,stroke-width .09s;}
+#charts #cedges path.ch-edge:hover{stroke:var(--accent,#e46551);stroke-width:4;filter:drop-shadow(0 0 3px var(--accent,#e46551));}
+#charts #cedges path.ch-return{stroke-dasharray:7 4;opacity:.85;}
+#charts #cedges path.ch-branch{opacity:.95;}
+#charts #cedges path.ch-edge-focus{stroke:var(--accent,#e46551)!important;stroke-width:3.6;opacity:1!important;filter:drop-shadow(0 0 2px var(--accent,#e46551));}
+#charts #cedges path.ch-edge-dim{opacity:.13;}
+
+/* Nodes 5.9: generous invisible wire targets; persistent clicked-wire focus. */
+#charts #cedges path.ch-edge{pointer-events:none;transition:none}
+#charts #cedges path.ch-edge-hit{stroke:transparent;stroke-width:14;fill:none;pointer-events:stroke;cursor:pointer}
+#charts #cedges path.ch-edge-selected{stroke:#ffba55!important;stroke-width:4.8!important;opacity:1!important;filter:drop-shadow(0 0 3px rgba(255,186,85,.75));stroke-dasharray:none}
+#charts #cedges path.ch-edge-selected.ch-return{stroke-dasharray:7 4}
+#charts #cedges path.ch-edge-dim{opacity:.11}

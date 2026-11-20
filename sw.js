@@ -10,6 +10,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.pathname.includes('/modder/')) return; // (the modder is another app, with its own updates)
   if (url.origin === location.origin) {
     // App files: use the network when online so updates arrive, fall back to the cache offline.
     e.respondWith(fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })

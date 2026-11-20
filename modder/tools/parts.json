@@ -1,0 +1,168 @@
+[
+ {
+  "file": "js/05-helpers.js",
+  "about": "Small helpers the engine uses (the app has them too): h(), icons, toast, game file list, ...",
+  "regions": [
+   [
+    "const $ =",
+    "const collator"
+   ],
+   [
+    "function h(tag, props, ...kids)",
+    "const ICONS = {"
+   ],
+   [
+    "const ICONS = {",
+    "const MODE_LABEL"
+   ],
+   [
+    "function mb(n)",
+    "let toastTimer"
+   ],
+   [
+    "let toastTimer;",
+    "function snapGallery"
+   ],
+   [
+    "const baseName =",
+    "+2"
+   ],
+   [
+    "const pyLit =",
+    "+2"
+   ],
+   [
+    "async function gameFileList(",
+    "/* where a mod's files go"
+   ],
+   [
+    "async function setModOn(",
+    "+1"
+   ],
+   [
+    "const errKey =",
+    "function gameErrors("
+   ],
+   [
+    "async function newestSlot(",
+    "let gameSaveChain"
+   ],
+   [
+    "function askYes(",
+    "/* Tags a page or folder"
+   ]
+  ]
+ },
+ {
+  "file": "js/10-basics.js",
+  "about": "Ren'Py games: what is a game, find its parts, pick a runtime version, keep pieces (chunks) in storage",
+  "regions": [
+   [
+    "const RPY_BASE =",
+    "const HTML_KIND"
+   ],
+   [
+    "function rpyTitle(",
+    "const RPY = {"
+   ]
+  ]
+ },
+ {
+  "file": "js/20-runtime.js",
+  "about": "Downloads one Ren'Py version (the runtime) and keeps it in storage",
+  "regions": [
+   [
+    "const RPY = {",
+    "function rpyAskDownload("
+   ]
+  ]
+ },
+ {
+  "file": "js/30-import.js",
+  "about": "Adds a game: reads a folder or zip, finds the game, stores it in pieces",
+  "regions": [
+   [
+    "const fileItem =",
+    "async function rpyUpdateGame("
+   ]
+  ]
+ },
+ {
+  "file": "js/35-archives.js",
+  "about": "Reading inside the game's files: pieces, .rpa archives, pictures and sounds on demand",
+  "regions": [
+   [
+    "const rpyChunkCache",
+    "async function lastAddTarget("
+   ],
+   [
+    "async function gameFileReader(",
+    "async function rpyPictures("
+   ]
+  ]
+ },
+ {
+  "file": "js/40-play.js",
+  "about": "Playing: the sealed frame (rpyDoc), what runs inside it (rpyBoot), autosave",
+  "regions": [
+   [
+    "const GAME = {",
+    "async function liveMods("
+   ]
+  ]
+ },
+ {
+  "file": "js/50-livemods.js",
+  "about": "Mods while the game runs: files put into the game, hooks, errors, gamePy",
+  "regions": [
+   [
+    "async function liveMods(",
+    "async function setFixFile("
+   ]
+  ]
+ },
+ {
+  "file": "js/60-gamepy.js",
+  "about": "Running Python in the game, writing files into it, fast reload",
+  "regions": [
+   [
+    "const TRIAL_FILE",
+    "const FLOW_FILE"
+   ]
+  ]
+ },
+ {
+  "file": "js/70-flow.js",
+  "about": "The story's flowchart data: reading the game's scenes (Python), the edits file (patches), taking edits back",
+  "regions": [
+   [
+    "const FLOW_FILE",
+    "async function openModder("
+   ]
+  ]
+ },
+ {
+  "file": "js/80-modder.js",
+  "about": "The flowchart screen: layout, drawing, moving boxes, selecting, editing",
+  "regions": [
+   [
+    "async function openModder(",
+    "async function gameTrial("
+   ]
+  ]
+ },
+ {
+  "file": "js/90-open.js",
+  "about": "Opening a game: the player screen, saves",
+  "regions": [
+   [
+    "let gameSaveChain",
+    "async function gsvListing("
+   ],
+   [
+    "async function openGame(",
+    "async function openHtmlGame("
+   ]
+  ]
+ }
+]
