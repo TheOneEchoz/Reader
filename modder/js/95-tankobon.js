@@ -1,14 +1,10 @@
 /* THE LINK WITH TANKŌBON (the reader app, same website). Not from the app.
-   - Tankōbon's "Mod this game" opens this page as modder/?tkb=<game id>. The modder asks Tankōbon for that game on a
-     BroadcastChannel; Tankōbon (open and unlocked in another tab) sends the game's record and its pieces, unencrypted, a
-     few at a time, and the modder keeps them in its own storage under the same ids. A game already here only gets what
-     is missing (its saves, new mods), so the modder's own edits stay.
-   - "Send to Tankōbon" sends the mods made here (the Story edits) back; Tankōbon keeps them as one mod on that game.
-   Messages: hello {gid, have[]} -> game {rec, ids[]} | locked | nogame;  piece {id, t, buf|json} ... done;  ack {n}
-             mod {gid, name, files[{p, buf}]} -> modres {ok, why}                                                        */
+   - Opened from Tankōbon's "Mod this game", the modder works on Tankōbon's own game (js/01-remote.js): nothing is copied,
+     there is no library here, and the flowchart opens straight away. The Ren'Py runtime is Tankōbon's too.
+   - Games copied here by nodes-5.10 keep "Send to Tankōbon", so edits made in such a copy can still go back.
+   Messages for those copies: mod {gid, name, files[{p, buf}]} -> modres {ok, why}                                        */
 const TKB_LINK = (() => {
-  const CH = 'tankobon-modder';
-  let bc = null; try { bc = new BroadcastChannel(CH); } catch (e) { }
+  let bc = null; try { bc = new BroadcastChannel('tankobon-modder'); } catch (e) { }
   const rid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
   const wait = (match, ms) => new Promise(res => {
     if (!bc) return res(null);
@@ -16,60 +12,12 @@ const TKB_LINK = (() => {
     const f = e => { const m = e.data || {}; if (match(m)) { clearTimeout(t); bc.removeEventListener('message', f); res(m); } };
     bc.addEventListener('message', f);
   });
-  const status = (text, bad) => {
-    let el = document.getElementById('tkbstatus');
-    if (!el) { el = h('div', { id: 'tkbstatus', class: 'gamecard', role: 'status', style: 'white-space:normal' }); const box = document.getElementById('games'); box && box.prepend(el); }
-    el.replaceChildren(h('div', { class: 'grow', style: 'white-space:normal' }, h('b', {}, 'From Tankōbon'), h('span', { class: 'sub', style: 'white-space:normal' + (bad ? ';color:#edab72' : '') }, text)));
-    return el;
-  };
-  /* a game from Tankōbon */
-  async function receive(gid) {
-    if (!bc) { status('This browser cannot talk to Tankōbon (no BroadcastChannel). Add the game here instead.', true); return; }
-    const mine = await S.gal(gid).catch(() => null);
-    const have = mine ? await rpyIds(mine).catch(() => []) : [];
-    let head = null;
-    for (let k = 0; k < 90 && !head; k++) {
-      const r = rid();
-      bc.postMessage({ t: 'hello', rid: r, gid, have });
-      const m = await wait(x => x.rid === r && ['game', 'locked', 'nogame'].includes(x.t), 1500);
-      if (!m) { status('Waiting for Tankōbon… Keep it open in another tab, with the game\'s page.'); continue; }
-      if (m.t === 'nogame') { status('Tankōbon does not have that game (any more).', true); return; }
-      if (m.t === 'locked') { status('Tankōbon is locked. Unlock it in its tab, and the game comes over by itself.'); await new Promise(z => setTimeout(z, 1500)); continue; }
-      head = m;
-    }
-    if (!head) { status('Tankōbon did not answer. Open the game in Tankōbon and press “Mod this game” again.', true); return; }
-    const total = head.ids.length; let got = 0, size = 0;
-    status(total ? `Getting “${head.rec.title}”: 0 of ${total} pieces…` : `Updating “${head.rec.title}”…`);
-    await new Promise((res, rej) => {
-      if (!total) return res();
-      let n = 0;
-      const f = async e => {
-        const m = e.data || {}; if (m.rid !== head.rid) return;
-        if (m.t === 'piece') {
-          try {
-            await ST.put('images', m.json !== undefined ? { id: m.id, t: 'application/json', e: JSON.stringify(m.json) } : { id: m.id, t: m.mime || 'application/octet-stream', e: m.buf });
-          } catch (err) { bc.removeEventListener('message', f); return rej(err); }
-          got++; n++; size += m.buf ? m.buf.byteLength : 0;
-          if (got % 20 === 0 || got === total) status(`Getting “${head.rec.title}”: ${got} of ${total} pieces (${mb(size)})…`);
-          if (n >= 8) { n = 0; bc.postMessage({ t: 'ack', rid: head.rid, got }); }
-          if (got >= total) { bc.removeEventListener('message', f); res(); }
-        } else if (m.t === 'fail') { bc.removeEventListener('message', f); rej(new Error(m.why || 'Tankōbon stopped sending.')); }
-      };
-      bc.addEventListener('message', f);
-      bc.postMessage({ t: 'ack', rid: head.rid, got: 0 });
-    }).catch(e => { status('The game did not come over completely: ' + (e.message || e), true); throw e; });
-    // the record: Tankōbon's, with the mods made here kept (Tankōbon's copy of them is left out: it came from here)
-    const rec = head.rec, own = mine ? (mine.game.mods || []).filter(m => m.flow) : [];
-    // (Tankōbon's own old Story edits, from when it had Modding mode, were taken over here the first time)
-    rec.game.mods = [...(rec.game.mods || []).filter(m => !m.modder && !(mine && m.flow)), ...own];
-    rec.fromTkb = true; rec.tkbAt = Date.now();
-    await saveGallery(rec);
-    if (window.ENGINE && window.ENGINE.draw) await window.ENGINE.draw();
-    status(`“${rec.title}” is here${mine ? ' (updated from Tankōbon; your edits are kept)' : ''}. Press Play + flowchart to mod it, then Send to Tankōbon.`);
-    const card = document.querySelector(`.gamecard[data-id="${gid}"]`); card && card.scrollIntoView({ block: 'center' });
-    try { history.replaceState(null, '', location.pathname); } catch (e) { }
+  if (TKB_REMOTE && !TKB_REMOTE.broken) {
+    // the runtime Tankōbon already has (and one downloaded here is kept there too)
+    RPY.reg = () => TKB_REMOTE.ask({ op: 'reg' }).then(r => r || {});
+    RPY.saveReg = o => TKB_REMOTE.ask({ op: 'saveReg', o });
   }
-  /* the mods made here, back to Tankōbon */
+  /* a game copied here by nodes-5.10: its Story edits, back to Tankōbon */
   async function send(gid) {
     const g = await S.gal(gid); if (!g) return;
     const mods = (g.game.mods || []).filter(m => m.flow);
@@ -82,14 +30,27 @@ const TKB_LINK = (() => {
       bc.postMessage({ t: 'mod', rid: r, gid, name: 'Story edits (from the modder)', on: mods.some(m => m.on), files });
       const m = await wait(x => x.rid === r && x.t === 'modres', 2000);
       if (!m) { if (k === 0) toast('Waiting for Tankōbon… keep it open in another tab.', 3000); continue; }
-      if (m.ok) return toast(`Sent to Tankōbon: “${g.title}” plays with your edits there (switch the mod off on its page to play the original).`, 5500);
+      if (m.ok) return toast(`Sent to Tankōbon: “${g.title}” plays with your edits there.`, 5000);
       if (m.why === 'locked') { toast('Unlock Tankōbon in its tab; sending again…', 3000); await new Promise(z => setTimeout(z, 2000)); continue; }
       return toast('Tankōbon could not keep the edits: ' + m.why, 5000);
     }
     toast('Tankōbon did not answer. Open it (unlocked) in another tab and try again.', 5000);
   }
-  // (opened inside Tankōbon's desktop app, the game comes as window.TKB_GAME)
-  const q = new URLSearchParams(location.search).get('tkb') || window.TKB_GAME || null;
-  if (q) (async () => { for (let k = 0; k < 50 && !(window.ENGINE && window.ENGINE.draw); k++) await new Promise(z => setTimeout(z, 100)); receive(q).catch(e => console.error('tkb', e)); })();
-  return { receive, send };
+  /* the page while working on a Tankōbon game: no library, just this game, with the flowchart opened at once */
+  async function panel(box, play) {
+    if (TKB_REMOTE.broken) { box.replaceChildren(h('p', { class: 'hint' }, TKB_REMOTE.broken)); return; }
+    box.replaceChildren(h('div', { class: 'gamecard', id: 'tkbpanel' }, h('div', { class: 'grow' }, h('b', {}, 'Opening the game from Tankōbon…'))));
+    let g = null;
+    try { g = await S.gal(TKB_REMOTE.gid); } catch (e) { box.replaceChildren(h('p', { class: 'hint' }, 'Tankōbon could not open the game: ' + (e.message || e))); return; }
+    if (!g || !isGame(g)) { box.replaceChildren(h('p', { class: 'hint' }, 'Tankōbon does not have that game (any more).')); return; }
+    const edits = (g.game.mods || []).find(m => m.flow);
+    box.replaceChildren(h('div', { class: 'gamecard', id: 'tkbpanel', 'data-id': g.id },
+      h('div', { class: 'grow' }, h('b', {}, g.title),
+        h('span', { class: 'sub', style: 'white-space:normal' }, `Tankōbon's game · Ren'Py ${g.game.ver || 'unknown'}. Your changes are saved straight into Tankōbon, as the mod “${edits ? edits.name : 'Story edits'}” on this game${edits ? (edits.on ? '' : ' (switched off there)') : ''}.`)),
+      h('button', { class: 'btn primary', id: 'tkb-flow', onclick: () => play(g, true) }, TKB_COMPAT.bootMode(g.game) === 'safe' ? 'Play + nodes' : 'Open the flowchart'),
+      h('button', { class: 'btn', id: 'tkb-play', onclick: () => play(g) }, 'Play')));
+    document.title = g.title + ' · Tankōbon Modder';
+    if (!panel.started) { panel.started = true; play(g, true); }
+  }
+  return { send, panel };
 })();

@@ -1,5 +1,13 @@
 [
  {
+  "v": "nodes-5.11",
+  "date": "2026-11-21",
+  "items": [
+   "“Mod this game” in Tankōbon now opens the game's flowchart straight away. The modder works on Tankōbon's own game: nothing is copied, there is no second library, and every change is saved into Tankōbon at once as the Story edits mod on that game (no Send to Tankōbon needed). It uses Tankōbon's Ren'Py runtime too.",
+   "Games copied here by nodes-5.10 still have Send to Tankōbon, for edits made in them; they can be deleted."
+  ]
+ },
+ {
   "v": "nodes-5.10.1",
   "date": "2026-11-20",
   "items": [

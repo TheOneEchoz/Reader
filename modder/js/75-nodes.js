@@ -1,6 +1,6 @@
 /* NEW (not in the app yet): nodes are the basic operations; a chart is a sequence of nodes; a node can be a chart (charts inside charts). */
 //>> js/75-nodes.js#0
-const ENGINE_VERSION = 'nodes-5.10.1';   // shown in the page header and on the Charts screen; change it with every release
+const ENGINE_VERSION = 'nodes-5.11';   // shown in the page header and on the Charts screen; change it with every release
 /* kind -> label, fields [key, label, placeholder], arms: the node holds sub-charts (menu/if), */
 const NODE_KINDS = {
   say:   { t: 'Say',     f: [['who', 'Who', 'narrator if empty'], ['attrs', 'Appearance', 'happy'], ['text', 'Text', ''], ['with', 'Transition', 'dissolve']] },

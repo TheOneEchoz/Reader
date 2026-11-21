@@ -7,8 +7,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../icon-192.png">
 <meta name="theme-color" content="#1b1a17">
-<link rel="stylesheet" href="css/app.css?v=nodes-5.10.1">
-<link rel="stylesheet" href="css/engine.css?v=nodes-5.10.1">
+<link rel="stylesheet" href="css/app.css?v=nodes-5.11">
+<link rel="stylesheet" href="css/engine.css?v=nodes-5.11">
 </head>
 <body>
 <div class="wrap" id="shell">
@@ -26,34 +26,35 @@
 <div id="toast" style="opacity:0" role="status"></div>
 <div id="shield" hidden aria-hidden="true"></div>
 
-<script src="lib/jszip.min.js?v=nodes-5.10.1"></script>
-<script src="js/00-shim.js?v=nodes-5.10.1"></script>
-<script src="js/05-helpers.js?v=nodes-5.10.1"></script>
-<script src="js/10-basics.js?v=nodes-5.10.1"></script>
-<script src="js/15-compat.js?v=nodes-5.10.1"></script>
-<script src="js/20-runtime.js?v=nodes-5.10.1"></script>
-<script src="js/30-import.js?v=nodes-5.10.1"></script>
-<script src="js/35-archives.js?v=nodes-5.10.1"></script>
-<script src="js/37-vfs.js?v=nodes-5.10.1"></script>
-<script src="js/38-vfs-ui.js?v=nodes-5.10.1"></script>
-<script src="js/40-play.js?v=nodes-5.10.1"></script>
-<script src="js/50-livemods.js?v=nodes-5.10.1"></script>
-<script src="js/60-gamepy.js?v=nodes-5.10.1"></script>
-<script src="js/70-flow.js?v=nodes-5.10.1"></script>
-<script src="js/74-legacy-pictures.js?v=nodes-5.10.1"></script>
-<script src="js/75-scene-map.js?v=nodes-5.10.1"></script>
-<script src="js/75-nodes.js?v=nodes-5.10.1"></script>
-<script src="js/75-transition-frames.js?v=nodes-5.10.1"></script>
-<script src="js/76-layout.js?v=nodes-5.10.1"></script>
-<script src="js/76-charts.js?v=nodes-5.10.1"></script>
-<script src="js/77-trace.js?v=nodes-5.10.1"></script>
-<script src="js/78-scene-setup.js?v=nodes-5.10.1"></script>
-<script src="js/79-setup-analysis.js?v=nodes-5.10.1"></script>
-<script src="js/80-modder.js?v=nodes-5.10.1"></script>
-<script src="js/81-node-projects.js?v=nodes-5.10.1"></script>
-<script src="js/90-open.js?v=nodes-5.10.1"></script>
-<script src="js/99-shell.js?v=nodes-5.10.1"></script>
-<script src="js/95-tankobon.js?v=nodes-5.10.1"></script>
+<script src="lib/jszip.min.js?v=nodes-5.11"></script>
+<script src="js/00-shim.js?v=nodes-5.11"></script>
+<script src="js/01-remote.js?v=nodes-5.11"></script>
+<script src="js/05-helpers.js?v=nodes-5.11"></script>
+<script src="js/10-basics.js?v=nodes-5.11"></script>
+<script src="js/15-compat.js?v=nodes-5.11"></script>
+<script src="js/20-runtime.js?v=nodes-5.11"></script>
+<script src="js/30-import.js?v=nodes-5.11"></script>
+<script src="js/35-archives.js?v=nodes-5.11"></script>
+<script src="js/37-vfs.js?v=nodes-5.11"></script>
+<script src="js/38-vfs-ui.js?v=nodes-5.11"></script>
+<script src="js/40-play.js?v=nodes-5.11"></script>
+<script src="js/50-livemods.js?v=nodes-5.11"></script>
+<script src="js/60-gamepy.js?v=nodes-5.11"></script>
+<script src="js/70-flow.js?v=nodes-5.11"></script>
+<script src="js/74-legacy-pictures.js?v=nodes-5.11"></script>
+<script src="js/75-scene-map.js?v=nodes-5.11"></script>
+<script src="js/75-nodes.js?v=nodes-5.11"></script>
+<script src="js/75-transition-frames.js?v=nodes-5.11"></script>
+<script src="js/76-layout.js?v=nodes-5.11"></script>
+<script src="js/76-charts.js?v=nodes-5.11"></script>
+<script src="js/77-trace.js?v=nodes-5.11"></script>
+<script src="js/78-scene-setup.js?v=nodes-5.11"></script>
+<script src="js/79-setup-analysis.js?v=nodes-5.11"></script>
+<script src="js/80-modder.js?v=nodes-5.11"></script>
+<script src="js/81-node-projects.js?v=nodes-5.11"></script>
+<script src="js/90-open.js?v=nodes-5.11"></script>
+<script src="js/95-tankobon.js?v=nodes-5.11"></script>
+<script src="js/99-shell.js?v=nodes-5.11"></script>
 <script>document.getElementById("ver").textContent="modder "+ENGINE_VERSION;
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => { });</script>
 </body>

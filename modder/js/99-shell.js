@@ -222,13 +222,14 @@
     openSheet('Reinstall “' + g.title + '” offline', body);
   }
   async function draw() {
+    if (TKB_REMOTE) return TKB_LINK.panel(box, play); // (a Tankōbon game, worked on in place: no library)
     const gs = (await S.gals()).filter(isGame);
     box.replaceChildren(
       h('div', { class: 'addbox' }, h('label', { class: 'btn primary', for: 'pick-dir' }, 'Add a game folder'), h('label', { class: 'btn', for: 'pick-zip' }, 'Add a zip'), pickDir, pickZip, status),
       ...gs.map(g => h('div', { class: 'gamecard', 'data-id': g.id }, h('div', { class: 'grow' }, h('b', {}, g.title),
-          h('span', { class: 'sub' }, `${g.fromTkb ? 'From Tankōbon · ' : ''}Game: Ren'Py ${g.game.ver || 'unknown'} · Browser runtime: ${g.game.rt} · ${g.game.files} files`),
+          h('span', { class: 'sub' }, `${g.fromTkb ? 'Copy from Tankōbon (no longer needed) · ' : ''}Game: Ren'Py ${g.game.ver || 'unknown'} · Browser runtime: ${g.game.rt} · ${g.game.files} files`),
           g.game.ver && vcmp(g.game.ver, '7.3.0') < 0 ? h('span', { class: 'sub', style: 'color:#edab72;white-space:normal' }, `Experimental legacy compatibility · ${TKB_COMPAT.bootMode(g.game)} boot · no 6.99 web runtime`) : null),
-        g.fromTkb ? h('button', { class: 'btn primary', title: 'Send the Story edits made here to Tankōbon, as a mod on this game', onclick: () => TKB_LINK.send(g.id) }, 'Send to Tankōbon') : null,
+        g.fromTkb ? h('button', { class: 'btn primary', title: 'A copy made by an earlier version of the modder: send the Story edits made in it to Tankōbon. (“Mod this game” in Tankōbon now works on Tankōbon\'s own game, without a copy; this one can be deleted.)', onclick: () => TKB_LINK.send(g.id) }, 'Send to Tankōbon') : null,
         h('button', { class: g.fromTkb ? 'btn' : 'btn primary', onclick: () => play(g) }, 'Play'),
         h('button', { class: 'btn', onclick: () => play(g, true) }, TKB_COMPAT.bootMode(g.game) === 'safe' ? 'Play + nodes (edit drafts)' : 'Play + flowchart'),
         h('button', { class: 'btn', title: 'Edit a saved story snapshot without starting Ren’Py. An existing compiled-story snapshot is required.', onclick: () => openOfflineNodes(g.id) }, 'Offline nodes'),

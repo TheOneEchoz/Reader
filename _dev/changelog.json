@@ -1,5 +1,15 @@
 [
  {
+  "v": 146,
+  "name": "1.23.0-beta.48",
+  "date": "2026-11-21",
+  "beta": true,
+  "items": [
+   "Extra apps are now called Add-ons (Settings › Add-ons): things to add to Tankōbon, for those who want them.",
+   "“Mod this game” opens the Modder straight into the game's flowchart. The Modder no longer copies the game or keeps a library of its own: it works on Tankōbon's game, and every change is saved into Tankōbon at once, as the Story edits mod on that game (no Send to Tankōbon). Keep Tankōbon open and unlocked while modding."
+  ]
+ },
+ {
   "v": 145,
   "name": "1.23.0-beta.47",
   "date": "2026-11-20",

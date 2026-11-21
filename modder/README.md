@@ -5,11 +5,11 @@ and the modding flowchart (with shared scenes). No library, login, encryption, s
 at `modder/` (https://theoneechoz.github.io/Reader/modder/) and can be installed on its own (manifest.webmanifest, sw.js).
 
 ## With Tankōbon
-- In Tankōbon: Settings › Extra apps › Modder › **Get**. Each Ren'Py game's page then has **Mod this game**.
-- That opens this page as `modder/?tkb=<game id>`; `js/95-tankobon.js` asks Tankōbon (open and unlocked, in another tab) for the
-  game on the BroadcastChannel `tankobon-modder` and keeps it here under the same ids. A game already here only gets what changed.
-- **Send to Tankōbon** (on the game's card here) sends the Story edits mod back; Tankōbon keeps it as one mod on that game
-  ("Story edits (from the modder)"), which can be switched off there.
+- In Tankōbon: Settings › Add-ons › Modder › **Get**. Each Ren'Py game's page then has **Mod this game**.
+- That opens this page as `modder/?tkb=<game id>` (in Tankōbon's desktop app: inside its window, with `window.TKB_GAME`).
+  `js/01-remote.js` then routes the modder's storage of games and pieces to Tankōbon on the BroadcastChannel `tankobon-modder`:
+  nothing is copied, there is no library, and the flowchart opens at once (`TKB_LINK.panel` in js/95-tankobon.js).
+  The Story edits mod the flowchart makes is written straight onto Tankōbon's game. Tankōbon must be open and unlocked.
 - Releases: bump `ENGINE_VERSION` (js/75-nodes.js), the `?v=` in index.html, `CACHE` in sw.js, and add an entry to changelog.json.
   Tankōbon's own builds never touch this folder.
 
@@ -417,3 +417,7 @@ These changes are editor presentation and runtime controls. They do not rewrite 
 - Lives on the Tankōbon website as `modder/`, with its own manifest, service worker, version and changelog.json.
 - Games come from Tankōbon (“Mod this game”), and the Story edits go back with Send to Tankōbon (js/95-tankobon.js).
 - The Ren'Py runtime is found next to this page or one folder up (the website's renpy/), else on the Tankōbon website.
+
+## nodes-5.11 — no copy
+- “Mod this game” opens the flowchart at once, working on Tankōbon's own game through js/01-remote.js; Ren'Py's runtime is
+  Tankōbon's too. Games copied here by nodes-5.10 keep Send to Tankōbon.

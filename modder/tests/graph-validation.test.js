@@ -8,7 +8,7 @@ const context = vm.createContext({ console });
 vm.runInContext(source, context);
 const test = code => vm.runInContext(code, context);
 const asJson = code => JSON.parse(JSON.stringify(test(code)));
-assert.equal(test('ENGINE_VERSION'), 'nodes-5.10.1');
+assert.equal(test('ENGINE_VERSION'), 'nodes-5.11');
 assert.deepEqual(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'return'}], entry:'a' }, ['start'])"), []);
 assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'say', next:'gone'}], entry:'a' })")[0].code, 'broken-wire');
 assert.equal(asJson("tkbValidateGraph('start', { nodes: [{id:'a', k:'say', next:'a'}], entry:'gone' })")[0].code, 'missing-entry');

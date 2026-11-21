@@ -2058,18 +2058,18 @@ async function rpyIds(g) {
   return out;
 }
 
-/* ---------- extra apps: separate apps on the same website that work with Tankōbon, each with its own updates. Getting one
+/* ---------- add-ons: separate apps on the same website that add to Tankōbon, each with its own updates. Getting one
    only shows its buttons here (and opens it); none of its code is part of Tankōbon. ---------- */
-const EXTRA_APPS = [
+const ADDONS = [
   { id: 'modder', name: 'Modder', path: 'modder/', beta: true, icon: 'edit',
     about: 'Mod Ren\'Py games: see a game\'s story as a flowchart, change scenes, choices and lines, and send the changes back to Tankōbon as a mod on that game.',
     adds: 'A “Mod this game” button on each Ren\'Py game\'s page.' },
 ];
 const hasApp = id => !!(UI.apps && UI.apps[id]);
 const appUrl = (a, q = '') => new URL((location.pathname.includes('/beta/') ? '../' : './') + a.path + q, location.href).href;
-function openExtraApps() {
+function openAddons() {
   const list = h('div', { class: 'stack', id: 'apps-list' });
-  const draw = () => list.replaceChildren(...EXTRA_APPS.map(a => {
+  const draw = () => list.replaceChildren(...ADDONS.map(a => {
     const on = hasApp(a.id);
     return h('div', { class: 'panel stack', 'data-app': a.id, style: 'gap:8px' },
       h('div', { class: 'row', style: 'gap:10px;align-items:center' }, icon(a.icon), h('b', { style: 'flex:1' }, a.name), a.beta ? h('span', { class: 'appbeta' }, 'Beta') : null),
@@ -2082,15 +2082,16 @@ function openExtraApps() {
         on ? h('button', { class: 'btn ghost', id: `app-remove-${a.id}`, onclick: () => { UI.apps = { ...(UI.apps || {}) }; delete UI.apps[a.id]; saveMeta(); draw(); toast(`${a.name} removed from Tankōbon. What you made with it stays in its own app.`, 4000); } }, 'Remove') : null));
   }));
   draw();
-  subSheet('Extra apps', h('div', { class: 'stack' },
-    h('p', { class: 'hint', style: 'margin:0' }, 'Separate apps that work with Tankōbon. Each one has its own updates and can be installed on its own; Tankōbon only gets a button to open it.'),
+  subSheet('Add-ons', h('div', { class: 'stack' },
+    h('p', { class: 'hint', style: 'margin:0' }, 'Add-ons add things to Tankōbon. Each one is a separate app with its own updates, and can be installed on its own; Tankōbon only gets a button to open it.'),
     list));
 }
-/* the modder, opened for a game. Tankōbon hands the game over on a BroadcastChannel when the modder asks (only while unlocked),
-   and keeps what the modder sends back as a mod on that game. */
+/* the modder, opened for a game. It keeps no copy: it works on Tankōbon's game in place, asking on a BroadcastChannel for the
+   game's record and pieces as it needs them, and writing its Story edits (a mod on the game) the same way. Tankōbon answers
+   only while unlocked, and only for games; pieces are decrypted and encrypted here. */
 function openModderFor(gid) {
   if (DESK || window.TKB_MODDER_INSIDE) return openModderInside(gid);
-  const a = EXTRA_APPS.find(x => x.id === 'modder'); window.open(appUrl(a, gid ? '?tkb=' + encodeURIComponent(gid) : ''), 'tkb-modder');
+  const a = ADDONS.find(x => x.id === 'modder'); window.open(appUrl(a, gid ? '?tkb=' + encodeURIComponent(gid) : ''), 'tkb-modder');
 }
 /* the desktop app cannot open another window of its own, so there the modder opens inside Tankōbon's window, over it. Its files
    come from the website each time (so it keeps its own updates), put together into one page; the last copy is kept for when
@@ -2129,29 +2130,32 @@ async function openModderInside(gid) {
 }
 const MODDER_LINK = (() => {
   let bc = null; try { bc = new BroadcastChannel('tankobon-modder'); } catch (e) { return null; }
-  const acked = new Map();
   const say = m => { try { bc.postMessage(m); } catch (e) { console.warn('modder link', e); } };
-  async function sendGame(m) {
-    const g = await S.gal(m.gid).catch(() => null);
-    if (!g || !isGame(g) || g.game.engine === 'html') return say({ t: 'nogame', rid: m.rid });
-    const have = new Set(m.have || []), all = await rpyIds(g);
-    // small records that change (file lists, saves, mods) always; the game's pieces only when the modder does not have them
-    const fresh = new Set([g.game.list, g.game.sv, ...(g.game.mods || []).map(x => x.list)].filter(Boolean));
-    const ids = [...new Set(all)].filter(id => fresh.has(id) || !have.has(id));
-    const rec = JSON.parse(JSON.stringify(g));
-    acked.set(m.rid, -1);
-    say({ t: 'game', rid: m.rid, rec, ids });
-    const W = 24; let sent = 0, idle = 0;
-    for (const id of ids) {
-      while (sent - Math.max(0, acked.get(m.rid)) >= W || acked.get(m.rid) < 0) { await new Promise(z => setTimeout(z, 25)); if (++idle > 2400) { acked.delete(m.rid); return say({ t: 'fail', rid: m.rid, why: 'The modder stopped answering.' }); } }
-      idle = 0;
-      const r = await ST.get('images', id).catch(() => null);
-      if (!r || !r.e) { say({ t: 'piece', rid: m.rid, id, buf: new ArrayBuffer(0) }); sent++; continue; }
-      if (r.t === 'application/json') say({ t: 'piece', rid: m.rid, id, json: await Crypt.decJSON(r.e) });
-      else say({ t: 'piece', rid: m.rid, id, mime: r.t, buf: await Crypt.dec(r.e) });
-      sent++;
+  // the modder's storage of games and pieces, answered from Tankōbon's
+  async function store(m) {
+    if (m.s === 'galleries') {
+      if (m.op === 'get') { const g = await S.gal(m.id).catch(() => null); return g && isGame(g) ? { id: g.id, e: JSON.stringify(g) } : null; }
+      if (m.op === 'put') {
+        const g = JSON.parse(m.rec.e), old = await S.gal(g.id).catch(() => null);
+        if (!old || !isGame(old) || g.id !== m.gid) throw new Error('The modder may only change the game it was opened for.');
+        await saveGallery(g);
+        if (CUR && CUR.view === 'detail' && CUR.params && CUR.params.id === g.id && !GAME.box) render('detail', CUR.params);
+        return true;
+      }
+      throw new Error('The modder cannot do that to a game.');
     }
-    acked.delete(m.rid);
+    if (m.s === 'images') {
+      if (m.op === 'get') {
+        const r = await ST.get('images', m.id).catch(() => null); if (!r || !r.e) return null;
+        return r.t === 'application/json' ? { id: r.id, t: r.t, e: JSON.stringify(await Crypt.decJSON(r.e)) } : { id: r.id, t: r.t, e: await Crypt.dec(r.e) };
+      }
+      if (m.op === 'put') { const r = m.rec; await ST.put('images', { id: r.id, t: r.t, e: r.t === 'application/json' ? await Crypt.encJSON(JSON.parse(r.e)) : await Crypt.enc(r.e) }); return true; }
+      if (m.op === 'del') { await ST.delMany('images', [m.id]); return true; }
+      if (m.op === 'delMany') { await ST.delMany('images', m.ids || []); return true; }
+    }
+    if (m.op === 'reg') return RPY.reg();
+    if (m.op === 'saveReg') { await RPY.saveReg(m.o || {}); return true; }
+    throw new Error('Unknown request from the modder.');
   }
   async function keepMod(m) {
     const g = await S.gal(m.gid).catch(() => null);
@@ -2175,10 +2179,14 @@ const MODDER_LINK = (() => {
   }
   bc.addEventListener('message', e => {
     const m = e.data || {};
-    if (m.t === 'ack') { if (acked.has(m.rid)) acked.set(m.rid, m.got); return; }
-    if (m.t !== 'hello' && m.t !== 'mod') return;
-    if (!Crypt.ready) return say({ t: m.t === 'mod' ? 'modres' : 'locked', rid: m.rid, ok: false, why: 'locked' });
-    (m.t === 'hello' ? sendGame(m) : keepMod(m)).catch(err => { console.error('modder link', err); say(m.t === 'mod' ? { t: 'modres', rid: m.rid, ok: false, why: String(err.message || err) } : { t: 'fail', rid: m.rid, why: String(err.message || err) }); });
+    if (m.t === 'st') {
+      if (!Crypt.ready) return say({ t: 'stres', rid: m.rid, ok: false, err: 'locked' });
+      store(m).then(v => say({ t: 'stres', rid: m.rid, ok: true, v }), err => say({ t: 'stres', rid: m.rid, ok: false, err: String(err && err.message || err) }));
+      return;
+    }
+    if (m.t !== 'mod') return; // (a game copied into the modder by its version nodes-5.10, sending its edits back)
+    if (!Crypt.ready) return say({ t: 'modres', rid: m.rid, ok: false, why: 'locked' });
+    keepMod(m).catch(err => { console.error('modder link', err); say({ t: 'modres', rid: m.rid, ok: false, why: String(err.message || err) }); });
   });
   return bc;
 })();
@@ -5801,7 +5809,7 @@ function openGlobalSettings() {
       setItem('layers', 'Layer library', 'Layer images to reuse on any layered image', () => { closeSheet(); openLayerLibrary(); }),
       setItem('plus', 'Add the sample gallery', 'A short example comic to try the reader with', () => { closeSheet(); addSample(); })),
     setGroup('App',
-      EXP && (!NATIVE || DESK) ? setItem('plus', 'Extra apps', hasApp('modder') ? 'The modder · on' : 'Apps that work with Tankōbon, for those who want them', () => { closeSheet(); openExtraApps(); }) : null,
+      EXP && (!NATIVE || DESK) ? setItem('plus', 'Add-ons', hasApp('modder') ? 'The Modder · on' : 'Things to add to Tankōbon, for those who want them', () => { closeSheet(); openAddons(); }) : null,
       NATIVE ? setItem('download', 'App updates', upd ? `Version ${APP_VNAME} · version ${VNAME(upd.version, upd)} is available` : AppFile.latest ? `Version ${APP_VNAME} · a new app file is available` : `Version ${APP_VNAME}`, go2(openUpdates), upd || AppFile.latest ? h('span', { class: 'chip' }, 'NEW') : null) : null,
       !NATIVE && !isStandalone() ? setItem('plus', 'Install the app', 'Open it from its own icon, full screen', go2(openInstallHelp)) : null,
       !NATIVE ? setItem('download', 'Version', `${APP_VNAME} · updates arrive by themselves`) : null)));

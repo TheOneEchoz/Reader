@@ -1,6 +1,6 @@
 {
- "version": 145,
- "name": "1.23.0-beta.47",
+ "version": 146,
+ "name": "1.23.0-beta.48",
  "channel": "beta",
  "files": [
   "Sortable.min.js",
@@ -22,6 +22,7 @@
   "qrcode.js"
  ],
  "notes": [
-  "Desktop app: Extra apps is there too, and the Modder works. As the desktop app cannot open another window, the Modder opens inside Tankōbon's window, over it (Close comes back). Its files still come from the website each time, so it keeps its own updates; the last copy is kept for when the computer is offline."
+  "Extra apps are now called Add-ons (Settings › Add-ons): things to add to Tankōbon, for those who want them.",
+  "“Mod this game” opens the Modder straight into the game's flowchart. The Modder no longer copies the game or keeps a library of its own: it works on Tankōbon's game, and every change is saved into Tankōbon at once, as the Story edits mod on that game (no Send to Tankōbon). Keep Tankōbon open and unlocked while modding."
  ]
 }
